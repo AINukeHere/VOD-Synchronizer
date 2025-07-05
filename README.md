@@ -31,7 +31,12 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으로 활성화됩니다.
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mipj1jn488M?si=ed1Zbm_YJPQqaTyN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-## 이거 안전한거에요? 원리가 뭐에요
+
+## 계획중인 추가 기능
+- 치지직도 지원하게 만들듯? ~~(아 누가 기여 안해주나?)~~
+
+## QnA
+### 1. 이거 안전한거에요? 원리가 뭐에요
 ㅖ. 그냥 사람이 해야하는 일 자동화한겁니다.
 #### 1. 타임스탬프 표시
 
@@ -47,8 +52,8 @@ SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으
 <br/><br/>
 - **구체적인 방법**: 검색한 스트리머 닉네임을 가지고 페이지 내 보이지 않는 iframe에서 스트리머를 검색하여 스트리머의 ID를 찾은 뒤 해당 스트리머 채널의 다시보기 검색을 하여 업로드 일자를 확인하여 가능성 있는 VOD를 새 탭에서 엽니다. 각 탭은 FindVOD 버튼을 눌렀을 때의 재생 시점 타임스탬프가 각 스트리밍 기간안에 포함되는지를 체크하여 포함되지 않는 탭은 자동으로 닫힙니다. (원래는 이것또한 정확한 파악 이후 열려고 했지만 vod player페이지는 iframe에서 열리면 무조건 embed모드로 열려서 스트리밍 시간을 페이지에서 제공하지 않아서 어쩔수 없이 이렇게 구현했습니다.)
 
-## 계획중인 추가 기능
-- 치지직도 지원하게 만들듯? ~~(아 누가 기여 안해주나?)~~
+### 2. 다시보기를 지우거나 해당 시간대의 VOD가 없으면 어떡해요?
+당연히 못 보는거죠 뭐. 없는걸 만들거나 다시보기를 저장해두는 서버가 있는 게  아니라 그냥 사용자 계정으로 대신 검색해주는 기능일 뿐입니다.
 
 ## 알려진 문제
 - 스트리밍에 문제가 있어 다시보기 영상 자체가 중간에 편집된 경우 동기화가 어긋날 수 있습니다.
