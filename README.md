@@ -28,8 +28,8 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 
 
 ## 사용 예시
-SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으로 활성화됩니다.<br/>
-@[youtube](https://youtu.be/mipj1jn488M)
+SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으로 활성화됩니다.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/mipj1jn488M?si=ed1Zbm_YJPQqaTyN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## 이거 안전한거에요? 원리가 뭐에요
 ㅖ. 그냥 사람이 해야하는 일 자동화한겁니다.
