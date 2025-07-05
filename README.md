@@ -29,7 +29,8 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 
 ## 사용 예시
 SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으로 활성화됩니다.
-<br/>[예시 영상](mipj1jn488M)
+<br/> 예시 영상
+[![Video Label](https://img.youtube.com/vi/mipj1jn488M/0.jpg)](https://youtu.be/mipj1jn488M)
 
 
 ## 계획중인 추가 기능
