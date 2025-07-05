@@ -1,6 +1,6 @@
 if (window !== top){
     function log(...data){
-        console.log('[vod_get.js]', data);
+        console.log('[vod_get.js]', ...data);
     }
     function GetVodList(datetime){
         const dateSpanElements = document.querySelectorAll('#contents > div > div > section > section.vod-list > ul > li > div.vod-info > div > span.date');

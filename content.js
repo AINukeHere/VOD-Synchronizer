@@ -5,7 +5,7 @@ if (window == top) {
     let tsManager = null;
     let vodLinker = null;
     function log(...data){
-        console.log('[content.js]', data);
+        console.log('[content.js]', ...data);
     }
 
     class TimestampTooltipManager {
@@ -16,7 +16,12 @@ if (window == top) {
             this.observer = null;
             this.isEditing = false;
             this.requestGlobalTS = null;
+            this.requestSystemTime = null;
             this.startMonitoring();
+        }
+        RequestGlobalTSAsync(global_ts, system_time){
+            this.requestGlobalTS = global_ts;
+            this.requestSystemTime = system_time;
         }
         startMonitoring() {
             this.observeDOMChanges();
@@ -54,13 +59,22 @@ if (window == top) {
                     this.tooltip.style.boxShadow = "none";
                 });
 
-                this.tooltip.addEventListener("keydown", (event) => {
+                this.tooltip.addEventListener("keydown", (event) => {                    
+                    // 숫자 키 (0-9) - 영상 점프 기능만 차단하고 텍스트 입력은 허용
+                    if (/^[0-9]$/.test(event.key)) {
+                        // 영상 플레이어의 키보드 이벤트만 차단
+                        event.stopPropagation();
+                        return;
+                    }
+
+                    // Enter 키 처리
                     if (event.key === "Enter") {
                         event.preventDefault();
                         this.processTimestampInput(this.tooltip.innerText.trim());
                         this.tooltip.contentEditable = "false";
                         this.tooltip.blur();
                         this.isEditing = false;
+                        return;
                     }
                 });
             }
@@ -76,9 +90,13 @@ if (window == top) {
                     this.tooltip.innerText = timestamp.toLocaleString("ko-KR");
                 }
                 if (this.requestGlobalTS != null){
-                    if (!tsManager.moveToGlobalTS(this.requestGlobalTS, false))
+                    const currentSystemTime = Date.now();
+                    const timeDifference = currentSystemTime - this.requestSystemTime;
+                    const adjustedGlobalTS = this.requestGlobalTS + timeDifference; 
+                    if (!tsManager.moveToGlobalTS(adjustedGlobalTS, false))
                         window.close();
                     this.requestGlobalTS = null;
+                    this.requestSystemTime = null;
                 }
             }, 1000);
         }
@@ -191,8 +209,8 @@ if (window == top) {
             const playbackTime = Math.floor((globalDateTime.getTime() - streamStartDateTime.getTime()) / 1000);
             const url = new URL(window.location.href);
             url.searchParams.delete('change_global_ts');
+            url.searchParams.delete('request_system_time');
             url.searchParams.set('change_second', playbackTime);
-            // alert('goto change_global_ts');
             window.location.replace(url.toString());
             return true;
         }
@@ -204,6 +222,7 @@ if (window == top) {
             this.buttons=[];
             this.curProcessingBtn = null;
             this.iframe=null;
+            this.requestSystemTime = null; // VOD List 요청한 시스템 시간 저장
             this.init();            
         }
         init(){
@@ -212,6 +231,9 @@ if (window == top) {
         }
         findVODList(streamer_id){
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_FINDING_VOD;
+            // VOD List 요청한 시스템 시간 저장
+            this.requestSystemTime = Date.now();
+            log('this.requestSystemTime: ', this.requestSystemTime);
             const datetime = tsManager.getCurDateTime();
             const year = datetime.getFullYear();
             const month = datetime.getMonth()+1;
@@ -323,22 +345,24 @@ if (window == top) {
     tsManager = new TimestampTooltipManager();
     vodLinker = new VODLinker();
     const params = new URLSearchParams(window.location.search);
-    const global_ts = params.get("change_global_ts");
-    log('global_ts: ', global_ts);
+    const global_ts = parseInt(params.get("change_global_ts"));
+    const system_time = parseInt(params.get("request_system_time"));
     if (global_ts){
-        tsManager.requestGlobalTS = global_ts;
+        tsManager.RequestGlobalTSAsync(global_ts, system_time);
     }
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    async function checkOneByOne(vodLinks, request_datetime){
+    async function checkOneByOne(vodLinks, request_global_ts){
         if (vodLinks.length > 0){
+            
             for (let i = 0; i < vodLinks.length; i++) {
                 const link = vodLinks[i];
 
                 const url = new URL(link);
                 url.searchParams.delete('change_second');
-                url.searchParams.set('change_global_ts', tsManager.getCurDateTime().getTime());
+                url.searchParams.set('change_global_ts', request_global_ts);
+                url.searchParams.set('request_system_time', vodLinker.requestSystemTime);
                 window.open(url, "_blank");
             }
         }
@@ -349,7 +373,9 @@ if (window == top) {
             const request_datetime = event.data.request_datetime;
             log("VOD_LIST 받음:", vodLinks);
             vodLinker.clearLastRequest();
-            checkOneByOne(vodLinks, request_datetime);
+
+            
+            checkOneByOne(vodLinks, request_datetime.getTime());
             vodLinker.curProcessingBtn.innerText = "Find VOD";
             vodLinker.curProcessingBtn = null;
         }

@@ -1,7 +1,7 @@
 
 if (window !== top){
     function log(...data){
-        console.log('[streamerID_get.js]', data);
+        console.log('[streamerID_get.js]', ...data);
     }
     
     log('in iframe');
