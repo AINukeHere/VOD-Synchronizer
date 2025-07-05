@@ -32,6 +32,9 @@ if (window !== top){
                 log(`vod added: ${month}-${day} ${vodLinkList[i].href}`);
             }
         }
+        // TODO: 최대치까지 표시됐다면 다음 페이지 검색필요
+        // if (vodLinkList.length == 60)
+
         return resultVODLinks;
     }
     function TryGetVodList(request_datetime){
