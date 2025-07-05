@@ -1,0 +1,4 @@
+# Ignore deployment files
+*.crx
+*.pem
+*.zip
