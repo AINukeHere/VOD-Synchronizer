@@ -16,10 +16,27 @@ if (window !== top){
         let prevMonth = 0;
         let prevDay = 0;
         for (var i = dateSpanElements.length - 1; i >= 0 ; --i){
-            const [_year, _month, _day] = dateSpanElements[i].innerText.split("-");
-            const year = parseInt(_year);
-            const month = parseInt(_month);
-            const day = parseInt(_day);
+            const innerText = dateSpanElements[i].innerText;
+            let year, month, day;
+            
+            // HH시간전 형식인지 체크
+            const timeAgoMatch = innerText.match(/(\d+)시간 전/);
+            if (timeAgoMatch) {
+                const hoursAgo = parseInt(timeAgoMatch[1]);
+                const uploadDate = new Date();
+                uploadDate.setHours(uploadDate.getHours() - hoursAgo);
+                year = uploadDate.getFullYear();
+                month = uploadDate.getMonth() + 1;
+                day = uploadDate.getDate();
+                log(`시간전 형식 파싱: ${hoursAgo}시간전 -> ${year}-${month}-${day}`);
+            } else {
+                // YYYY-MM-DD 형식 처리
+                const [_year, _month, _day] = innerText.split("-");
+                year = parseInt(_year);
+                month = parseInt(_month);
+                day = parseInt(_day);
+            }
+            
             if (i < dateSpanElements.length - 1){
                 if (prevMonth > request_month || prevDay > request_day){
                     break;
