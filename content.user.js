@@ -208,6 +208,7 @@
             this.isEditing = false;
             this.requestGlobalTS = null;
             this.requestSystemTime = null;
+            this.isControllableState = false;
             this.startMonitoring();
         }
         
@@ -282,6 +283,7 @@
                 const timestamp = this.getCurDateTime();
 
                 if (timestamp) {
+                    this.isControllableState = true;
                     this.tooltip.innerText = timestamp.toLocaleString("ko-KR");
                 }
                 if (this.requestGlobalTS != null){
@@ -485,6 +487,7 @@
         
         updateFindVODButtons(){
             setInterval(() => {
+                if (!tsManager.isControllableState) return;
                 const searchResults = document.querySelectorAll('#areaSuggest > ul > li > a');
                 if (searchResults){
                     searchResults.forEach(element => {
