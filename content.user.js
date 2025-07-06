@@ -3,13 +3,14 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.0.6
 // @description  SOOP 다시보기 VOD를 시청하면 우측 하단에 당시의 타임스탬프를 표시합니다. 타임스탬프를 클릭하여 수정하고 엔터를 누르면 알맞는 재생시간으로 새로고침합니다. 상단 기본 Soop 검색창에 다른 스트리머를 검색하여 Find VOD 버튼을 누르면 그 스트리머의 VOD에서 동일시점을 찾고 새 탭에서 열립니다.
-// @author       You
+// @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
 // @match        https://ch.sooplive.co.kr/*
 // @match        https://www.sooplive.co.kr/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
 // @run-at       document-end
+// @license      MIT
 // ==/UserScript==
 
 (function() {
