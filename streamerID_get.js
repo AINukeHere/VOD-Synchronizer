@@ -3,11 +3,13 @@ if (window !== top){
     function log(...data){
         console.log('[streamerID_get.js]', ...data);
     }
-    BTN_TEXT_IDLE = "Find VOD";
+    const BTN_TEXT_IDLE = "Find VOD";
+    const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
+    const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
     log('in iframe');
     
     let isChzzkRequest = false;
-    let request_ts = null;
+    let curProcessingBtn = null;
     let request_vod_ts = null;
     
     function GetStreamerID(nickname){
@@ -44,6 +46,7 @@ if (window !== top){
     }
     
     function searchStreamerInIframe(nickname) {
+        curProcessingBtn.innerText = BTN_TEXT_FINDING_STREAMER_ID;
         const encodedNickname = encodeURI(nickname);
         const url = new URL(`https://www.sooplive.co.kr/search`);
         url.searchParams.set("szLocation", "total_search");
@@ -130,6 +133,7 @@ if (window !== top){
                         button.style.padding = "5px";
                         element.appendChild(button);
                         button.addEventListener('click', function (e){
+                            curProcessingBtn  = button;
                             e.preventDefault();       // a 태그의 기본 이동 동작 막기
                             e.stopPropagation();      // 이벤트 버블링 차단
                             const nicknameSpan = element.querySelector('span');
@@ -165,6 +169,7 @@ if (window !== top){
 
         window.addEventListener("message", (event) =>{
             if (event.data.response === "STREAMER_ID"){
+                curProcessingBtn.innerText = BTN_TEXT_FINDING_VOD;
                 const streamer_id = event.data.streamer_id;
                 log('streamer_id: ', streamer_id);
                 if (streamer_id != null){

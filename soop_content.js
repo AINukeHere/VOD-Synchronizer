@@ -43,7 +43,7 @@ if (window == top) {
             this.lastRequestTimeout = setTimeout(() => {
                 alert(this.lastRequestFailedMessage);
                 this.iframe.src = "";
-                this.curProcessingBtn.innerText = "Find VOD";
+                this.curProcessingBtn.innerText = BTN_TEXT_IDLE;
                 this.curProcessingBtn = null;
             }, 3000);
             this.iframe.src = reqUrl.toString();
@@ -150,7 +150,7 @@ if (window == top) {
             vodLinker.clearLastRequest();
             
             checkOneByOne(vodLinks, tsManager.getCurDateTime().getTime(), Date.now());
-            vodLinker.curProcessingBtn.innerText = "Find VOD";
+            vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
             vodLinker.curProcessingBtn = null;
         }
         else if (event.data.response === "STATUS_STREAM_ID_CHECKED"){
