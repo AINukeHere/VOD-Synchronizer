@@ -12,14 +12,14 @@ if (window == top) {
     class SoopLinker {
         constructor() {
             this.iframe = null;
+            this.closeBtn = null;
             this.init();
         }
-
         init() {
             this.createSearchIframe();
             this.createSearchButton();
+            this.createCloseButton();
         }
-
         createSearchIframe() {
             this.iframe = document.createElement('iframe');
             this.iframe.id = 'soop-search-iframe';
@@ -35,10 +35,33 @@ if (window == top) {
             this.iframe.style.zIndex = '10000';
             this.iframe.style.display = 'none';
             this.iframe.src = 'https://www.sooplive.co.kr/search';
-            
             document.body.appendChild(this.iframe);
         }
-
+        createCloseButton() {
+            this.closeBtn = document.createElement('button');
+            this.closeBtn.innerText = '✕';
+            this.closeBtn.title = '닫기';
+            this.closeBtn.style.position = 'fixed';
+            this.closeBtn.style.top = 'calc(50% - 200px)';
+            this.closeBtn.style.left = 'calc(50% + 280px)';
+            this.closeBtn.style.transform = 'translate(-50%, -50%)';
+            this.closeBtn.style.width = '32px';
+            this.closeBtn.style.height = '32px';
+            this.closeBtn.style.background = '#222';
+            this.closeBtn.style.color = 'white';
+            this.closeBtn.style.border = 'none';
+            this.closeBtn.style.borderRadius = '16px';
+            this.closeBtn.style.fontSize = '20px';
+            this.closeBtn.style.fontWeight = 'bold';
+            this.closeBtn.style.cursor = 'pointer';
+            this.closeBtn.style.zIndex = '10001';
+            this.closeBtn.style.display = 'none';
+            this.closeBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+            this.closeBtn.addEventListener('click', () => {
+                this.hideSearchIframe();
+            });
+            document.body.appendChild(this.closeBtn);
+        }
         createSearchButton() {
             const button = document.createElement("button");
             button.id = "soop-search-btn";
@@ -56,46 +79,38 @@ if (window == top) {
             button.style.cursor = "pointer";
             button.style.zIndex = "10000";
             button.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
-
             button.addEventListener('click', () => {
                 this.showSearchIframe();
             });
-
             document.body.appendChild(button);
         }
-
         showSearchIframe() {
             if (!tsManager || !tsManager.isControllableState) {
                 alert("VOD 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.");
                 return;
             }
-
             const currentDateTime = tsManager.getCurDateTime();
             if (!currentDateTime) {
                 alert("현재 재생 시간을 가져올 수 없습니다.");
                 return;
             }
-
             this.iframe.style.display = 'block';
-            
+            this.closeBtn.style.display = 'block';
             // iframe에 타임스탬프 정보 전달
             const targetTimestamp = currentDateTime.getTime();
             const url = new URL(`https://www.sooplive.co.kr/search`);
             url.searchParams.set("p_request", "GET_SOOP_VOD_FROM_CHZZK");
             url.searchParams.set("request_vod_ts", `${targetTimestamp}`);
             this.iframe.src = url.toString();
-            
             log('SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
         }
-
         hideSearchIframe() {
             this.iframe.style.display = 'none';
+            this.closeBtn.style.display = 'none';
         }
-
         handleSoopVodList(vodLinks, request_vod_ts, request_real_ts) {
             for (let i = 0; i < vodLinks.length; i++) {
                 const link = vodLinks[i];
-
                 const url = new URL(link);
                 url.searchParams.delete('change_second');
                 url.searchParams.set('request_vod_ts', request_vod_ts);
