@@ -6,7 +6,7 @@
     "content_scripts": [
         {
             "matches": ["https://vod.sooplive.co.kr/*"],
-            "js": ["content.js"],
+            "js": ["timestamp_manager.js", "soop_timestamp_manager.js", "soop_content.js"],
             "all_frames": true
         },
         {
@@ -20,8 +20,8 @@
             "all_frames": true
         },
         {
-            "matches": ["https://chzzk.naver.com/video/*"],
-            "js": ["chzzk_content.js"],
+            "matches": ["https://chzzk.naver.com/*"],
+            "js": ["timestamp_manager.js", "chzzk_timestamp_manager.js", "chzzk_content.js"],
             "all_frames": true
         }
     ]
