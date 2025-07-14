@@ -25,16 +25,22 @@ if (window !== top){
         return streamer_id;
     }
     
-    function TryGetStreamerID(nickname){
-        const intervalID = setInterval(() => {
-            log("TryGetStreamerID - soop 요청");
-            const streamer_id = GetStreamerID(nickname);
-            if (streamer_id == null) return;
-            log(`streamer_id 찾음: ${streamer_id}`);
-            findVodList(streamer_id, request_vod_ts, "https://vod.sooplive.co.kr");
-            clearInterval(intervalID);
+    function TryGetStreamerID(nickname) {
+        return new Promise((resolve, reject) => {
+            const intervalID = setInterval(() => {
+                log("TryGetStreamerID - soop 요청");
+                const streamer_id = GetStreamerID(nickname);
+                if (streamer_id == null) return;
+                log(`streamer_id 찾음: ${streamer_id}`);
+                clearInterval(intervalID);
+                resolve(streamer_id); // streamer_id를 Promise로 반환
+            }, 100);
 
-        }, 100);
+            setTimeout(() => {
+                clearInterval(intervalID);
+                reject(new Error("streamer_id를 찾지 못했습니다."));
+            }, 5000); // 5초 후 실패 처리
+        });
     }
     
     function searchStreamerInIframe(nickname) {
@@ -79,6 +85,12 @@ if (window !== top){
         iframe.src = reqUrl.toString();
         document.body.appendChild(iframe);
         
+        // 부모 페이지(chzzk)로 STREAMER_ID를 찾았다는 정보 전송
+        window.parent.postMessage({
+            response: "STATUS_STREAM_ID_CHECKED",
+            reqUrl: reqUrl.toString()
+        }, responseTo);
+
         // VOD 리스트 응답 처리
         window.addEventListener('message', function handleVodList(event) {
             if (event.data.response === "VOD_LIST") {
@@ -165,12 +177,27 @@ if (window !== top){
         log('soop 요청 감지, 타임스탬프:', new Date(request_vod_ts).toLocaleString());
         const request_nickname = params.get("szKeyword");
         const decoded_nickname = decodeURI(request_nickname);
-        TryGetStreamerID(decoded_nickname);
-    }
-    else if (p_request === "GET_STREAMER_ID"){
-        log("GET_STREAMER_ID 요청받음");
-        const request_nickname = params.get("szKeyword");
-        const decoded_nickname = decodeURI(request_nickname)
         TryGetStreamerID(decoded_nickname)
+            .then(streamer_id => {
+                findVodList(streamer_id, request_vod_ts, "https://vod.sooplive.co.kr");
+            })
+            .catch(err => {
+                log(err.message);
+            });
+    }
+    else if (p_request == "GET_STREAMER_ID"){
+        log("chzzk의 soop iframe의 soop iframe이 요청 감지");
+        const request_nickname = params.get("szKeyword");
+        const decoded_nickname = decodeURI(request_nickname);
+        TryGetStreamerID(decoded_nickname)
+            .then(streamer_id => {
+                window.parent.postMessage({
+                    response: "STREAMER_ID",
+                    streamer_id: streamer_id
+                }, "https://www.sooplive.co.kr");
+            })
+            .catch(err => {
+                log(err.message);
+            });
     }
 }

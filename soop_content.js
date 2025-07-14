@@ -153,11 +153,10 @@ if (window == top) {
             vodLinker.curProcessingBtn.innerText = "Find VOD";
             vodLinker.curProcessingBtn = null;
         }
-        else if (event.data.response === "STREAMER_ID"){
+        else if (event.data.response === "STATUS_STREAM_ID_CHECKED"){
             log("STREAMER_ID 받음:", event.data.streamer_id);
             vodLinker.clearLastRequest();
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_FINDING_VOD;
-            vodLinker.findVODList(event.data.streamer_id);
         }
     })
 }
