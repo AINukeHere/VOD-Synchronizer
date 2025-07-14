@@ -18,6 +18,11 @@
             "matches": ["https://www.sooplive.co.kr/*"],
             "js": ["streamerID_get.js"],
             "all_frames": true
+        },
+        {
+            "matches": ["https://chzzk.naver.com/video/*"],
+            "js": ["chzzk_content.js"],
+            "all_frames": true
         }
     ]
   }
