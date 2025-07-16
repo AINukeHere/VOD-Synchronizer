@@ -16,7 +16,7 @@
         },
         {
             "matches": ["https://www.sooplive.co.kr/*"],
-            "js": ["streamerID_get.js"],
+            "js": ["StreamerIDManager.js"],
             "all_frames": true
         },
         {

@@ -177,9 +177,6 @@ if (window == top) {
             this.iframe.src = url.toString();
             log('SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
         }
-        hideSearchIframe() {
-            this.iframe.style.display = 'none';
-        }
         // 마우스 입력에 따라 투명화
         setupMouseTracking() {
             // 패널 위에 마우스가 올라가면 투명화 방지
@@ -226,13 +223,6 @@ if (window == top) {
             this.isPanelVisible = false;
             this.closePanel();
         }
-    }
-
-    // 기존 SoopLinker는 패널 내부 기능으로 대체
-    class SoopLinker {
-        constructor(panelInstance) {
-            this.panelInstance = panelInstance;
-        }
         handleSoopVodList(vodLinks, request_vod_ts, request_real_ts) {
             for (let i = 0; i < vodLinks.length; i++) {
                 const link = vodLinks[i];
@@ -242,10 +232,10 @@ if (window == top) {
                 url.searchParams.set('request_real_ts', request_real_ts);
                 window.open(url, "_blank");
                 log('SOOP VOD 열기:', url.toString());
-                this.panelInstance.hideSearchIframe();
             }
         }
     }
+
 
     // URL 파라미터에서 change_second 읽기
     const urlParams = new URLSearchParams(window.location.search);
@@ -282,7 +272,6 @@ if (window == top) {
     
     // SOOP 패널 및 Linker 초기화
     const soopPanel = new SoopPanel();
-    soopLinker = new SoopLinker(soopPanel);
     
     // 메시지 리스너 추가
     window.addEventListener('message', (event) => {
@@ -290,7 +279,7 @@ if (window == top) {
             log("SOOP VOD 리스트 받음:", event.data.resultVODLinks);
             const curDateTime = tsManager.getCurDateTime();
             if (curDateTime){
-                soopLinker.handleSoopVodList(event.data.resultVODLinks, curDateTime.getTime(), Date.now());
+                soopPanel.handleSoopVodList(event.data.resultVODLinks, curDateTime.getTime(), Date.now());
             }
         }
     });
