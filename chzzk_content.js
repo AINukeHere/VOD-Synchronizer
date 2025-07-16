@@ -97,9 +97,9 @@ if (window == top) {
             this.panel.style.top = '80px';
             this.panel.style.right = '0';
             this.panel.style.width = '340px';
-            this.panel.style.height = '630px';
+            this.panel.style.height = '520px';
             this.panel.style.background = 'rgba(255,255,255,0.98)';
-            this.panel.style.border = '2px solid #00d564';
+            this.panel.style.border = '2px solid #007bff'; // 파랑 테두리
             this.panel.style.borderRadius = '10px 0 0 10px';
             this.panel.style.boxShadow = '0 2px 12px rgba(0,0,0,0.15)';
             this.panel.style.zIndex = '10000';
@@ -116,13 +116,13 @@ if (window == top) {
             header.style.display = 'flex';
             header.style.justifyContent = 'space-between';
             header.style.alignItems = 'center';
-            header.style.background = '#00d564';
+            header.style.background = '#007bff'; // 파랑
             header.style.color = 'white';
             header.style.fontWeight = 'bold';
             header.style.fontSize = '16px';
             header.style.padding = '10px 16px';
             header.style.borderRadius = '8px 0 0 0';
-            header.innerText = 'SOOP 패널';
+            header.innerText = 'SOOP 스트리머와 동기화';
             this.panel.appendChild(header);
 
             // 버튼 영역
@@ -135,11 +135,10 @@ if (window == top) {
             btnArea.style.flex = '0 0 auto';
             btnArea.style.height = '55px'; // 고정 높이
 
-
             // SOOP 검색 버튼
             this.soopSyncBtn = document.createElement('button');
             this.soopSyncBtn.innerText = 'SOOP 검색';
-            this.soopSyncBtn.style.background = '#00d564';
+            this.soopSyncBtn.style.background = '#007bff'; // 파랑
             this.soopSyncBtn.style.color = 'white';
             this.soopSyncBtn.style.border = 'none';
             this.soopSyncBtn.style.borderRadius = '5px';
@@ -183,7 +182,7 @@ if (window == top) {
             this.toggleBtn.style.fontSize = '15px';
             this.toggleBtn.style.textAlign = 'center';
             this.toggleBtn.style.lineHeight = '1.2';
-            this.toggleBtn.style.background = '#00d564';
+            this.toggleBtn.style.background = '#007bff'; // 파랑
             this.toggleBtn.style.color = 'white';
             this.toggleBtn.style.border = 'none';
             this.toggleBtn.style.borderRadius = '8px 0 0 8px';
