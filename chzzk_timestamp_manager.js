@@ -1,7 +1,7 @@
 class ChzzkTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
-        this.playTimeTag = null;
+        this.videoTag = null;
         this.videoId = null;
         this.videoInfo = null;
     }
@@ -55,9 +55,9 @@ class ChzzkTimestampManager extends BaseTimestampManager {
 
             if (!newVideoTag || !newVideoId) return;
             
-            if (newVideoTag !== this.playTimeTag || newVideoId !== this.videoId) {
+            if (newVideoTag !== this.videoTag || newVideoId !== this.videoId) {
                 console.log('[chzzk_timestamp_manager.js] VOD 변경 감지됨! 요소 업데이트 중...');
-                this.playTimeTag = newVideoTag;
+                this.videoTag = newVideoTag;
                 this.videoId = newVideoId;
                 
                 // 새로운 VOD 정보 가져오기
@@ -84,11 +84,11 @@ class ChzzkTimestampManager extends BaseTimestampManager {
     }
 
     getCurDateTime(){
-        if (!this.playTimeTag || !this.videoInfo) {
+        if (!this.videoTag || !this.videoInfo) {
             return null;
         }
         
-        const currentTime = this.playTimeTag.currentTime;
+        const currentTime = this.videoTag.currentTime;
         const timestamp = this.calculateTimestamp(this.videoInfo, currentTime);
         return timestamp;
     }
@@ -96,8 +96,8 @@ class ChzzkTimestampManager extends BaseTimestampManager {
     // chzzk용 applyPlaybackTime 메서드 구현
     applyPlaybackTime(playbackTime, doAlert = true) {
         // chzzk에서는 URL 파라미터로 시간 변경을 지원하지 않으므로 비디오 태그를 직접 제어
-        if (this.playTimeTag && this.playTimeTag.tagName === 'VIDEO') {
-            this.playTimeTag.currentTime = playbackTime;
+        if (this.videoTag && this.videoTag.tagName === 'VIDEO') {
+            this.videoTag.currentTime = playbackTime;
             console.log('[chzzk_timestamp_manager.js] 비디오 시간을', playbackTime, '초로 변경했습니다.');
             return true;
         } else {
@@ -106,5 +106,13 @@ class ChzzkTimestampManager extends BaseTimestampManager {
             }
             return false;
         }
+    }
+
+    // 현재 재생 중인지 여부 반환
+    isPlaying() {
+        if (this.videoTag && this.videoTag.tagName === 'VIDEO') {
+            return !this.videoTag.paused;
+        }
+        return false;
     }
 } 

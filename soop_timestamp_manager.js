@@ -1,6 +1,7 @@
 class SoopTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
+        this.videoTag = null;
         this.playTimeTag = null;
         this.streamPeriodTag = null;
     }
@@ -41,12 +42,14 @@ class SoopTimestampManager extends BaseTimestampManager {
         this.observer = new MutationObserver(() => {
             const newPlayTimeTag = document.querySelector('#player > div.player_ctrlBox > div.ctrlBox > div.ctrl > div.time_display > span.time-current');
             const newStreamPeriodTag = document.querySelector("#player_area > div.wrapping.player_bottom > div.broadcast_information > div:nth-child(2) > div.cnt_info > ul > li:nth-child(2) > span");
+            const newVideoTag = document.querySelector('#video');
 
             if (!newPlayTimeTag || !newStreamPeriodTag) return;
-            if (newPlayTimeTag !== this.playTimeTag || newStreamPeriodTag !== this.streamPeriodTag) {
+            if (newPlayTimeTag !== this.playTimeTag || newStreamPeriodTag !== this.streamPeriodTag || newVideoTag !== this.videoTag) {
                 console.log('[soop_timestamp_manager.js] VOD 변경 감지됨! 요소 업데이트 중...');
                 this.playTimeTag = newPlayTimeTag;
                 this.streamPeriodTag = newStreamPeriodTag;
+                this.videoTag = newVideoTag;
             }
         });
 
@@ -82,5 +85,13 @@ class SoopTimestampManager extends BaseTimestampManager {
         url.searchParams.set('change_second', playbackTime);
         window.location.replace(url.toString());
         return true;
+    }
+
+    // 현재 재생 중인지 여부 반환
+    isPlaying() {
+        if (this.videoTag) {
+            return !this.videoTag.paused;
+        }
+        return false;
     }
 } 

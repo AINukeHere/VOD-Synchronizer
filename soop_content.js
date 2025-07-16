@@ -115,10 +115,15 @@ if (window == top) {
     const params = new URLSearchParams(window.location.search);
     const url_request_vod_ts = params.get("request_vod_ts");
     const url_request_real_ts = params.get("request_real_ts");
-    if (url_request_vod_ts && url_request_real_ts){
+    if (url_request_vod_ts){
         const request_vod_ts = parseInt(url_request_vod_ts);
-        const request_real_ts = parseInt(url_request_real_ts);
-        tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+        if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
+            const request_real_ts = parseInt(url_request_real_ts);
+            tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+        }
+        else{
+            tsManager.RequestGlobalTSAsync(request_vod_ts);
+        }
         
         // url 지우기
         const url = new URL(window.location.href);
@@ -129,18 +134,26 @@ if (window == top) {
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-    async function checkOneByOne(vodLinks, request_vod_ts, request_real_ts){
-        if (vodLinks.length > 0){
-            
-            for (let i = 0; i < vodLinks.length; i++) {
-                const link = vodLinks[i];
-
-                const url = new URL(link);
-                url.searchParams.delete('change_second');
-                url.searchParams.set('request_vod_ts', request_vod_ts);
-                url.searchParams.set('request_real_ts', request_real_ts);
-                window.open(url, "_blank");
+    function checkOneByOne(vodLinks){
+        const curDateTime = tsManager.getCurDateTime();
+        if (curDateTime){
+            const request_vod_ts = curDateTime.getTime();
+            const request_real_ts = Date.now();
+            const isPlaying = tsManager.isPlaying();
+            if (vodLinks.length > 0){
+                for (let i = 0; i < vodLinks.length; i++) {
+                    const link = vodLinks[i];
+                    const url = new URL(link);
+                    url.searchParams.delete('change_second');
+                    url.searchParams.set('request_vod_ts', request_vod_ts);
+                    if (isPlaying)
+                        url.searchParams.set('request_real_ts', request_real_ts);
+                    window.open(url, "_blank");
+                }
             }
+        }
+        else{
+            log(`getCurDateTime() returned ${curDateTime}`);
         }
     }
     window.addEventListener('message', (event) => {
@@ -148,21 +161,16 @@ if (window == top) {
             const vodLinks = event.data.resultVODLinks;
             log("VOD_LIST 받음:", vodLinks);
             vodLinker.clearLastRequest();
+            vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
+            vodLinker.curProcessingBtn = null;
+            checkOneByOne(vodLinks);
             
-            const curDateTime = tsManager.getCurDateTime();
-            if (curDateTime){
-                checkOneByOne(vodLinks, curDateTime.getTime(), Date.now());
-                vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
-                vodLinker.curProcessingBtn = null;
-            }
-            else{
-                log(`getCurDateTime() returned ${curDateTime}`);
-            }
         }
         else if (event.data.response === "STATUS_STREAM_ID_CHECKED"){
             log("STREAMER_ID 받음:", event.data.streamer_id);
             vodLinker.clearLastRequest();
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_FINDING_VOD;
+            vodLinker.curProcessingBtn = null;
         }
     })
 }

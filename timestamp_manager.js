@@ -3,8 +3,8 @@ class BaseTimestampManager {
         this.tooltip = null;
         this.observer = null;
         this.isEditing = false;
-        this.requestGlobalTS = null;
-        this.requestSystemTime = null;
+        this.request_vod_ts = null;
+        this.request_real_ts = null;
         this.isControllableState = false;
         this.lastMouseMoveTime = Date.now();
         this.isTooltipVisible = true;
@@ -12,9 +12,11 @@ class BaseTimestampManager {
         this.startMonitoring();
     }
 
-    RequestGlobalTSAsync(global_ts, system_time){
-        this.requestGlobalTS = global_ts;
-        this.requestSystemTime = system_time;
+    // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
+    // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
+    RequestGlobalTSAsync(request_vod_ts, request_real_ts = null){
+        this.request_vod_ts = request_vod_ts;
+        this.request_real_ts = request_real_ts;
     }
 
     startMonitoring() {
@@ -130,14 +132,20 @@ class BaseTimestampManager {
                 this.isControllableState = true;
                 this.tooltip.innerText = timestamp.toLocaleString("ko-KR");
             }
-            if (this.requestGlobalTS != null){
-                const currentSystemTime = Date.now();
-                const timeDifference = currentSystemTime - this.requestSystemTime;
-                const adjustedGlobalTS = this.requestGlobalTS + timeDifference; 
-                if (!this.moveToGlobalTS(adjustedGlobalTS, false))
-                    window.close();
-                this.requestGlobalTS = null;
-                this.requestSystemTime = null;
+            if (this.request_vod_ts != null){
+                if (this.request_real_ts == null){
+                    if (!this.moveToGlobalTS(this.request_vod_ts, false))
+                        window.close();
+                }
+                else{
+                    const currentSystemTime = Date.now();
+                    const timeDifference = currentSystemTime - this.request_real_ts;
+                    const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
+                    if (!this.moveToGlobalTS(adjustedGlobalTS, false))
+                        window.close();
+                }
+                this.request_vod_ts = null;
+                this.request_real_ts = null;
             }
         }, 200);
     }
@@ -153,6 +161,11 @@ class BaseTimestampManager {
 
     getStreamPeriod() {
         throw new Error("getStreamPeriod must be implemented by subclass");
+    }
+
+    // 현재 재생 중인지 여부를 반환하는 추상 메서드
+    isPlaying() {
+        throw new Error("isPlaying must be implemented by subclass");
     }
 
     processTimestampInput(input) {

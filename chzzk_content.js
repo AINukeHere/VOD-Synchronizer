@@ -223,15 +223,23 @@ if (window == top) {
             this.panel.style.right = '-340px';
             this.toggleBtn.style.right = '-112px';
         }
-        handleSoopVodList(vodLinks, request_vod_ts, request_real_ts) {
-            for (let i = 0; i < vodLinks.length; i++) {
-                const link = vodLinks[i];
-                const url = new URL(link);
-                url.searchParams.delete('change_second');
-                url.searchParams.set('request_vod_ts', request_vod_ts);
-                url.searchParams.set('request_real_ts', request_real_ts);
-                window.open(url, "_blank");
-                log('SOOP VOD 열기:', url.toString());
+        handleSoopVodList(vodLinks) {
+            const curDateTime = tsManager.getCurDateTime();
+            if (curDateTime){
+                const request_vod_ts = curDateTime.getTime();
+                const request_real_ts = Date.now();
+                const isPlaying = tsManager.isPlaying();
+                for (let i = 0; i < vodLinks.length; i++) {
+                    const link = vodLinks[i];
+                    const url = new URL(link);
+                    url.searchParams.delete('change_second');
+                    url.searchParams.set('request_vod_ts', request_vod_ts);
+                    if (isPlaying){
+                        url.searchParams.set('request_real_ts', request_real_ts);
+                    }
+                    window.open(url, "_blank");
+                    log('SOOP VOD 열기:', url.toString());
+                }
             }
         }
     }
@@ -246,7 +254,7 @@ if (window == top) {
         
         // tsManager가 초기화되고 비디오 정보를 가져온 후에 시간 변경 실행
         const checkAndJump = () => {
-            if (tsManager.videoInfo && tsManager.playTimeTag) {
+            if (tsManager.videoInfo && tsManager.videoTag) {
                 const streamPeriod = tsManager.getStreamPeriod();
                 if (streamPeriod) {
                     const [streamStartDateTime] = streamPeriod;
@@ -292,10 +300,7 @@ if (window == top) {
     window.addEventListener('message', (event) => {
         if (event.data.response === "VOD_LIST") {
             log("SOOP VOD 리스트 받음:", event.data.resultVODLinks);
-            const curDateTime = tsManager.getCurDateTime();
-            if (curDateTime){
-                soopPanel.handleSoopVodList(event.data.resultVODLinks, curDateTime.getTime(), Date.now());
-            }
+            soopPanel.handleSoopVodList(event.data.resultVODLinks);
         }
     });
     
