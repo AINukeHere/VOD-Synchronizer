@@ -97,7 +97,7 @@ if (window == top) {
             this.panel.style.top = '80px';
             this.panel.style.right = '0';
             this.panel.style.width = '340px';
-            this.panel.style.height = '420px';
+            this.panel.style.height = '630px';
             this.panel.style.background = 'rgba(255,255,255,0.98)';
             this.panel.style.border = '2px solid #00d564';
             this.panel.style.borderRadius = '10px 0 0 10px';
