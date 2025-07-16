@@ -155,12 +155,12 @@ if (window == top) {
         }
         showSearchIframe() {
             if (!tsManager || !tsManager.isControllableState) {
-                alert("VOD 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.");
+                alert("현재 VOD 정보를 가져올 수 없습니다.");
                 return;
             }
             const currentDateTime = tsManager.getCurDateTime();
             if (!currentDateTime) {
-                alert("현재 재생 시간을 가져올 수 없습니다.");
+                alert("현재 VOD의 라이브 당시 시간을 가져올 수 없습니다.");
                 return;
             }
             this.iframe.style.display = 'block';
