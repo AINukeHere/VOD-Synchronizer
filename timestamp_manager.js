@@ -9,6 +9,7 @@ class BaseTimestampManager {
         this.lastMouseMoveTime = Date.now();
         this.isTooltipVisible = true;
         this.mouseCheckInterval = null;
+        this.videoTag = null;
         this.startMonitoring();
     }
 

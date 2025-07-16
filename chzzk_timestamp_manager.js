@@ -1,7 +1,6 @@
 class ChzzkTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
-        this.videoTag = null;
         this.videoId = null;
         this.videoInfo = null;
     }

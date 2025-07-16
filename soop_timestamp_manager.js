@@ -1,7 +1,6 @@
 class SoopTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
-        this.videoTag = null;
         this.playTimeTag = null;
         this.streamPeriodTag = null;
     }
