@@ -224,6 +224,7 @@ if (window == top) {
                 this.toggleBtn.style.opacity = '0.1';
             }
             this.isPanelVisible = false;
+            this.closePanel();
         }
     }
 
