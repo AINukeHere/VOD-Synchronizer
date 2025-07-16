@@ -205,4 +205,42 @@ if (window !== top){
                 log(err.message);
             });
     }
+    
+    // only_search가 있는 경우 검색창만 남김
+    (function waitForGnbAndSearchArea() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('only_search') === '1') {
+            const gnb = document.querySelector('#soop-gnb');
+            const searchArea = document.querySelector('.sc-hvigdm.khASjK.topSearchArea');
+            const backBtn = document.querySelector('#topSearchArea > div > div > button');
+            let allDone = true;
+    
+            if (gnb) {
+                Array.from(gnb.parentNode.children).forEach(sibling => {
+                    if (sibling !== gnb) sibling.style.display = 'none';
+                });
+            } else {
+                allDone = false;
+            }
+    
+            if (searchArea) {
+                searchArea.style.display="flow";
+                // 형제 노드 중 searchArea가 아닌 것들은 DOM에서 제거
+                Array.from(searchArea.parentNode.children).forEach(sibling => {
+                    if (sibling !== searchArea) sibling.remove();
+                });
+            } else {
+                allDone = false;
+            }
+    
+            if (backBtn) {
+                backBtn.style.display="none";
+            } else {
+                allDone = false;
+            }
+    
+            document.body.style.background = 'white';
+            if (!allDone) setTimeout(waitForGnbAndSearchArea, 200);
+        }
+    })();
 }
