@@ -3,6 +3,10 @@ if (window !== top){
         console.log('[vod_get.js]', ...data);
     }
     function GetVodList(request_vod_datetime){
+        const textToExplainEmpty = document.querySelector('#contents > div > div > section > section.vod-list > ul > li > p');
+        if (textToExplainEmpty && textToExplainEmpty.innerText === '등록된 VOD가 없습니다.'){
+            return [];
+        }
         const dateSpanElements = document.querySelectorAll('#contents > div > div > section > section.vod-list > ul > li > div.vod-info > div > span.date');
         const vodLinkList = document.querySelectorAll('#contents > div > div > section > section.vod-list > ul > li > div.vod-info > p > a');
         if (dateSpanElements.length == 0) return null;
@@ -58,7 +62,7 @@ if (window !== top){
         const intervalID = setInterval(() => {
             const resultVODLinks = GetVodList(request_vod_datetime);
             log("TryGetVodList");
-            if (resultVODLinks == null) return;
+            if (resultVODLinks === null) return;
             // 부모 페이지로 VOD List 를 보냄
             const message = {
                 response: "SOOP_VOD_LIST",

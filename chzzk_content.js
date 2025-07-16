@@ -240,6 +240,8 @@ if (window == top) {
         setupMouseTracking() {
             // 패널 위에 마우스가 올라가면 투명화 방지
             let isMouseOnPanel = false;
+            // 마지막 입력(마우스/키보드) 시간
+            this.lastInputTime = Date.now();
             this.panel.addEventListener('mouseenter', () => {
                 isMouseOnPanel = true;
                 this.showPanelWithOpacity();
@@ -248,8 +250,14 @@ if (window == top) {
                 isMouseOnPanel = false;
             });
 
+            // 마우스 이동 시 입력 시간 갱신
             document.addEventListener('mousemove', () => {
-                this.lastMouseMoveTime = Date.now();
+                this.lastInputTime = Date.now();
+                this.showPanelWithOpacity();
+            });
+            // 키보드 입력 시 입력 시간 갱신
+            document.addEventListener('keydown', () => {
+                this.lastInputTime = Date.now();
                 this.showPanelWithOpacity();
             });
             document.addEventListener('mouseleave', () => {
@@ -257,8 +265,8 @@ if (window == top) {
             });
             this.mouseCheckInterval = setInterval(() => {
                 const currentTime = Date.now();
-                const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
-                if (timeSinceLastMove >= 2000 && this.isPanelVisible && !isMouseOnPanel) {
+                const timeSinceLastInput = currentTime - this.lastInputTime;
+                if (timeSinceLastInput >= 2000 && this.isPanelVisible && !isMouseOnPanel) {
                     this.hidePanelWithOpacity();
                 }
             }, 200);
@@ -280,13 +288,17 @@ if (window == top) {
                 this.toggleBtn.style.opacity = '0.1';
             }
             this.isPanelVisible = false;
-            this.closePanel();
+            // this.closePanel();
         }
         hideCompletely() {
             this.panel.style.right = '-340px';
             this.toggleBtn.style.right = '-112px';
         }
         handleSoopVodList(vodLinks) {
+            if (vodLinks.length == 0){
+                alert('동기화 가능한 VOD가 없습니다.');
+                return;
+            }
             const curDateTime = tsManager.getCurDateTime();
             if (curDateTime){
                 const request_vod_ts = curDateTime.getTime();
