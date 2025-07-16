@@ -6,6 +6,8 @@ class BaseTimestampManager {
         this.requestGlobalTS = null;
         this.requestSystemTime = null;
         this.isControllableState = false;
+        this.mouseTimeout = null;
+        this.isTooltipVisible = true;
         this.startMonitoring();
     }
 
@@ -17,6 +19,52 @@ class BaseTimestampManager {
     startMonitoring() {
         this.observeDOMChanges();
         this.createTooltip();
+        this.setupMouseTracking();
+    }
+
+    setupMouseTracking() {
+        let mouseTimeout;
+        
+        const resetMouseTimeout = () => {
+            if (mouseTimeout) {
+                clearTimeout(mouseTimeout);
+            }
+            
+            // 툴팁을 불투명하게 만들기
+            if (this.tooltip && !this.isTooltipVisible) {
+                this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
+                this.tooltip.style.opacity = '1';
+                this.isTooltipVisible = true;
+            }
+            
+            // 2초 후에 툴팁을 투명하게 만들기
+            mouseTimeout = setTimeout(() => {
+                if (this.tooltip && this.isTooltipVisible && !this.isEditing) {
+                    this.tooltip.style.transition = 'opacity 0.5s ease-in-out';
+                    this.tooltip.style.opacity = '0';
+                    this.isTooltipVisible = false;
+                }
+            }, 2000);
+            
+            this.mouseTimeout = mouseTimeout;
+        };
+
+        // 마우스 움직임 감지
+        document.addEventListener('mousemove', resetMouseTimeout);
+        
+        // 마우스가 툴팁 위에 있을 때도 투명화 방지
+        if (this.tooltip) {
+            this.tooltip.addEventListener('mouseenter', () => {
+                if (this.mouseTimeout) {
+                    clearTimeout(this.mouseTimeout);
+                }
+                if (this.tooltip && !this.isTooltipVisible) {
+                    this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
+                    this.tooltip.style.opacity = '1';
+                    this.isTooltipVisible = true;
+                }
+            });
+        }
     }
 
     createTooltip() {
@@ -33,6 +81,7 @@ class BaseTimestampManager {
             this.tooltip.style.whiteSpace = "nowrap";
             this.tooltip.style.display = "block";
             this.tooltip.style.zIndex = "1000";
+            this.tooltip.style.opacity = "1";
             this.tooltip.contentEditable = "false";
             document.body.appendChild(this.tooltip);
 
@@ -42,6 +91,12 @@ class BaseTimestampManager {
                 this.isEditing = true;
                 this.tooltip.style.outline = "2px solid red"; 
                 this.tooltip.style.boxShadow = "0 0 10px red";
+                // 편집 중일 때는 투명화 방지
+                if (this.tooltip && !this.isTooltipVisible) {
+                    this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
+                    this.tooltip.style.opacity = '1';
+                    this.isTooltipVisible = true;
+                }
             });
 
             this.tooltip.addEventListener("blur", () => {
