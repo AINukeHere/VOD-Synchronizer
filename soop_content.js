@@ -149,9 +149,15 @@ if (window == top) {
             log("VOD_LIST 받음:", vodLinks);
             vodLinker.clearLastRequest();
             
-            checkOneByOne(vodLinks, tsManager.getCurDateTime().getTime(), Date.now());
-            vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
-            vodLinker.curProcessingBtn = null;
+            const curDateTime = tsManager.getCurDateTime();
+            if (curDateTime){
+                checkOneByOne(vodLinks, curDateTime.getTime(), Date.now());
+                vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
+                vodLinker.curProcessingBtn = null;
+            }
+            else{
+                log(`getCurDateTime() returned ${curDateTime}`);
+            }
         }
         else if (event.data.response === "STATUS_STREAM_ID_CHECKED"){
             log("STREAMER_ID 받음:", event.data.streamer_id);

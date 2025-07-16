@@ -66,6 +66,7 @@ class SoopTimestampManager extends BaseTimestampManager {
     }
 
     getCurDateTime(){
+        if (!this.playTimeTag) return null;
         const playbackTimeStr = this.playTimeTag.innerText.trim();
         const broadcastInfo = this.streamPeriodTag.attributes['tip'].value;
         const timestamp = this.calculateTimestamp(broadcastInfo, playbackTimeStr);

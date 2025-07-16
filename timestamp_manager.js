@@ -6,8 +6,9 @@ class BaseTimestampManager {
         this.requestGlobalTS = null;
         this.requestSystemTime = null;
         this.isControllableState = false;
-        this.mouseTimeout = null;
+        this.lastMouseMoveTime = Date.now();
         this.isTooltipVisible = true;
+        this.mouseCheckInterval = null;
         this.startMonitoring();
     }
 
@@ -23,47 +24,42 @@ class BaseTimestampManager {
     }
 
     setupMouseTracking() {
-        let mouseTimeout;
-        
-        const resetMouseTimeout = () => {
-            if (mouseTimeout) {
-                clearTimeout(mouseTimeout);
-            }
-            
-            // 툴팁을 불투명하게 만들기
-            if (this.tooltip && !this.isTooltipVisible) {
-                this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
-                this.tooltip.style.opacity = '1';
-                this.isTooltipVisible = true;
-            }
-            
-            // 2초 후에 툴팁을 투명하게 만들기
-            mouseTimeout = setTimeout(() => {
-                if (this.tooltip && this.isTooltipVisible && !this.isEditing) {
-                    this.tooltip.style.transition = 'opacity 0.5s ease-in-out';
-                    this.tooltip.style.opacity = '0';
-                    this.isTooltipVisible = false;
-                }
-            }, 2000);
-            
-            this.mouseTimeout = mouseTimeout;
-        };
+        // 마우스 움직임 감지 - 시간만 업데이트
+        document.addEventListener('mousemove', () => {
+            this.lastMouseMoveTime = Date.now();
+            this.showTooltip();
+        });
 
-        // 마우스 움직임 감지
-        document.addEventListener('mousemove', resetMouseTimeout);
-        
-        // 마우스가 툴팁 위에 있을 때도 투명화 방지
+        // 마우스가 페이지 밖으로 나갈 때 툴팁 숨기기
+        document.addEventListener('mouseleave', () => {
+            this.hideTooltip();
+        });
+
+        // 0.2초마다 마우스 상태 체크
+        this.mouseCheckInterval = setInterval(() => {
+            const currentTime = Date.now();
+            const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
+            
+            // 2초 이상 마우스가 움직이지 않았고, 편집 중이 아니면 툴팁 숨기기
+            if (timeSinceLastMove >= 2000 && !this.isEditing && this.isTooltipVisible) {
+                this.hideTooltip();
+            }
+        }, 200);
+    }
+
+    showTooltip() {
         if (this.tooltip) {
-            this.tooltip.addEventListener('mouseenter', () => {
-                if (this.mouseTimeout) {
-                    clearTimeout(this.mouseTimeout);
-                }
-                if (this.tooltip && !this.isTooltipVisible) {
-                    this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
-                    this.tooltip.style.opacity = '1';
-                    this.isTooltipVisible = true;
-                }
-            });
+            this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
+            this.tooltip.style.opacity = '1';
+            this.isTooltipVisible = true;
+        }
+    }
+
+    hideTooltip() {
+        if (this.tooltip) {
+            this.tooltip.style.transition = 'opacity 0.5s ease-in-out';
+            this.tooltip.style.opacity = '0.1';
+            this.isTooltipVisible = false;
         }
     }
 
@@ -92,11 +88,7 @@ class BaseTimestampManager {
                 this.tooltip.style.outline = "2px solid red"; 
                 this.tooltip.style.boxShadow = "0 0 10px red";
                 // 편집 중일 때는 투명화 방지
-                if (this.tooltip && !this.isTooltipVisible) {
-                    this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
-                    this.tooltip.style.opacity = '1';
-                    this.isTooltipVisible = true;
-                }
+                this.showTooltip();
             });
 
             this.tooltip.addEventListener("blur", () => {
@@ -147,7 +139,7 @@ class BaseTimestampManager {
                 this.requestGlobalTS = null;
                 this.requestSystemTime = null;
             }
-        }, 1000);
+        }, 200);
     }
 
     // 플랫폼별로 구현해야 하는 추상 메서드들
