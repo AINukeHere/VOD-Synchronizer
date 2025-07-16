@@ -54,13 +54,14 @@ class SoopTimestampManager extends BaseTimestampManager {
     }
 
     getStreamPeriod(){
-        const broadcastInfo = this.streamPeriodTag.attributes['tip'].value;
-        const match = broadcastInfo.match(/방송시간\s*:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ~ (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
-
-        if (!match) {
-            return null;
-        }
-        const startTime = new Date(match[1]);
+        if (!this.streamPeriodTag) return null;
+            const broadcastInfo = this.streamPeriodTag.attributes['tip'].value;
+            const match = broadcastInfo.match(/방송시간\s*:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ~ (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+            
+            if (!match) {
+                return null;
+            }
+            const startTime = new Date(match[1]);
         const endTime = new Date(match[2]);
         return [startTime, endTime];
     }

@@ -3,7 +3,6 @@ if (window == top) {
     const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
     const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
     const tsManager = new ChzzkTimestampManager();
-    let soopLinker = null;
     
     function log(...data){
         console.log('[chzzk_content.js]', ...data);
@@ -15,7 +14,6 @@ if (window == top) {
             this.toggleBtn = null;
             this.iframe = null;
             this.soopSyncBtn = null;
-            this.closeBtn = null;
             this.isPanelOpen = false; // 기본값: 접힘
             this.isPanelVisible = true;
             this.lastMouseMoveTime = Date.now();
@@ -145,14 +143,12 @@ if (window == top) {
         }
         openPanel() {
             this.panel.style.right = '0';
-            this.panel.style.opacity = '1';
             this.toggleBtn.innerHTML = '▼ VOD Sync';
             this.toggleBtn.style.right = '282px'; // 패널 width - 버튼 height/2
             this.isPanelOpen = true;
         }
         closePanel() {
             this.panel.style.right = '-340px';
-            this.panel.style.opacity = '0.1';
             this.toggleBtn.innerHTML = '▲ VOD Sync';
             this.toggleBtn.style.right = '-56px';
             this.isPanelOpen = false;
@@ -183,7 +179,7 @@ if (window == top) {
             let isMouseOnPanel = false;
             this.panel.addEventListener('mouseenter', () => {
                 isMouseOnPanel = true;
-                this.showPanel();
+                this.showPanelWithOpacity();
             });
             this.panel.addEventListener('mouseleave', () => {
                 isMouseOnPanel = false;
@@ -191,20 +187,20 @@ if (window == top) {
 
             document.addEventListener('mousemove', () => {
                 this.lastMouseMoveTime = Date.now();
-                this.showPanel();
+                this.showPanelWithOpacity();
             });
             document.addEventListener('mouseleave', () => {
-                this.hidePanel();
+                this.hidePanelWithOpacity();
             });
             this.mouseCheckInterval = setInterval(() => {
                 const currentTime = Date.now();
                 const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
                 if (timeSinceLastMove >= 2000 && this.isPanelVisible && !isMouseOnPanel) {
-                    this.hidePanel();
+                    this.hidePanelWithOpacity();
                 }
             }, 200);
         }
-        showPanel() {
+        showPanelWithOpacity() {
             this.panel.style.transition = 'opacity 0.3s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
             this.panel.style.opacity = '1';
             if (this.toggleBtn) {
@@ -213,7 +209,7 @@ if (window == top) {
             }
             this.isPanelVisible = true;
         }
-        hidePanel() {
+        hidePanelWithOpacity() {
             this.panel.style.transition = 'opacity 0.5s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
             this.panel.style.opacity = '0.1';
             if (this.toggleBtn) {
@@ -222,6 +218,10 @@ if (window == top) {
             }
             this.isPanelVisible = false;
             this.closePanel();
+        }
+        hideCompletely() {
+            this.panel.style.right = '-340px';
+            this.toggleBtn.style.right = '-112px';
         }
         handleSoopVodList(vodLinks, request_vod_ts, request_real_ts) {
             for (let i = 0; i < vodLinks.length; i++) {
@@ -272,6 +272,21 @@ if (window == top) {
     
     // SOOP 패널 및 Linker 초기화
     const soopPanel = new SoopPanel();
+
+    // VOD 페이지 여부에 따라 패널/토글 버튼 show/hide
+    let lastIsVodPage = null;
+    function checkVodPageAndTogglePanel() {
+        const isVodPage = window.location.pathname.includes('/video/');
+        if (isVodPage !== lastIsVodPage) {
+            lastIsVodPage = isVodPage;
+            if (isVodPage) {
+                soopPanel.closePanel();
+            } else {
+                soopPanel.hideCompletely();
+            }
+        }
+    }
+    setInterval(checkVodPageAndTogglePanel, 500);
     
     // 메시지 리스너 추가
     window.addEventListener('message', (event) => {
