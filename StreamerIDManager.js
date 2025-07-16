@@ -5,6 +5,10 @@ if (window !== top) {
             this.BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
             this.BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
             this.isChzzkRequest = false;
+            this.searchIframe = document.createElement('iframe');
+            this.searchIframe.style.display = 'none';
+            document.body.appendChild(this.searchIframe);
+
             this.curProcessingBtn = null;
             this.request_vod_ts = null;
             this.log('in iframe');
@@ -54,12 +58,9 @@ if (window !== top) {
             url.searchParams.set("szActype", "input_field");
             url.searchParams.set("p_request", "GET_STREAMER_ID");
             this.log('검색 결과 페이지 iframe 열기:', url.toString());
-            const searchIframe = document.createElement('iframe');
-            searchIframe.style.display = 'none';
-            searchIframe.src = url.toString();
-            document.body.appendChild(searchIframe);
+            this.searchIframe.src = url.toString();
         }
-        findVodList(streamerId, targetTimestamp, responseTo) {
+        findVodListInIframe(streamerId, targetTimestamp) {
             const targetDateTime = new Date(targetTimestamp);
             const year = targetDateTime.getFullYear();
             const month = targetDateTime.getMonth() + 1;
@@ -72,25 +73,7 @@ if (window !== top) {
             reqUrl.searchParams.set("p_request", "GET_VOD_LIST");
             reqUrl.searchParams.set("request_vod_ts", targetDateTime.getTime());
             this.log('SOOP VOD 리스트 요청:', reqUrl.toString());
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = reqUrl.toString();
-            document.body.appendChild(iframe);
-            window.parent.postMessage({
-                response: "STATUS_STREAM_ID_CHECKED",
-                reqUrl: reqUrl.toString()
-            }, responseTo);
-            window.addEventListener('message', function handleVodList(event) {
-                if (event.data.response === "VOD_LIST") {
-                    this.log("VOD 리스트 받음:", event.data.resultVODLinks);
-                    window.parent.postMessage({
-                        response: "VOD_LIST",
-                        resultVODLinks: event.data.resultVODLinks,
-                    }, responseTo);
-                    document.body.removeChild(iframe);
-                    window.removeEventListener('message', handleVodList);
-                }
-            }.bind(this));
+            this.searchIframe.src = reqUrl.toString();
         }
         updateFindVodButtons() {
             setInterval(() => {
@@ -136,8 +119,16 @@ if (window !== top) {
                     const streamer_id = event.data.streamer_id;
                     this.log('streamer_id: ', streamer_id);
                     if (streamer_id != null) {
-                        this.findVodList(streamer_id, this.request_vod_ts, "https://chzzk.naver.com");
+                        this.findVodListInIframe(streamer_id, this.request_vod_ts);
                     }
+                }
+                if (event.data.response === "SOOP_VOD_LIST") {
+                    this.curProcessingBtn.innerText = this.BTN_TEXT_IDLE;
+                    this.log("VOD 리스트 받음:", event.data.resultVODLinks);
+                    window.parent.postMessage({
+                        response: "SOOP_VOD_LIST",
+                        resultVODLinks: event.data.resultVODLinks,
+                    }, "https://chzzk.naver.com");
                 }
             });
         }
@@ -147,7 +138,17 @@ if (window !== top) {
             const decoded_nickname = decodeURI(request_nickname);
             this.tryGetStreamerID(decoded_nickname)
                 .then(streamer_id => {
-                    this.findVodList(streamer_id, this.request_vod_ts, "https://vod.sooplive.co.kr");
+                    this.findVodListInIframe(streamer_id, this.request_vod_ts, "https://vod.sooplive.co.kr");
+                    window.addEventListener("message", (event) => {
+                        if (event.data.response === "SOOP_VOD_LIST") {
+                            this.log("VOD 리스트 받음:", event.data.resultVODLinks);
+                            window.parent.postMessage({
+                                response: "SOOP_VOD_LIST",
+                                resultVODLinks: event.data.resultVODLinks,
+                            }, "https://vod.sooplive.co.kr");
+                        }
+                    });
+
                 })
                 .catch(err => {
                     this.log(err.message);

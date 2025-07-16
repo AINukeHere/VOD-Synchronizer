@@ -127,25 +127,33 @@ class BaseTimestampManager {
             if (!this.tooltip || this.isEditing) return;
             
             const timestamp = this.getCurDateTime();
-
+            
             if (timestamp) {
                 this.isControllableState = true;
                 this.tooltip.innerText = timestamp.toLocaleString("ko-KR");
             }
-            if (this.request_vod_ts != null){
-                if (this.request_real_ts == null){
-                    if (!this.moveToGlobalTS(this.request_vod_ts, false))
-                        window.close();
+            if (this.isPlaying() === true && this.request_vod_ts != null){
+                const streamPeriod = this.getStreamPeriod();
+                if (streamPeriod){
+
+                    if (this.request_real_ts == null){
+                        log("시차 적용하지않고 동기화 시도");
+                        if (!this.moveToGlobalTS(this.request_vod_ts, false)){
+                            window.close();
+                        }
+                    }
+                    else{
+                        log("시차 적용하여 동기화 시도");
+                        const currentSystemTime = Date.now();
+                        const timeDifference = currentSystemTime - this.request_real_ts;
+                        const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
+                        if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
+                            window.close();
+                        }
+                    }
+                    this.request_vod_ts = null;
+                    this.request_real_ts = null;
                 }
-                else{
-                    const currentSystemTime = Date.now();
-                    const timeDifference = currentSystemTime - this.request_real_ts;
-                    const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
-                    if (!this.moveToGlobalTS(adjustedGlobalTS, false))
-                        window.close();
-                }
-                this.request_vod_ts = null;
-                this.request_real_ts = null;
             }
         }, 200);
     }

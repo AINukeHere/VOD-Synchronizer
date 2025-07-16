@@ -61,7 +61,7 @@ if (window !== top){
             if (resultVODLinks == null) return;
             // 부모 페이지로 VOD List 를 보냄
             const message = {
-                response: "VOD_LIST",
+                response: "SOOP_VOD_LIST",
                 resultVODLinks: resultVODLinks
             };
             window.parent.postMessage(message, "https://www.sooplive.co.kr");
@@ -84,7 +84,7 @@ if (window !== top){
                 // 부모 페이지로 VOD List 를 보냄
                 event.source.postMessage(
                     {
-                        response: "VOD_LIST",
+                        response: "SOOP_VOD_LIST",
                         request_datetime: event.data.datetime,
                         resultVODLinks: resultVODLinks
                     }, 

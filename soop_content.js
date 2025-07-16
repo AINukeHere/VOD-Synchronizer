@@ -157,9 +157,9 @@ if (window == top) {
         }
     }
     window.addEventListener('message', (event) => {
-        if (event.data.response === "VOD_LIST"){
+        if (event.data.response === "SOOP_VOD_LIST"){
             const vodLinks = event.data.resultVODLinks;
-            log("VOD_LIST 받음:", vodLinks);
+            log("SOOP_VOD_LIST 받음:", vodLinks);
             vodLinker.clearLastRequest();
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
             vodLinker.curProcessingBtn = null;

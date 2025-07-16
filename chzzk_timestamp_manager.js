@@ -110,9 +110,8 @@ class ChzzkTimestampManager extends BaseTimestampManager {
 
     // 현재 재생 중인지 여부 반환
     isPlaying() {
-        if (this.videoTag && this.videoTag.tagName === 'VIDEO') {
-            return !this.videoTag.paused;
-        }
+        if (this.videoTag && this.videoTag.currentTime > 0 && !this.videoTag.paused && !this.videoTag.ended && this.videoTag.readyState > 2)
+            return true;
         return false;
     }
 } 

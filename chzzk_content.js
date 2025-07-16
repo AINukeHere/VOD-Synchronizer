@@ -1,12 +1,68 @@
+
+const BTN_TEXT_IDLE = "Find VOD";
+const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
+const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
 if (window == top) {
-    const BTN_TEXT_IDLE = "Find VOD";
-    const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
-    const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
+
     const tsManager = new ChzzkTimestampManager();
-    
     function log(...data){
-        console.log('[chzzk_content.js]', ...data);
+        console.log('[chzzk_content.js:outframe]', ...data);
     }
+    // URL 파라미터 처리
+    const urlParams = new URLSearchParams(window.location.search);
+    const changeSecond = urlParams.get('change_second');
+    const url_request_vod_ts = urlParams.get("request_vod_ts");
+    const url_request_real_ts = urlParams.get("request_real_ts");
+    
+    if (changeSecond) {
+        log('change_second 파라미터 감지:', changeSecond);
+        
+        // tsManager가 초기화되고 비디오 정보를 가져온 후에 시간 변경 실행
+        const checkAndJump = () => {
+            if (tsManager.videoInfo && tsManager.videoTag) {
+                const streamPeriod = tsManager.getStreamPeriod();
+                if (streamPeriod) {
+                    const [streamStartDateTime] = streamPeriod;
+                    const targetTime = streamStartDateTime.getTime() + parseInt(changeSecond) * 1000;
+                    
+                    log('타겟 시간으로 점프:', new Date(targetTime).toLocaleString());
+                    tsManager.moveToGlobalTS(targetTime, false);
+                    
+                    // URL에서 change_second 파라미터 제거
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('change_second');
+                    window.history.replaceState({}, '', url.toString());
+                }
+            } else {
+                // 아직 초기화되지 않았으면 잠시 후 다시 시도
+                setTimeout(checkAndJump, 1000);
+            }
+        };
+        
+        // 초기 체크 시작
+        setTimeout(checkAndJump, 1000);
+    }
+    if (url_request_vod_ts){
+        const request_vod_ts = parseInt(url_request_vod_ts);
+        if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
+            const request_real_ts = parseInt(url_request_real_ts);
+            tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+        }
+        else{
+            tsManager.RequestGlobalTSAsync(request_vod_ts);
+        }
+        
+        // url 지우기
+        const url = new URL(window.location.href);
+        url.searchParams.delete('request_vod_ts');
+        url.searchParams.delete('request_real_ts');
+        window.history.replaceState({}, '', url.toString());
+    }
+
+    let vodLinker = null;
+    let lastIsVodPage = null;
+    let soopPanel = null;
+    
 
     class SoopPanel {
         constructor() {
@@ -19,6 +75,13 @@ if (window == top) {
             this.lastMouseMoveTime = Date.now();
             this.mouseCheckInterval = null;
             this.init();
+            // 메시지 리스너 추가
+            window.addEventListener('message', (event) => {
+                if (event.data.response === "SOOP_VOD_LIST") {
+                    log("SOOP VOD 리스트 받음:", event.data.resultVODLinks);
+                    soopPanel.handleSoopVodList(event.data.resultVODLinks);
+                }
+            });
         }
         init() {
             this.createPanel();
@@ -85,7 +148,7 @@ if (window == top) {
             this.soopSyncBtn.style.fontWeight = 'bold';
             this.soopSyncBtn.style.cursor = 'pointer';
             this.soopSyncBtn.addEventListener('click', () => {
-                this.showSearchIframe();
+                this.startSearchWithIframe();
             });
             btnArea.appendChild(this.soopSyncBtn);
 
@@ -153,7 +216,7 @@ if (window == top) {
             this.toggleBtn.style.right = '-56px';
             this.isPanelOpen = false;
         }
-        showSearchIframe() {
+        startSearchWithIframe() {
             if (!tsManager || !tsManager.isControllableState) {
                 alert("현재 VOD 정보를 가져올 수 없습니다.");
                 return;
@@ -244,49 +307,143 @@ if (window == top) {
         }
     }
 
+    class VODLinker{
+        constructor(){
+            this.iframeTag = null;
+            this.curProcessBtn = null;
+            this.init();
+        }
 
-    // URL 파라미터에서 change_second 읽기
-    const urlParams = new URLSearchParams(window.location.search);
-    const changeSecond = urlParams.get('change_second');
-    
-    if (changeSecond) {
-        log('change_second 파라미터 감지:', changeSecond);
-        
-        // tsManager가 초기화되고 비디오 정보를 가져온 후에 시간 변경 실행
-        const checkAndJump = () => {
-            if (tsManager.videoInfo && tsManager.videoTag) {
-                const streamPeriod = tsManager.getStreamPeriod();
-                if (streamPeriod) {
-                    const [streamStartDateTime] = streamPeriod;
-                    const targetTime = streamStartDateTime.getTime() + parseInt(changeSecond) * 1000;
-                    
-                    log('타겟 시간으로 점프:', new Date(targetTime).toLocaleString());
-                    tsManager.moveToGlobalTS(targetTime, false);
-                    
-                    // URL에서 change_second 파라미터 제거
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('change_second');
-                    window.history.replaceState({}, '', url.toString());
+        init(){
+            this.iframeTag = document.createElement('iframe');
+            this.iframeTag.style.display = 'none';
+            document.body.appendChild(this.iframeTag);
+            setInterval(this.addChzzkSyncButtons, 200);
+            // 메시지 리스너 추가
+            window.addEventListener('message', (event) => {
+                if (event.data.response === "CHZZK_VOD") {
+                    vodLinker.curProcessBtn.innerText = BTN_TEXT_IDLE;
+                    vodLinker.curProcessBtn = null;
+                    log("CHZZK VOD 리스트 받음:", event.data.vod_link);
+                    vodLinker.handleChzzkVodLink(event.data.vod_link);
                 }
-            } else {
-                // 아직 초기화되지 않았으면 잠시 후 다시 시도
-                setTimeout(checkAndJump, 1000);
-            }
-        };
+                else if (event.data.response === "CHZZK_VOD_NOT_FOUND"){
+                    vodLinker.curProcessBtn.innerText = BTN_TEXT_IDLE;
+                    vodLinker.curProcessBtn = null;
+                    log("CHZZK VOD를 찾지 못했다고 응답받음. 사유:",event.data.reason);
+                    alert("동기화 가능한 VOD를 찾지 못했습니다.");
+                }
+                else if (event.data.response === 'CHZZK_VOD_FINDER_STATUS'){
+                    vodLinker.curProcessBtn.innerText = `${event.data.pageNum}페이지에서 ${BTN_TEXT_FINDING_VOD}[${event.data.retryCount}]`;
+                }
+            });
+        }
         
-        // 초기 체크 시작
-        setTimeout(checkAndJump, 1000);
+        // 치지직 검색 결과에 동기화 버튼 추가 (SOOP 방식과 동일)
+        addChzzkSyncButtons() {
+            if (!lastIsVodPage) return;
+
+            const searchHeader = document.querySelector(
+                '#root > div > div.toolbar_container__k2trF > div.search_container__8jbrv.search_is_focus__QJ-2o > div > div.search_header__b5k9O'
+            );
+            if (searchHeader) return; // 검색 결과 없음 → 버튼 생성 X
+
+            const searchResults = document.querySelectorAll(
+                '#root > div > div.toolbar_container__k2trF > div.search_container__8jbrv.search_is_focus__QJ-2o > div > ul > li > a'
+            );
+            if (!searchResults.length) return;
+
+            searchResults.forEach(element => {
+                if (element.querySelector('.chzzk-sync-btn')) return; // 이미 버튼 있음
+
+                const button = document.createElement('button');
+                button.className = 'chzzk-sync-btn';
+                button.innerText = BTN_TEXT_IDLE;
+                button.style.background = '#00d564';
+                button.style.color = 'black';
+                button.style.fontSize = '12px';
+                button.style.marginLeft = '12px';
+                button.style.padding = '4px 8px';
+                button.style.border = 'none';
+                button.style.borderRadius = '4px';
+                button.style.cursor = 'pointer';
+
+                button.addEventListener('click', (e)=>{
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (vodLinker.curProcessBtn){
+                        alert('이미 처리중인 작업이 있습니다');
+                        return;
+                    }
+                    vodLinker.curProcessBtn = button;
+                    const searchWordSpan = button.parentElement.querySelector('.search_keyword__mAhns');
+                    
+                    if (!searchWordSpan){
+                        return;
+                    }
+        
+                    button.innerText = BTN_TEXT_FINDING_STREAMER_ID;
+                    const keyword = searchWordSpan.innerText;
+                    log(`검색어: ${keyword}`);
+                    const channelSearchAPI = new URL(`https://api.chzzk.naver.com/service/v1/search/channels`);
+                    const encodedKeyword = encodeURI(keyword);
+                    channelSearchAPI.searchParams.set('keyword', encodedKeyword);
+                    channelSearchAPI.searchParams.set('offset', 0);
+                    channelSearchAPI.searchParams.set('size', 50);
+                    fetch(channelSearchAPI.toString())
+                    .then(response=>response.json())
+                    .then(result=>{
+                        if (result.code !== 200) return;
+        
+                        const data = result.content.data;
+                        if (data.length > 0){
+                            const channelObj = data[0].channel;
+                            const channel_id = channelObj.channelId;
+                            const channel_name = channelObj.channelName;
+                            
+                            // 스트리머 ID로 iframe VOD 페이지에서 찾도록 함
+                            const vodListUrl = new URL(`https://chzzk.naver.com/${channel_id}/videos`);
+                            vodListUrl.searchParams.set('videoType', 'REPLAY');
+                            vodListUrl.searchParams.set('sortType', 'LATEST');
+                            vodListUrl.searchParams.set('page', 1);
+                            vodListUrl.searchParams.set('p_request', 'GET_VOD');
+                            vodListUrl.searchParams.set('request_vod_ts', tsManager.getCurDateTime().getTime());
+                            vodLinker.curProcessBtn.innerText = BTN_TEXT_FINDING_VOD;
+                            vodLinker.iframeTag.src = vodListUrl.toString();
+                        }
+                        else{
+                            button.innerText = BTN_TEXT_IDLE;
+                            alert(`${keyword}의 스트리머 ID를 찾지 못했습니다.`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('에러 발생:', error);
+                    })
+                });
+                element.appendChild(button);
+            });
+        }
+        handleChzzkVodLink(vod_link){
+            const curTS = tsManager.getCurDateTime().getTime();
+            const url = new URL(vod_link);
+            url.searchParams.set('request_vod_ts', curTS);
+            if (tsManager.isPlaying())
+                url.searchParams.set('request_real_ts', Date.now());
+            log(`vod 열기 ${url.toString()}`);
+            window.open(url, "_blank");
+        }
     }
     
     // SOOP 패널 및 Linker 초기화
-    const soopPanel = new SoopPanel();
+    soopPanel = new SoopPanel();
+    vodLinker = new VODLinker();
 
-    // VOD 페이지 여부에 따라 패널/토글 버튼 show/hide
-    let lastIsVodPage = null;
+    // VOD 플레이어 페이지 여부를 지속적으로 갱신
     function checkVodPageAndTogglePanel() {
         const isVodPage = window.location.pathname.includes('/video/');
         if (isVodPage !== lastIsVodPage) {
             lastIsVodPage = isVodPage;
+            // 상태가 바뀔때 패널을 숨기거나 표시함.
             if (isVodPage) {
                 soopPanel.closePanel();
             } else {
@@ -295,14 +452,160 @@ if (window == top) {
         }
     }
     setInterval(checkVodPageAndTogglePanel, 500);
-    
-    // 메시지 리스너 추가
-    window.addEventListener('message', (event) => {
-        if (event.data.response === "VOD_LIST") {
-            log("SOOP VOD 리스트 받음:", event.data.resultVODLinks);
-            soopPanel.handleSoopVodList(event.data.resultVODLinks);
+}
+else{ // iframe 내부
+    let vodFinder = null;
+    function log(...data){
+        console.log('[chzzk_content.js:inframe]', ...data);
+    }
+    class VODFinder{
+        constructor(request_vod_ts, pageNum){
+            this.request_vod_date = new Date(request_vod_ts);
+            this.pageNum = pageNum;
+            this.retryCount = 0;
+            this.init();
         }
-    });
-    
-    log("Chzzk VOD Timestamp Manager initialized");
+        init(){
+            log(`CHZZK VOD 검색시작: ${window.location}`);
+            this.tryCheck();
+        }
+        async tryCheck(){
+            this.retryCount += 1;
+            window.parent.postMessage({
+                response: 'CHZZK_VOD_FINDER_STATUS',
+                pageNum: this.pageNum,
+                retryCount: this.retryCount
+            })
+
+            const p = document.querySelector('#videos-PANEL > div > p');
+            if (p !== null && p.innerText === '영상이 하나도 없네요...\n'){
+                window.parent.postMessage(
+                    {
+                        response: "CHZZK_VOD_NOT_FOUND",
+                        reason: "no vod"
+                    },
+                    "https://chzzk.naver.com"
+                );
+                return;
+            }
+            const videoListTag = document.querySelector('#videos-PANEL > ul');
+            if (videoListTag){
+                const aTags = videoListTag.querySelectorAll('li > div > a');
+                if (aTags.length > 0){
+                    let found = false;
+                    //현재 페이지의 마지막 다시보기기의 업로드 시점을 읽어옴
+                    const l_vod_idx = aTags.length-1;
+                    const l_vod_link = aTags[l_vod_idx].href;
+                    const l_video_id = parseInt(l_vod_link.match(/\/video\/(\d+)/)[1]);
+                    const l_video_api_url = `https://api.chzzk.naver.com/service/v2/videos/${l_video_id}`;
+                    const l_response = await fetch(l_video_api_url);
+                    const l_video_info = await l_response.json();
+                    if (l_video_info.code !== 200) {
+                        window.parent.postMessage(
+                            {
+                                response: "CHZZK_VOD_NOT_FOUND",
+                                reason: `${l_video_id} video api response ${l_video_info.code}.`
+                            },
+                            "https://chzzk.naver.com"
+                        );
+                        return;
+                    }
+                    const l_liveOpenDateStr = l_video_info.content.liveOpenDate;
+                    const l_durationMSec = l_video_info.content.duration*1000;
+                    const l_liveOpenDate = new Date(l_liveOpenDateStr.replace(' ', 'T'));
+                    const l_liveCloseDate = new Date(l_liveOpenDate.getTime() + l_durationMSec);
+
+                    if (this.request_vod_date < l_liveOpenDate){
+                        // 현재 페이지의 마지막 다시보기의 라이브 시작 시점이 요청시간보다 이전이라면 다음 페이지에서 다시 검색해야함
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('page', this.pageNum+1);
+                        url.searchParams.set('p_request', 'GET_VOD');
+                        url.searchParams.set('request_vod_ts', this.request_vod_date.getTime());
+                        const urlStr = url.toString();
+                        log(`다음 페이지로 이동 (${this.pageNum} --> ${this.pageNum+1}): ${urlStr}`);
+                        window.location.replace(urlStr);
+                    }
+                    else if (l_liveCloseDate < this.request_vod_date){
+                        //현재 페이지의 마지막 다시보기의 라이브 종료 시점이 요청시간보다 이후라면 이 페이지에서 마저 검색해야함
+                        // 이분 탐색으로 VOD를 찾는다 (tryCheck가 async이므로 바로 await 사용)
+                        let left = 0;
+                        let right = l_vod_idx > 0 ? l_vod_idx-1 : 0;
+                        while (left <= right) {
+                            const mid = Math.floor((left + right) / 2);
+                            const vod_link = aTags[mid].href;
+                            const match = vod_link.match(/\/video\/(\d+)/);
+                            const videoId = parseInt(match[1]);
+                            const url = `https://api.chzzk.naver.com/service/v2/videos/${videoId}`;
+                            log(`이분탐색: ${left}~[${mid}]~${right} CHZZK VOD 정보 검색중: ${url}`);
+                            const response = await fetch(url);
+                            const videoInfo = await response.json();
+                            if (videoInfo.code !== 200) {
+                                window.parent.postMessage(
+                                    {
+                                        response: "CHZZK_VOD_NOT_FOUND",
+                                        reason: `${videoId} video api response ${videoInfo.code}.`
+                                    },
+                                    "https://chzzk.naver.com"
+                                );
+                                return;
+                            }
+                            const liveOpenDateStr = videoInfo.content.liveOpenDate;
+                            const durationMSec = videoInfo.content.duration*1000;
+                            const liveOpenDate = new Date(liveOpenDateStr.replace(' ', 'T'));
+                            const liveCloseDate = new Date(liveOpenDate.getTime() + durationMSec);
+                            if (liveOpenDate <= this.request_vod_date && this.request_vod_date <= liveCloseDate) {
+                                window.parent.postMessage(
+                                    {
+                                        response: "CHZZK_VOD",
+                                        vod_link: vod_link
+                                    },
+                                    "https://chzzk.naver.com"
+                                );
+                                return;
+                            } else if (this.request_vod_date < liveOpenDate) {
+                                left = mid + 1;
+                            } else {
+                                right = mid - 1;
+                            }
+                        }
+                        // 다 검사했는데 없으면 아예 동기화할 다시보기가 없다는 뜻.
+                        window.parent.postMessage(
+                            {
+                                response: "CHZZK_VOD_NOT_FOUND",
+                                reason: `no vod.`
+                            },
+                            "https://chzzk.naver.com"
+                        );
+                        return;
+                    }
+                    else {
+                        // 현재 페이지의 마지막 다시보기의 라이브 구간안에 요청시간이 포함되어있음.
+                        found = true;
+                        window.parent.postMessage(
+                            {
+                                response: "CHZZK_VOD",
+                                vod_link: vod_link
+                            },
+                            "https://chzzk.naver.com"
+                        );
+                        return;
+                    }
+                }
+            }
+            log('페이지 로딩중. 재시도');
+            setTimeout(this.tryCheck.bind(this), 100);
+        }
+    }
+    // URL 파라미터 처리
+    const urlParams = new URLSearchParams(window.location.search);
+    const p_request = urlParams.get('p_request');
+    const request_vod_ts_str = urlParams.get('request_vod_ts');
+    if (p_request === "GET_VOD"){
+        const request_vod_ts = parseInt(request_vod_ts_str);
+        const pageNumStr = urlParams.get('page');
+        if (pageNumStr){
+            const pageNum = parseInt(pageNumStr);
+            vodFinder = new VODFinder(request_vod_ts, pageNum);
+        }
+    }
 }
