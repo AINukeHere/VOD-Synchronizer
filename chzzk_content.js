@@ -173,12 +173,12 @@ if (window == top) {
         createToggleBtn() {
             this.toggleBtn = document.createElement('button');
             this.toggleBtn.id = 'soop-panel-toggle-btn';
-            this.toggleBtn.innerHTML = '▲VOD Sync';
+            this.toggleBtn.innerHTML = '▲VOD Synchronizer';
             this.toggleBtn.style.position = 'fixed';
             this.toggleBtn.style.top = '290px'; // 패널 top(80px) + 패널 height/2(210px)
             this.toggleBtn.style.transform = 'translateY(-50%) rotate(-90deg)';
             this.toggleBtn.style.transformOrigin = 'center center';
-            this.toggleBtn.style.width = '160px';
+            this.toggleBtn.style.width = '180px';
             this.toggleBtn.style.height = '48px';
             this.toggleBtn.style.fontSize = '15px';
             this.toggleBtn.style.textAlign = 'center';
@@ -206,14 +206,14 @@ if (window == top) {
         }
         openPanel() {
             this.panel.style.right = '0';
-            this.toggleBtn.innerHTML = '▼ VOD Sync';
-            this.toggleBtn.style.right = '282px'; // 패널 width - 버튼 height/2
+            this.toggleBtn.innerHTML = '▼ VOD Synchronizer';
+            this.toggleBtn.style.right = '272px'; // 패널 width - 버튼 height/2
             this.isPanelOpen = true;
         }
         closePanel() {
             this.panel.style.right = '-340px';
-            this.toggleBtn.innerHTML = '▲ VOD Sync';
-            this.toggleBtn.style.right = '-56px';
+            this.toggleBtn.innerHTML = '▲ VOD Synchronizer';
+            this.toggleBtn.style.right = '-66px';
             this.isPanelOpen = false;
         }
         startSearchWithIframe() {
