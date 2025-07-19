@@ -4,12 +4,13 @@ if (window == top) {
     const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
     let tsManager = null;
     let vodLinker = null;
+    let rpPanel = null;
     function log(...data){
         console.log('[soop_content.js]', ...data);
     }
+    log('loaded');
 
-    // 전역 변수로 tsManager 설정
-    tsManager = new SoopTimestampManager();
+    // tsManager는 설정에 따라 초기화됨
     class VODLinker{
         constructor(){
             this.lastRequest = null;
@@ -25,6 +26,10 @@ if (window == top) {
             this.updateFindVODButtons();
         }
         findStreamerID(nickname){
+            if (!tsManager) {
+                alert('타임스탬프 기능이 비활성화되어 있습니다.');
+                return;
+            }
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_FINDING_STREAMER_ID;
             const encodedNickname = encodeURI(nickname);
             const url = new URL(`https://www.sooplive.co.kr/search`);
@@ -50,7 +55,7 @@ if (window == top) {
         }
         updateFindVODButtons(){
             setInterval(() => {
-                if (!tsManager.isControllableState) return;
+                if (!tsManager || !tsManager.isControllableState) return;
                 const searchResults = document.querySelectorAll('#areaSuggest > ul > li > a');
                 if (searchResults){
                     searchResults.forEach(element => {
@@ -110,31 +115,88 @@ if (window == top) {
         }
     }
 
-    vodLinker = new VODLinker();
-
-    const params = new URLSearchParams(window.location.search);
-    const url_request_vod_ts = params.get("request_vod_ts");
-    const url_request_real_ts = params.get("request_real_ts");
-    if (url_request_vod_ts){
-        const request_vod_ts = parseInt(url_request_vod_ts);
-        if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
-            const request_real_ts = parseInt(url_request_real_ts);
-            tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
-        }
-        else{
-            tsManager.RequestGlobalTSAsync(request_vod_ts);
-        }
+    // 설정에 따라 기능 초기화
+    async function initializeFeatures() {
+        // 설정 로딩이 완료될 때까지 기다림
+        await vodSyncSettings.waitForLoad();
         
-        // url 지우기
-        const url = new URL(window.location.href);
-        url.searchParams.delete('request_vod_ts');
-        url.searchParams.delete('request_real_ts');
-        window.history.replaceState({}, '', url.toString());
+        await updateFeatures();
+        
+        // 설정 변경 감지
+        vodSyncSettings.onSettingsChanged(async (newSettings) => {
+            log('설정 변경 감지, 기능 업데이트 중...');
+            await updateFeatures();
+        });
+
+        const params = new URLSearchParams(window.location.search);
+        const url_request_vod_ts = params.get("request_vod_ts");
+        const url_request_real_ts = params.get("request_real_ts");
+        if (url_request_vod_ts && tsManager){
+            const request_vod_ts = parseInt(url_request_vod_ts);
+            if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
+                const request_real_ts = parseInt(url_request_real_ts);
+                tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+            }
+            else{
+                tsManager.RequestGlobalTSAsync(request_vod_ts);
+            }
+            
+            // url 지우기
+            const url = new URL(window.location.href);
+            url.searchParams.delete('request_vod_ts');
+            url.searchParams.delete('request_real_ts');
+            window.history.replaceState({}, '', url.toString());
+        }
     }
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+
+    // 기능 업데이트 함수
+    async function updateFeatures() {
+        const enableChzzkPanel = await vodSyncSettings.isFeatureEnabled('enableSoopChzzkPanel');
+        const enableRpPanel = await vodSyncSettings.isFeatureEnabled('enableRpPanel');
+        const enableTimestamp = await vodSyncSettings.isFeatureEnabled('enableTimestamp');
+
+        log('기능 업데이트:', {
+            enableChzzkPanel,
+            enableRpPanel,
+            enableTimestamp
+        });
+
+        // VOD Linker 초기화 (항상 활성화)
+        if (!vodLinker) {
+            vodLinker = new VODLinker();
+        }
+
+        // RP 패널 토글
+        if (enableRpPanel && !rpPanel) {
+            log('RP 패널 활성화');
+            rpPanel = new RPNicknamePanel();
+        } else if (!enableRpPanel && rpPanel) {
+            log('RP 패널 비활성화');
+            rpPanel.hideCompletely();
+            rpPanel = null;
+        }
+
+        // 타임스탬프 매니저 초기화
+        if (enableTimestamp && !tsManager) {
+            log('타임스탬프 매니저 활성화');
+            tsManager = new SoopTimestampManager();
+        } else if (enableTimestamp && tsManager) {
+            // 이미 활성화된 경우 enable 호출
+            tsManager.enable();
+        } else if (!enableTimestamp && tsManager) {
+            log('타임스탬프 매니저 비활성화');
+            tsManager.disable();
+        }
     }
+
+    // 기능 초기화 실행
+    initializeFeatures();
+
     function checkOneByOne(vodLinks){
+        if (!tsManager) {
+            log('타임스탬프 매니저가 없습니다.');
+            return;
+        }
         const curDateTime = tsManager.getCurDateTime();
         if (curDateTime){
             const request_vod_ts = curDateTime.getTime();

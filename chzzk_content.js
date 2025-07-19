@@ -4,7 +4,7 @@ const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
 const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
 if (window == top) {
 
-    const tsManager = new ChzzkTimestampManager();
+    let tsManager = null;
     function log(...data){
         console.log('[chzzk_content.js:outframe]', ...data);
     }
@@ -14,54 +14,62 @@ if (window == top) {
     const url_request_vod_ts = urlParams.get("request_vod_ts");
     const url_request_real_ts = urlParams.get("request_real_ts");
     
-    if (changeSecond) {
-        log('change_second 파라미터 감지:', changeSecond);
-        
-        // tsManager가 초기화되고 비디오 정보를 가져온 후에 시간 변경 실행
-        const checkAndJump = () => {
-            if (tsManager.videoInfo && tsManager.videoTag) {
-                const streamPeriod = tsManager.getStreamPeriod();
-                if (streamPeriod) {
-                    const [streamStartDateTime] = streamPeriod;
-                    const targetTime = streamStartDateTime.getTime() + parseInt(changeSecond) * 1000;
-                    
-                    log('타겟 시간으로 점프:', new Date(targetTime).toLocaleString());
-                    tsManager.moveToGlobalTS(targetTime, false);
-                    
-                    // URL에서 change_second 파라미터 제거
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('change_second');
-                    window.history.replaceState({}, '', url.toString());
+    // URL 파라미터 처리를 위한 함수
+    async function handleUrlParameters() {
+        if (changeSecond) {
+            log('change_second 파라미터 감지:', changeSecond);
+            
+            // tsManager가 초기화되고 비디오 정보를 가져온 후에 시간 변경 실행
+            const checkAndJump = () => {
+                if (tsManager && tsManager.videoInfo && tsManager.videoTag) {
+                    const streamPeriod = tsManager.getStreamPeriod();
+                    if (streamPeriod) {
+                        const [streamStartDateTime] = streamPeriod;
+                        const targetTime = streamStartDateTime.getTime() + parseInt(changeSecond) * 1000;
+                        
+                        log('타겟 시간으로 점프:', new Date(targetTime).toLocaleString());
+                        tsManager.moveToGlobalTS(targetTime, false);
+                        
+                        // URL에서 change_second 파라미터 제거
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('change_second');
+                        window.history.replaceState({}, '', url.toString());
+                    }
+                } else if (tsManager) {
+                    // 아직 초기화되지 않았으면 잠시 후 다시 시도
+                    setTimeout(checkAndJump, 1000);
                 }
-            } else {
-                // 아직 초기화되지 않았으면 잠시 후 다시 시도
-                setTimeout(checkAndJump, 1000);
+            };
+            
+            // 초기 체크 시작
+            setTimeout(checkAndJump, 1000);
+        }
+        if (url_request_vod_ts){
+            const request_vod_ts = parseInt(url_request_vod_ts);
+            if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
+                const request_real_ts = parseInt(url_request_real_ts);
+                if (tsManager) {
+                    tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+                }
             }
-        };
-        
-        // 초기 체크 시작
-        setTimeout(checkAndJump, 1000);
-    }
-    if (url_request_vod_ts){
-        const request_vod_ts = parseInt(url_request_vod_ts);
-        if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
-            const request_real_ts = parseInt(url_request_real_ts);
-            tsManager.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+            else{
+                if (tsManager) {
+                    tsManager.RequestGlobalTSAsync(request_vod_ts);
+                }
+            }
+            
+            // url 지우기
+            const url = new URL(window.location.href);
+            url.searchParams.delete('request_vod_ts');
+            url.searchParams.delete('request_real_ts');
+            window.history.replaceState({}, '', url.toString());
         }
-        else{
-            tsManager.RequestGlobalTSAsync(request_vod_ts);
-        }
-        
-        // url 지우기
-        const url = new URL(window.location.href);
-        url.searchParams.delete('request_vod_ts');
-        url.searchParams.delete('request_real_ts');
-        window.history.replaceState({}, '', url.toString());
     }
 
     let vodLinker = null;
     let lastIsVodPage = null;
     let soopPanel = null;
+    let rpPanel = null;
     
 
     class SoopPanel {
@@ -318,6 +326,8 @@ if (window == top) {
         }
     }
 
+
+
     class VODLinker{
         constructor(){
             this.iframeTag = null;
@@ -445,20 +455,87 @@ if (window == top) {
         }
     }
     
-    // SOOP 패널 및 Linker 초기화
-    soopPanel = new SoopPanel();
-    vodLinker = new VODLinker();
+    // 설정에 따라 기능 초기화
+    async function initializeFeatures() {
+        // 설정 로딩이 완료될 때까지 기다림
+        await vodSyncSettings.waitForLoad();
+        
+        await updateFeatures();
+        
+        // 설정 변경 감지
+        vodSyncSettings.onSettingsChanged(async (newSettings) => {
+            console.log('[chzzk_content] 설정 변경 감지, 기능 업데이트 중...');
+            await updateFeatures();
+        });
+    }
+
+    // 기능 업데이트 함수
+    async function updateFeatures() {
+        const enableSoopPanel = await vodSyncSettings.isFeatureEnabled('enableChzzkSoopPanel');
+        const enableRpPanel = await vodSyncSettings.isFeatureEnabled('enableRpPanel');
+        const enableTimestamp = await vodSyncSettings.isFeatureEnabled('enableTimestamp');
+
+        console.log('[chzzk_content] 기능 업데이트:', {
+            enableSoopPanel,
+            enableRpPanel,
+            enableTimestamp
+        });
+
+        // SOOP 패널 토글
+        if (enableSoopPanel && !soopPanel) {
+            console.log('[chzzk_content] SOOP 패널 활성화');
+            soopPanel = new SoopPanel();
+        } else if (!enableSoopPanel && soopPanel) {
+            console.log('[chzzk_content] SOOP 패널 비활성화');
+            soopPanel.hideCompletely();
+            soopPanel = null;
+        }
+
+        // RP 패널 토글
+        if (enableRpPanel && !rpPanel) {
+            console.log('[chzzk_content] RP 패널 활성화');
+            rpPanel = new RPNicknamePanel();
+        } else if (!enableRpPanel && rpPanel) {
+            console.log('[chzzk_content] RP 패널 비활성화');
+            rpPanel.hideCompletely();
+            rpPanel = null;
+        }
+
+        // VOD Linker 초기화 (항상 활성화)
+        if (!vodLinker) {
+            vodLinker = new VODLinker();
+        }
+
+        // 타임스탬프 매니저 초기화
+        if (enableTimestamp && !tsManager) {
+            console.log('[chzzk_content] 타임스탬프 매니저 활성화');
+            tsManager = new ChzzkTimestampManager();
+            // URL 파라미터 처리
+            handleUrlParameters();
+        } else if (enableTimestamp && tsManager) {
+            // 이미 활성화된 경우 enable 호출
+            tsManager.enable();
+        } else if (!enableTimestamp && tsManager) {
+            console.log('[chzzk_content] 타임스탬프 매니저 비활성화');
+            tsManager.disable();
+        }
+    }
+
+    // 기능 초기화 실행
+    initializeFeatures();
 
     // VOD 플레이어 페이지 여부를 지속적으로 갱신
-    function checkVodPageAndTogglePanel() {
+    async function checkVodPageAndTogglePanel() {
         const isVodPage = window.location.pathname.includes('/video/');
         if (isVodPage !== lastIsVodPage) {
             lastIsVodPage = isVodPage;
             // 상태가 바뀔때 패널을 숨기거나 표시함.
             if (isVodPage) {
-                soopPanel.closePanel();
+                if (soopPanel) soopPanel.closePanel();
+                if (rpPanel) rpPanel.closePanel();
             } else {
-                soopPanel.hideCompletely();
+                if (soopPanel) soopPanel.hideCompletely();
+                if (rpPanel) rpPanel.hideCompletely();
             }
         }
     }

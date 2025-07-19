@@ -10,6 +10,7 @@ class BaseTimestampManager {
         this.isTooltipVisible = true;
         this.mouseCheckInterval = null;
         this.videoTag = null;
+        this.isEnabled = true; // 활성화 상태 추적
         this.startMonitoring();
     }
 
@@ -29,6 +30,7 @@ class BaseTimestampManager {
     setupMouseTracking() {
         // 마우스 움직임 감지 - 시간만 업데이트
         document.addEventListener('mousemove', () => {
+            if (!this.isEnabled) return;
             this.lastMouseMoveTime = Date.now();
             this.showTooltip();
         });
@@ -40,6 +42,7 @@ class BaseTimestampManager {
 
         // 0.2초마다 마우스 상태 체크
         this.mouseCheckInterval = setInterval(() => {
+            if (!this.isEnabled) return;
             const currentTime = Date.now();
             const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
             
@@ -125,7 +128,7 @@ class BaseTimestampManager {
 
     updateTooltip() {
         setInterval(() => {
-            if (!this.tooltip || this.isEditing) return;
+            if (!this.tooltip || this.isEditing || !this.isEnabled) return;
             
             const timestamp = this.getCurDateTime();
             
@@ -175,6 +178,23 @@ class BaseTimestampManager {
     // 현재 재생 중인지 여부를 반환하는 추상 메서드
     isPlaying() {
         throw new Error("isPlaying must be implemented by subclass");
+    }
+
+    // 활성화/비활성화 메서드
+    enable() {
+        this.isEnabled = true;
+        if (this.tooltip) {
+            this.tooltip.style.display = 'block';
+        }
+        console.log('[BaseTimestampManager] 활성화됨');
+    }
+
+    disable() {
+        this.isEnabled = false;
+        if (this.tooltip) {
+            this.tooltip.style.display = 'none';
+        }
+        console.log('[BaseTimestampManager] 비활성화됨');
     }
 
     processTimestampInput(input) {

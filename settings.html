@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOD Synchronizer 설정</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 450px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .section h2 {
+            color: #007bff;
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .setting-item {
+            margin-bottom: 12px;
+        }
+        .setting-item label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #555;
+            font-size: 15px;
+        }
+        .setting-item input[type="text"],
+        .setting-item input[type="number"],
+        .setting-item select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .setting-item input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.1);
+        }
+        .button-group {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 0 8px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        .status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 500;
+            min-width: 200px;
+            text-align: center;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .shortcut-info {
+            background: #e9ecef;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .shortcut-info h3 {
+            margin: 0 0 8px 0;
+            color: #495057;
+            font-size: 14px;
+        }
+        .shortcut-info p {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+        .shortcut-key {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VOD Synchronizer 설정</h1>
+        </div>
+        <div class="content">
+            <div id="status" class="status"></div>
+
+            <div class="section">
+                <h2>기능 활성화 설정</h2>
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableTimestamp" checked>
+                        타임스탬프 표시 활성화
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        VOD에서 현재 시간과 라이브 당시 시간을 표시합니다.
+                    </small>
+                </div>
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableChzzkSoopPanel" checked>
+                        치지직 페이지에서 SOOP 패널 활성화
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        치지직 VOD 페이지에서 SOOP 스트리머와 동기화할 수 있는 패널을 표시합니다.
+                    </small>
+                </div>
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableSoopChzzkPanel" checked>
+                        SOOP 페이지에서 치지직 패널 활성화
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        SOOP VOD 페이지에서 치지직 스트리머와 동기화할 수 있는 패널을 표시합니다.
+                    </small>
+                </div>
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableRpPanel" checked>
+                        RP 닉네임 패널 활성화
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        RP 서버에서 사용하는 닉네임과 실제 스트리머 매핑을 보여주는 패널을 표시합니다.
+                    </small>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="collapsible-header" style="cursor: pointer; user-select: none;">
+                    설정 데이터 관리 
+                    <span id="dataManagementToggle" style="float: right; font-size: 14px;">▼</span>
+                </h2>
+                <div id="dataManagementContent" class="setting-item" style="display: none; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; gap: 8px;">
+                        <button id="exportSettings" class="btn btn-secondary">내보내기</button>
+                        <button id="importSettings" class="btn btn-secondary">가져오기</button>
+                        <button id="resetSettings" class="btn btn-secondary">초기화</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="saveSettings" class="btn btn-primary">저장</button>
+                <button id="closeSettings" class="btn btn-secondary">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+</html> 

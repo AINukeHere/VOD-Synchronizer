@@ -1,12 +1,18 @@
 {
     "manifest_version": 3,
     "name": "VOD Synchronizer",
-    "version": "0.0.9",
+    "version": "0.0.9.1",
     "description":"SOOP, CHZZK 다시보기 타임스탬프 표시, 다른 스트리머의 다시보기와 동기화",
+    "permissions": [
+        "storage"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
     "content_scripts": [
         {
             "matches": ["https://vod.sooplive.co.kr/*"],
-            "js": ["timestamp_manager.js", "soop_timestamp_manager.js", "soop_content.js"],
+            "js": ["settings_manager.js", "timestamp_manager.js", "soop_timestamp_manager.js", "rp_nickname_panel.js", "soop_content.js"],
             "all_frames": true
         },
         {
@@ -21,9 +27,24 @@
         },
         {
             "matches": ["https://chzzk.naver.com/*"],
-            "js": ["timestamp_manager.js", "chzzk_timestamp_manager.js", "chzzk_content.js"],
+            "js": ["settings_manager.js", "timestamp_manager.js", "chzzk_timestamp_manager.js", "rp_nickname_panel.js", "chzzk_content.js"],
             "all_frames": true
         }
-    ]
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["rp_nicknames.json"],
+            "matches": ["https://chzzk.naver.com/*", "https://vod.sooplive.co.kr/*"]
+        }
+    ],
+    "commands": {
+        "open-settings": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+S",
+                "mac": "Command+Shift+S"
+            },
+            "description": "설정 창 열기"
+        }
+    }
   }
   
