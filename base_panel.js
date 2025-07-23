@@ -76,6 +76,7 @@ class BaseSyncPanel {
         this.iframe.style.flex = '1 1 0%';
         this.iframe.style.minHeight = '0';
         this.iframe.style.width = '100%';
+
         this.iframe.style.border = 'none';
         this.iframe.style.borderRadius = '0 0 10px 10px';
         this.iframe.style.backgroundColor = 'white';
@@ -185,9 +186,11 @@ class BaseSyncPanel {
     }
 
     showPanelWithOpacity() {
+        this.panel.style.display = 'flex';
         this.panel.style.transition = 'opacity 0.3s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
         this.panel.style.opacity = '1';
         if (this.toggleBtn) {
+            this.toggleBtn.style.display = 'block';
             this.toggleBtn.style.transition = 'opacity 0.3s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
             this.toggleBtn.style.opacity = '1';
         }
@@ -195,9 +198,11 @@ class BaseSyncPanel {
     }
 
     hidePanelWithOpacity() {
+        this.panel.style.display = 'flex';
         this.panel.style.transition = 'opacity 0.5s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
         this.panel.style.opacity = '0.1';
         if (this.toggleBtn) {
+            this.toggleBtn.style.display = 'block';
             this.toggleBtn.style.transition = 'opacity 0.5s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
             this.toggleBtn.style.opacity = '0.1';
         }

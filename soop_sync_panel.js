@@ -15,7 +15,7 @@ class SoopSyncPanel extends BaseSyncPanel {
         // 메시지 리스너 추가
         window.addEventListener('message', (event) => {
             if (event.data.response === "SOOP_VOD_LIST") {
-                console.log('[soop_sync_panel] SOOP VOD 리스트 받음:', event.data.resultVODLinks);
+                logToExtension('[soop_sync_panel] SOOP VOD 리스트 받음:', event.data.resultVODLinks);
                 this.handleSoopVodList(event.data.resultVODLinks);
             }
         });
@@ -59,7 +59,7 @@ class SoopSyncPanel extends BaseSyncPanel {
         url.searchParams.set("p_request", "GET_SOOP_VOD_FROM_CHZZK");
         url.searchParams.set("request_vod_ts", `${targetTimestamp}`);
         this.iframe.src = url.toString();
-        console.log('[soop_sync_panel] SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
+        logToExtension('[soop_sync_panel] SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
     }
 
     handleSoopVodList(vodLinks) {
@@ -81,7 +81,7 @@ class SoopSyncPanel extends BaseSyncPanel {
                     url.searchParams.set('request_real_ts', request_real_ts);
                 }
                 window.open(url, "_blank");
-                console.log('[soop_sync_panel] SOOP VOD 열기:', url.toString());
+                logToExtension('[soop_sync_panel] SOOP VOD 열기:', url.toString());
             }
         }
     }

@@ -1,6 +1,6 @@
 if (window !== top){
     function log(...data){
-        console.log('[vod_get.js]', ...data);
+        logToExtension('[vod_get.js]', ...data);
     }
     function GetVodList(request_vod_datetime){
         const textToExplainEmpty = document.querySelector('#contents > div > div > section > section.vod-list > ul > li > p');

@@ -7,7 +7,7 @@ if (window == top) {
     let rpPanel = null;
     let chzzkPanel = null; // CHZZK 패널 추가
     function log(...data){
-        console.log('[soop_content.js]', ...data);
+        logToExtension('[soop_content.js]', ...data);
     }
     log('loaded');
 

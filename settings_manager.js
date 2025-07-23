@@ -1,5 +1,5 @@
 // 설정 관리자
-console.log('settings_manager.js loaded');
+logToExtension('settings_manager.js loaded');
 class SettingsManager {
     constructor() {
         this.defaultSettings = {
@@ -24,7 +24,7 @@ class SettingsManager {
             const result = await chrome.storage.sync.get('vodSyncSettings');
             this.settings = { ...this.defaultSettings, ...result.vodSyncSettings };
             this.isLoaded = true;
-            console.log('[SettingsManager] 설정 로드 완료:', this.settings);
+            logToExtension('[SettingsManager] 설정 로드 완료:', this.settings);
         } catch (error) {
             console.error('[SettingsManager] 설정 로드 실패:', error);
             this.settings = { ...this.defaultSettings };
@@ -49,7 +49,7 @@ class SettingsManager {
         chrome.storage.onChanged.addListener((changes, namespace) => {
             if (namespace === 'sync' && changes.vodSyncSettings) {
                 this.settings = { ...this.defaultSettings, ...changes.vodSyncSettings.newValue };
-                console.log('[SettingsManager] 설정 변경 감지:', this.settings);
+                logToExtension('[SettingsManager] 설정 변경 감지:', this.settings);
                 if (callback) callback(this.settings);
             }
         });

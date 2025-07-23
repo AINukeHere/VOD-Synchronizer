@@ -155,6 +155,57 @@
             font-weight: bold;
             font-size: 12px;
         }
+        
+        /* 탭 스타일 */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+        }
+        .tab:hover {
+            color: #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 로그 스타일 */
+        .log-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .log-controls select {
+            width: auto;
+            min-width: 120px;
+        }
+        .log-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -166,63 +217,91 @@
         <div class="content">
             <div id="status" class="status"></div>
 
-            <div class="section">
-                <h2>기능 활성화 설정</h2>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" id="enableTimestamp" checked>
-                        타임스탬프 표시 활성화
-                    </label>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        VOD에서 현재 시간과 라이브 당시 시간을 표시합니다.
-                    </small>
-                </div>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" id="enableChzzkSoopPanel" checked>
-                        치지직 페이지에서 SOOP 패널 활성화
-                    </label>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        치지직 VOD 페이지에서 SOOP 스트리머와 동기화할 수 있는 패널을 표시합니다.
-                    </small>
-                </div>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" id="enableSoopChzzkPanel" checked>
-                        SOOP 페이지에서 치지직 패널 활성화
-                    </label>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        SOOP VOD 페이지에서 치지직 스트리머와 동기화할 수 있는 패널을 표시합니다.
-                    </small>
-                </div>
-                <div class="setting-item">
-                    <label>
-                        <input type="checkbox" id="enableRpPanel" checked>
-                        RP 닉네임 패널 활성화
-                    </label>
-                    <small style="color: #666; display: block; margin-top: 5px;">
-                        RP 서버에서 사용하는 닉네임과 실제 스트리머 매핑을 보여주는 패널을 표시합니다.
-                    </small>
-                </div>
+            <!-- 탭 네비게이션 -->
+            <div class="tabs">
+                <button class="tab active" data-tab="general">일반 설정</button>
+                <button class="tab" data-tab="logs">로그</button>
             </div>
 
-            <div class="section">
-                <h2 class="collapsible-header" style="cursor: pointer; user-select: none;">
-                    설정 데이터 관리 
-                    <span id="dataManagementToggle" style="float: right; font-size: 14px;">▼</span>
-                </h2>
-                <div id="dataManagementContent" class="setting-item" style="display: none; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; gap: 8px;">
-                        <button id="exportSettings" class="btn btn-secondary">내보내기</button>
-                        <button id="importSettings" class="btn btn-secondary">가져오기</button>
-                        <button id="resetSettings" class="btn btn-secondary">초기화</button>
+            <!-- 일반 설정 탭 -->
+            <div id="general" class="tab-content active">
+                <div class="section">
+                    <h2>기능 활성화 설정</h2>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableTimestamp" checked>
+                            타임스탬프 표시 활성화
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            VOD에서 현재 시간과 라이브 당시 시간을 표시합니다.
+                        </small>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableChzzkSoopPanel" checked>
+                            치지직 페이지에서 SOOP 패널 활성화
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            치지직 VOD 페이지에서 SOOP 스트리머와 동기화할 수 있는 패널을 표시합니다.
+                        </small>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableSoopChzzkPanel" checked>
+                            SOOP 페이지에서 치지직 패널 활성화
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            SOOP VOD 페이지에서 치지직 스트리머와 동기화할 수 있는 패널을 표시합니다.
+                        </small>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableRpPanel" checked>
+                            RP 닉네임 패널 활성화
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            RP 서버에서 사용하는 닉네임과 실제 스트리머 매핑을 보여주는 패널을 표시합니다.
+                        </small>
                     </div>
                 </div>
+
+                <div class="section">
+                    <h2 class="collapsible-header" style="cursor: pointer; user-select: none;">
+                        설정 데이터 관리 
+                        <span id="dataManagementToggle" style="float: right; font-size: 14px;">▼</span>
+                    </h2>
+                    <div id="dataManagementContent" class="setting-item" style="display: none; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; gap: 8px;">
+                            <button id="exportSettings" class="btn btn-secondary">내보내기</button>
+                            <button id="importSettings" class="btn btn-secondary">가져오기</button>
+                            <button id="resetSettings" class="btn btn-secondary">초기화</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="saveSettings" class="btn btn-primary">저장</button>
+                    <button id="closeSettings" class="btn btn-secondary">닫기</button>
+                </div>
             </div>
 
-            <div class="button-group">
-                <button id="saveSettings" class="btn btn-primary">저장</button>
-                <button id="closeSettings" class="btn btn-secondary">닫기</button>
+            <!-- 로그 탭 -->
+            <div id="logs" class="tab-content">
+                <div class="section">
+                    <h2>로그</h2>
+                    <div class="log-controls">
+                        <button id="clearLogs" class="btn btn-secondary">로그 지우기</button>
+                        <button id="refreshLogs" class="btn btn-primary">새로고침</button>
+                        <select id="logLevel" class="form-control">
+                            <option value="">모든 레벨</option>
+                            <option value="debug">Debug</option>
+                            <option value="info">Info</option>
+                            <option value="warn">Warning</option>
+                            <option value="error">Error</option>
+                        </select>
+                    </div>
+                    <div id="logContainer" class="log-container"></div>
+                </div>
             </div>
         </div>
     </div>

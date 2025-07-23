@@ -6,7 +6,7 @@ if (window == top) {
 
     let tsManager = null;
     function log(...data){
-        console.log('[chzzk_content.js:outframe]', ...data);
+        logToExtension('[chzzk_content.js:outframe]', ...data);
     }
     // URL 파라미터 처리
     const urlParams = new URLSearchParams(window.location.search);
@@ -71,6 +71,7 @@ if (window == top) {
     let soopPanel = null;
     let rpPanel = null;
     
+    // 메인 페이지에서 검색하고 버튼을 누르면 스트리머id를 api로 찾고 그 스트리머 채널을 iframe으로 열게 함. 그 iframe에서 vod link를 받아서 새 탭에서 열음
     class VODLinker{
         constructor(){
             this.iframeTag = null;
@@ -88,7 +89,7 @@ if (window == top) {
                 if (event.data.response === "CHZZK_VOD") {
                     vodLinker.curProcessBtn.innerText = BTN_TEXT_IDLE;
                     vodLinker.curProcessBtn = null;
-                    log("CHZZK VOD 리스트 받음:", event.data.vod_link);
+                    log("CHZZK VOD link 받음:", event.data.vod_link);
                     vodLinker.handleChzzkVodLink(event.data.vod_link);
                 }
                 else if (event.data.response === "CHZZK_VOD_NOT_FOUND"){
@@ -146,6 +147,7 @@ if (window == top) {
                         return;
                     }
         
+                    // 스트리머 ID 검색
                     button.innerText = BTN_TEXT_FINDING_STREAMER_ID;
                     const keyword = searchWordSpan.innerText;
                     log(`검색어: ${keyword}`);
@@ -207,7 +209,7 @@ if (window == top) {
         
         // 설정 변경 감지
         vodSyncSettings.onSettingsChanged(async (newSettings) => {
-            console.log('[chzzk_content] 설정 변경 감지, 기능 업데이트 중...');
+            logToExtension('[chzzk_content] 설정 변경 감지, 기능 업데이트 중...');
             await updateFeatures();
         });
     }
@@ -218,28 +220,28 @@ if (window == top) {
         const enableRpPanel = await vodSyncSettings.isFeatureEnabled('enableRpPanel');
         const enableTimestamp = await vodSyncSettings.isFeatureEnabled('enableTimestamp');
 
-        console.log('[chzzk_content] 기능 업데이트:', {
-            enableSoopPanel,
-            enableRpPanel,
-            enableTimestamp
-        });
+                    logToExtension('[chzzk_content] 기능 업데이트:', {
+                enableSoopPanel,
+                enableRpPanel,
+                enableTimestamp
+            });
 
         // SOOP 패널 토글
         if (enableSoopPanel && !soopPanel) {
-            console.log('[chzzk_content] SOOP 패널 활성화');
+            logToExtension('[chzzk_content] SOOP 패널 활성화');
             soopPanel = new SoopSyncPanel();
         } else if (!enableSoopPanel && soopPanel) {
-            console.log('[chzzk_content] SOOP 패널 비활성화');
+            logToExtension('[chzzk_content] SOOP 패널 비활성화');
             soopPanel.hideCompletely();
             soopPanel = null;
         }
 
         // RP 패널 토글
         if (enableRpPanel && !rpPanel) {
-            console.log('[chzzk_content] RP 패널 활성화');
+            logToExtension('[chzzk_content] RP 패널 활성화');
             rpPanel = new RPNicknamePanel();
         } else if (!enableRpPanel && rpPanel) {
-            console.log('[chzzk_content] RP 패널 비활성화');
+            logToExtension('[chzzk_content] RP 패널 비활성화');
             rpPanel.hideCompletely();
             rpPanel = null;
         }
@@ -251,7 +253,7 @@ if (window == top) {
 
         // 타임스탬프 매니저 초기화
         if (enableTimestamp && !tsManager) {
-            console.log('[chzzk_content] 타임스탬프 매니저 활성화');
+            logToExtension('[chzzk_content] 타임스탬프 매니저 활성화');
             tsManager = new ChzzkTimestampManager();
             window.tsManager = tsManager; // window 멤버로 공유
             // URL 파라미터 처리
@@ -260,7 +262,7 @@ if (window == top) {
             // 이미 활성화된 경우 enable 호출
             tsManager.enable();
         } else if (!enableTimestamp && tsManager) {
-            console.log('[chzzk_content] 타임스탬프 매니저 비활성화');
+            logToExtension('[chzzk_content] 타임스탬프 매니저 비활성화');
             tsManager.disable();
         }
     }
@@ -289,7 +291,7 @@ else{ // iframe 내부
     let vodFinder = null;
     let chzzkSearchHandler = null; // CHZZK 검색 핸들러 추가
     function log(...data){
-        console.log('[chzzk_content.js:inframe]', ...data);
+        logToExtension('[chzzk_content.js:inframe]', ...data);
     }
 
     // ===================== CHZZK 검색 핸들러 (SOOP 요청 처리) =====================

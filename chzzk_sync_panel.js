@@ -15,11 +15,19 @@ class ChzzkSyncPanel extends BaseSyncPanel {
         // 메시지 리스너 추가
         window.addEventListener('message', (event) => {
             if (event.data.response === "CHZZK_VOD") {
-                console.log('[chzzk_sync_panel] CHZZK VOD 받음:', event.data.vod_link);
+                if (window.logManager) {
+                    window.logManager.log('[chzzk_sync_panel] CHZZK VOD 받음:', event.data.vod_link);
+                } else {
+                    console.log('[chzzk_sync_panel] CHZZK VOD 받음:', event.data.vod_link);
+                }
                 this.handleChzzkVodLink(event.data.vod_link);
             }
             else if (event.data.response === "CHZZK_VOD_NOT_FOUND"){
-                console.log('[chzzk_sync_panel] CHZZK VOD를 찾지 못했다고 응답받음. 사유:',event.data.reason);
+                if (window.logManager) {
+                    window.logManager.log('[chzzk_sync_panel] CHZZK VOD를 찾지 못했다고 응답받음. 사유:',event.data.reason);
+                } else {
+                    console.log('[chzzk_sync_panel] CHZZK VOD를 찾지 못했다고 응답받음. 사유:',event.data.reason);
+                }
                 alert("동기화 가능한 VOD를 찾지 못했습니다.");
             }
             else if (event.data.response === 'CHZZK_VOD_FINDER_STATUS'){
@@ -66,7 +74,11 @@ class ChzzkSyncPanel extends BaseSyncPanel {
         url.searchParams.set('p_request', 'GET_CHZZK_VOD_FROM_SOOP');
         url.searchParams.set('request_vod_ts', `${targetTimestamp}`);
         this.iframe.src = url.toString();
-        console.log('[chzzk_sync_panel] CHZZK 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
+        if (window.logManager) {
+            window.logManager.log('[chzzk_sync_panel] CHZZK 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
+        } else {
+            console.log('[chzzk_sync_panel] CHZZK 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
+        }
     }
 
     handleChzzkVodLink(vod_link) {
@@ -75,7 +87,11 @@ class ChzzkSyncPanel extends BaseSyncPanel {
         url.searchParams.set('request_vod_ts', curTS);
         if (window.tsManager.isPlaying())
             url.searchParams.set('request_real_ts', Date.now());
-        console.log(`[chzzk_sync_panel] CHZZK VOD 열기: ${url.toString()}`);
+        if (window.logManager) {
+            window.logManager.log(`[chzzk_sync_panel] CHZZK VOD 열기: ${url.toString()}`);
+        } else {
+            console.log(`[chzzk_sync_panel] CHZZK VOD 열기: ${url.toString()}`);
+        }
         window.open(url, "_blank");
     }
 } 

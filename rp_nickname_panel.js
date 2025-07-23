@@ -32,9 +32,9 @@ class RPNicknamePanel {
             this.nicknamesByServer = data;
             // 첫 서버를 기본 선택
             this.currentServer = Object.keys(data)[0] || null;
-            console.log('[RPNicknamePanel] 서버별 RP 닉네임 데이터 로드 완료:', Object.keys(data));
+            logToExtension('[RPNicknamePanel] 서버별 RP 닉네임 데이터 로드 완료:', Object.keys(data));
         } catch (error) {
-            console.log('[RPNicknamePanel] RP 닉네임 데이터 로드 실패:', error);
+            logToExtension('[RPNicknamePanel] RP 닉네임 데이터 로드 실패:', error);
             this.nicknamesByServer = {};
             this.currentServer = null;
         }

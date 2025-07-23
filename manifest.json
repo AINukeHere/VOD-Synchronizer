@@ -13,20 +13,25 @@
         {
             "matches": ["https://www.sooplive.co.kr/*"],
             "js": [
+                "log_manager.js",
                 "settings_manager.js",
                 "base_panel.js",
-                "timestamp_manager.js",
-                "soop_timestamp_manager.js",
                 "rp_nickname_panel.js",
-                "chzzk_sync_panel.js",
-                "StreamerIDManager.js",
                 "soop_content.js"
+            ]
+        },
+        {
+            "matches": ["https://www.sooplive.co.kr/*"],
+            "js": [
+                "log_manager.js",
+                "StreamerIDManager.js"
             ],
             "all_frames": true
         },
         {
             "matches": ["https://ch.sooplive.co.kr/*"],
             "js": [
+                "log_manager.js",
                 "vod_get.js"
             ],
             "all_frames": true
@@ -34,6 +39,7 @@
         {
             "matches": ["https://vod.sooplive.co.kr/*"],
             "js": [
+                "log_manager.js",
                 "settings_manager.js",
                 "base_panel.js",
                 "timestamp_manager.js",
@@ -41,18 +47,26 @@
                 "rp_nickname_panel.js",
                 "chzzk_sync_panel.js",
                 "soop_content.js"
-            ],
-            "all_frames": true
+            ]
         },
         {
             "matches": ["https://chzzk.naver.com/*"],
             "js": [
+                "log_manager.js",
                 "settings_manager.js",
                 "base_panel.js",
                 "timestamp_manager.js",
                 "chzzk_timestamp_manager.js",
                 "rp_nickname_panel.js",
                 "soop_sync_panel.js",
+                "chzzk_content.js"
+            ]
+        },
+        {
+            "matches": ["https://chzzk.naver.com/*"],
+            "js": [
+                "log_manager.js",
+                "settings_manager.js",
                 "chzzk_content.js"
             ],
             "all_frames": true

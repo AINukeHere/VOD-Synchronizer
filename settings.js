@@ -184,5 +184,123 @@ class SettingsManager {
 
 // 설정 창이 로드되면 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    new SettingsManager();
+    const settingsManager = new SettingsManager();
+    
+    // 탭 기능 설정
+    function setupTabs() {
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+                
+                // 모든 탭 비활성화
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // 선택된 탭 활성화
+                tab.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+    }
+    
+    // 로그 기능 설정
+    function setupLogs() {
+        const logContainer = document.getElementById('logContainer');
+        const clearLogsBtn = document.getElementById('clearLogs');
+        const refreshLogsBtn = document.getElementById('refreshLogs');
+        const logLevelSelect = document.getElementById('logLevel');
+        
+        let lastLogCount = 0; // 마지막 로그 개수 추적
+        
+        // 로그가 새로 추가되었는지 추적
+        let hasNewLogs = false;
+        
+        // 로그 새로고침
+        async function refreshLogs() {
+            try {
+                const selectedLevel = logLevelSelect.value;
+                const response = await chrome.runtime.sendMessage({
+                    action: 'getLogs',
+                    level: selectedLevel
+                });
+                
+                const logs = response.logs || [];
+                const currentLogCount = logs.length;
+                
+                // 로그가 추가되었는지 확인
+                hasNewLogs = currentLogCount > lastLogCount;
+                
+                // 기존 로그 개수 업데이트
+                lastLogCount = currentLogCount;
+                
+                logContainer.innerHTML = '';
+                
+                if (logs.length === 0) {
+                    logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그가 없습니다.</div>';
+                    return;
+                }
+                
+                logs.forEach(log => {
+                    const logElement = document.createElement('div');
+                    logElement.style.padding = '8px 12px';
+                    logElement.style.borderBottom = '1px solid #eee';
+                    logElement.style.fontFamily = 'monospace';
+                    logElement.style.fontSize = '12px';
+                    logElement.style.whiteSpace = 'pre-wrap';
+                    logElement.style.wordBreak = 'break-all';
+                    
+                    // 로그 레벨에 따른 색상
+                    const levelColors = {
+                        debug: '#6c757d',
+                        info: '#007bff',
+                        warn: '#ffc107',
+                        error: '#dc3545'
+                    };
+                    
+                    logElement.style.color = levelColors[log.level] || '#000';
+                    logElement.textContent = `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`;
+                    
+                    logContainer.appendChild(logElement);
+                });
+                
+                // 새 로그가 추가되었으면 항상 맨 아래로 스크롤
+                if (hasNewLogs) {
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                }
+                
+            } catch (error) {
+                logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그를 가져올 수 없습니다.</div>';
+            }
+        }
+        
+        // 로그 지우기
+        clearLogsBtn.addEventListener('click', async () => {
+            try {
+                await chrome.runtime.sendMessage({
+                    action: 'clearLogs'
+                });
+                refreshLogs();
+            } catch (error) {
+                console.error('로그 지우기 실패:', error);
+            }
+        });
+        
+        // 로그 새로고침
+        refreshLogsBtn.addEventListener('click', refreshLogs);
+        
+        // 로그 레벨 변경
+        logLevelSelect.addEventListener('change', refreshLogs);
+        
+        // 초기 로그 로드
+        refreshLogs();
+        
+        // 5초마다 자동 새로고침
+        setInterval(refreshLogs, 5000);
+    }
+    
+    setupTabs();
+    setupLogs();
 }); 
