@@ -1,4 +1,5 @@
 if (window !== top) {
+    // SOOP 스트리머 닉네임으로부터 ID를 찾거나 다시보기 동기화까지 해줄 수 있는 클래스
     class StreamerIDManager {
         constructor() {
             this.BTN_TEXT_IDLE = "Find VOD";
@@ -210,7 +211,7 @@ if (window !== top) {
             url.searchParams.delete('p_request');
             url.searchParams.delete('request_vod_ts');
             window.history.replaceState({}, '', url.toString());
-            if (p_request == "GET_SOOP_VOD_FROM_CHZZK") {
+            if (p_request == "GET_SOOP_VOD_FROM_CHZZK") { // 치지직 페이지에서 soop sync panel에서 요청됨
                 this.handleChzzkRequest();
             } else if (p_request === "GET_SOOP_VOD_FROM_SOOP") {
                 this.handleSoopRequest(params);

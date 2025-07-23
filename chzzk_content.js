@@ -71,263 +71,6 @@ if (window == top) {
     let soopPanel = null;
     let rpPanel = null;
     
-
-    class SoopPanel {
-        constructor() {
-            this.panel = null;
-            this.toggleBtn = null;
-            this.iframe = null;
-            this.soopSyncBtn = null;
-            this.isPanelOpen = false; // 기본값: 접힘
-            this.isPanelVisible = true;
-            this.lastMouseMoveTime = Date.now();
-            this.mouseCheckInterval = null;
-            this.init();
-            // 메시지 리스너 추가
-            window.addEventListener('message', (event) => {
-                if (event.data.response === "SOOP_VOD_LIST") {
-                    log("SOOP VOD 리스트 받음:", event.data.resultVODLinks);
-                    soopPanel.handleSoopVodList(event.data.resultVODLinks);
-                }
-            });
-        }
-        init() {
-            this.createPanel();
-            this.createToggleBtn();
-            this.setupMouseTracking();
-            // 생성 직후 접힌 상태로 세팅
-            this.closePanel();
-        }
-        createPanel() {
-            this.panel = document.createElement('div');
-            this.panel.id = 'soop-panel';
-            this.panel.style.position = 'fixed';
-            this.panel.style.top = '80px';
-            this.panel.style.right = '0';
-            this.panel.style.width = '340px';
-            this.panel.style.height = '520px';
-            this.panel.style.background = 'rgba(255,255,255,0.98)';
-            this.panel.style.border = '2px solid #007bff'; // 파랑 테두리
-            this.panel.style.borderRadius = '10px 0 0 10px';
-            this.panel.style.boxShadow = '0 2px 12px rgba(0,0,0,0.15)';
-            this.panel.style.zIndex = '10000';
-            this.panel.style.transition = 'opacity 0.5s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
-            this.panel.style.opacity = '1';
-            this.panel.style.display = 'flex';
-            this.panel.style.flexDirection = 'column';
-            this.panel.style.alignItems = 'stretch';
-            this.panel.style.padding = '0';
-            this.panel.style.gap = '0';
-
-            // 패널 헤더
-            const header = document.createElement('div');
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-            header.style.background = '#007bff'; // 파랑
-            header.style.color = 'white';
-            header.style.fontWeight = 'bold';
-            header.style.fontSize = '16px';
-            header.style.padding = '10px 16px';
-            header.style.borderRadius = '8px 0 0 0';
-            header.innerText = 'SOOP 스트리머와 동기화';
-            this.panel.appendChild(header);
-
-            // 버튼 영역
-            const btnArea = document.createElement('div');
-            btnArea.style.display = 'flex';
-            btnArea.style.flexDirection = 'column';
-            btnArea.style.gap = '10px';
-            btnArea.style.padding = '16px';
-            btnArea.style.background = 'none';
-            btnArea.style.flex = '0 0 auto';
-            btnArea.style.height = '55px'; // 고정 높이
-
-            // SOOP 검색 버튼
-            this.soopSyncBtn = document.createElement('button');
-            this.soopSyncBtn.innerText = 'SOOP 검색';
-            this.soopSyncBtn.style.background = '#007bff'; // 파랑
-            this.soopSyncBtn.style.color = 'white';
-            this.soopSyncBtn.style.border = 'none';
-            this.soopSyncBtn.style.borderRadius = '5px';
-            this.soopSyncBtn.style.padding = '10px 0';
-            this.soopSyncBtn.style.fontSize = '15px';
-            this.soopSyncBtn.style.fontWeight = 'bold';
-            this.soopSyncBtn.style.cursor = 'pointer';
-            this.soopSyncBtn.addEventListener('click', () => {
-                this.startSearchWithIframe();
-            });
-            btnArea.appendChild(this.soopSyncBtn);
-
-            this.panel.appendChild(btnArea);
-
-            // iframe
-            this.iframe = document.createElement('iframe');
-            this.iframe.id = 'soop-search-iframe';
-            this.iframe.style.flex = '1 1 0%';
-            this.iframe.style.minHeight = '0';
-            this.iframe.style.width = '100%';
-            this.iframe.style.border = 'none';
-            this.iframe.style.borderRadius = '0 0 10px 10px';
-            this.iframe.style.backgroundColor = 'white';
-            this.iframe.style.display = 'none';
-            this.iframe.style.margin = '0';
-            this.iframe.style.padding = '0';
-            this.panel.appendChild(this.iframe);
-
-            document.body.appendChild(this.panel);
-        }
-        createToggleBtn() {
-            this.toggleBtn = document.createElement('button');
-            this.toggleBtn.id = 'soop-panel-toggle-btn';
-            this.toggleBtn.innerHTML = '▲VOD Synchronizer';
-            this.toggleBtn.style.position = 'fixed';
-            this.toggleBtn.style.top = '290px'; // 패널 top(80px) + 패널 height/2(210px)
-            this.toggleBtn.style.transform = 'translateY(-50%) rotate(-90deg)';
-            this.toggleBtn.style.transformOrigin = 'center center';
-            this.toggleBtn.style.width = '180px';
-            this.toggleBtn.style.height = '48px';
-            this.toggleBtn.style.fontSize = '15px';
-            this.toggleBtn.style.textAlign = 'center';
-            this.toggleBtn.style.lineHeight = '1.2';
-            this.toggleBtn.style.background = '#007bff'; // 파랑
-            this.toggleBtn.style.color = 'white';
-            this.toggleBtn.style.border = 'none';
-            this.toggleBtn.style.borderRadius = '8px 0 0 8px';
-            this.toggleBtn.style.fontWeight = 'bold';
-            this.toggleBtn.style.cursor = 'pointer';
-            this.toggleBtn.style.zIndex = '10001';
-            this.toggleBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-            this.toggleBtn.style.transition = 'right 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.3s';
-            this.toggleBtn.addEventListener('click', () => {
-                this.togglePanel();
-            });
-            document.body.appendChild(this.toggleBtn);
-        }
-        togglePanel() {
-            if (this.isPanelOpen) {
-                this.closePanel();
-            } else {
-                this.openPanel();
-            }
-        }
-        openPanel() {
-            this.panel.style.right = '0';
-            this.toggleBtn.innerHTML = '▼ VOD Synchronizer';
-            this.toggleBtn.style.right = '272px'; // 패널 width - 버튼 height/2
-            this.isPanelOpen = true;
-        }
-        closePanel() {
-            this.panel.style.right = '-340px';
-            this.toggleBtn.innerHTML = '▲ VOD Synchronizer';
-            this.toggleBtn.style.right = '-66px';
-            this.isPanelOpen = false;
-        }
-        startSearchWithIframe() {
-            if (!tsManager || !tsManager.isControllableState) {
-                alert("현재 VOD 정보를 가져올 수 없습니다.");
-                return;
-            }
-            const currentDateTime = tsManager.getCurDateTime();
-            if (!currentDateTime) {
-                alert("현재 VOD의 라이브 당시 시간을 가져올 수 없습니다.");
-                return;
-            }
-            this.iframe.style.display = 'block';
-            // iframe에 타임스탬프 정보 전달
-            const targetTimestamp = currentDateTime.getTime();
-            const url = new URL(`https://www.sooplive.co.kr/search`);
-            url.searchParams.set('only_search', '1');
-            url.searchParams.set("p_request", "GET_SOOP_VOD_FROM_CHZZK");
-            url.searchParams.set("request_vod_ts", `${targetTimestamp}`);
-            this.iframe.src = url.toString();
-            log('SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
-        }
-        // 마우스 입력에 따라 투명화
-        setupMouseTracking() {
-            // 패널 위에 마우스가 올라가면 투명화 방지
-            let isMouseOnPanel = false;
-            // 마지막 입력(마우스/키보드) 시간
-            this.lastInputTime = Date.now();
-            this.panel.addEventListener('mouseenter', () => {
-                isMouseOnPanel = true;
-                this.showPanelWithOpacity();
-            });
-            this.panel.addEventListener('mouseleave', () => {
-                isMouseOnPanel = false;
-            });
-
-            // 마우스 이동 시 입력 시간 갱신
-            document.addEventListener('mousemove', () => {
-                this.lastInputTime = Date.now();
-                this.showPanelWithOpacity();
-            });
-            // 키보드 입력 시 입력 시간 갱신
-            document.addEventListener('keydown', () => {
-                this.lastInputTime = Date.now();
-                this.showPanelWithOpacity();
-            });
-            document.addEventListener('mouseleave', () => {
-                this.hidePanelWithOpacity();
-            });
-            this.mouseCheckInterval = setInterval(() => {
-                const currentTime = Date.now();
-                const timeSinceLastInput = currentTime - this.lastInputTime;
-                if (timeSinceLastInput >= 2000 && this.isPanelVisible && !isMouseOnPanel) {
-                    this.hidePanelWithOpacity();
-                }
-            }, 200);
-        }
-        showPanelWithOpacity() {
-            this.panel.style.transition = 'opacity 0.3s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
-            this.panel.style.opacity = '1';
-            if (this.toggleBtn) {
-                this.toggleBtn.style.transition = 'opacity 0.3s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
-                this.toggleBtn.style.opacity = '1';
-            }
-            this.isPanelVisible = true;
-        }
-        hidePanelWithOpacity() {
-            this.panel.style.transition = 'opacity 0.5s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
-            this.panel.style.opacity = '0.1';
-            if (this.toggleBtn) {
-                this.toggleBtn.style.transition = 'opacity 0.5s, right 0.5s cubic-bezier(0.4,0,0.2,1)';
-                this.toggleBtn.style.opacity = '0.1';
-            }
-            this.isPanelVisible = false;
-            // this.closePanel();
-        }
-        hideCompletely() {
-            this.panel.style.right = '-340px';
-            this.toggleBtn.style.right = '-112px';
-        }
-        handleSoopVodList(vodLinks) {
-            if (vodLinks.length == 0){
-                alert('동기화 가능한 VOD가 없습니다.');
-                return;
-            }
-            const curDateTime = tsManager.getCurDateTime();
-            if (curDateTime){
-                const request_vod_ts = curDateTime.getTime();
-                const request_real_ts = Date.now();
-                const isPlaying = tsManager.isPlaying();
-                for (let i = 0; i < vodLinks.length; i++) {
-                    const link = vodLinks[i];
-                    const url = new URL(link);
-                    url.searchParams.delete('change_second');
-                    url.searchParams.set('request_vod_ts', request_vod_ts);
-                    if (isPlaying){
-                        url.searchParams.set('request_real_ts', request_real_ts);
-                    }
-                    window.open(url, "_blank");
-                    log('SOOP VOD 열기:', url.toString());
-                }
-            }
-        }
-    }
-
-
-
     class VODLinker{
         constructor(){
             this.iframeTag = null;
@@ -484,7 +227,7 @@ if (window == top) {
         // SOOP 패널 토글
         if (enableSoopPanel && !soopPanel) {
             console.log('[chzzk_content] SOOP 패널 활성화');
-            soopPanel = new SoopPanel();
+            soopPanel = new SoopSyncPanel();
         } else if (!enableSoopPanel && soopPanel) {
             console.log('[chzzk_content] SOOP 패널 비활성화');
             soopPanel.hideCompletely();
@@ -510,6 +253,7 @@ if (window == top) {
         if (enableTimestamp && !tsManager) {
             console.log('[chzzk_content] 타임스탬프 매니저 활성화');
             tsManager = new ChzzkTimestampManager();
+            window.tsManager = tsManager; // window 멤버로 공유
             // URL 파라미터 처리
             handleUrlParameters();
         } else if (enableTimestamp && tsManager) {
@@ -543,9 +287,147 @@ if (window == top) {
 }
 else{ // iframe 내부
     let vodFinder = null;
+    let chzzkSearchHandler = null; // CHZZK 검색 핸들러 추가
     function log(...data){
         console.log('[chzzk_content.js:inframe]', ...data);
     }
+
+    // ===================== CHZZK 검색 핸들러 (SOOP 요청 처리) =====================
+    class ChzzkSearchHandler {
+        constructor(request_vod_ts) {
+            this.request_vod_ts = request_vod_ts;
+            this.request_vod_date = new Date(request_vod_ts);
+            this.init();
+        }
+
+        init() {
+            log('CHZZK 검색 핸들러 초기화, 타임스탬프:', new Date(this.request_vod_ts).toLocaleString());
+            this.setupSearchInterface();
+        }
+
+        setupSearchInterface() {
+            // 검색 인터페이스 생성
+            const searchContainer = document.createElement('div');
+            searchContainer.style.position = 'fixed';
+            searchContainer.style.top = '20px';
+            searchContainer.style.left = '20px';
+            searchContainer.style.background = 'white';
+            searchContainer.style.padding = '20px';
+            searchContainer.style.border = '2px solid #00d564';
+            searchContainer.style.borderRadius = '10px';
+            searchContainer.style.zIndex = '10000';
+            searchContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+
+            const title = document.createElement('h3');
+            title.innerText = 'CHZZK 스트리머 검색';
+            title.style.margin = '0 0 15px 0';
+            title.style.color = '#00d564';
+            searchContainer.appendChild(title);
+
+            const description = document.createElement('p');
+            description.innerText = `타임스탬프: ${new Date(this.request_vod_ts).toLocaleString()}`;
+            description.style.margin = '0 0 15px 0';
+            description.style.fontSize = '14px';
+            searchContainer.appendChild(description);
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = '스트리머 이름을 입력하세요';
+            searchInput.style.width = '200px';
+            searchInput.style.padding = '8px';
+            searchInput.style.border = '1px solid #ccc';
+            searchInput.style.borderRadius = '4px';
+            searchInput.style.marginRight = '10px';
+            searchContainer.appendChild(searchInput);
+
+            const searchBtn = document.createElement('button');
+            searchBtn.innerText = '검색';
+            searchBtn.style.padding = '8px 16px';
+            searchBtn.style.background = '#00d564';
+            searchBtn.style.color = 'black';
+            searchBtn.style.border = 'none';
+            searchBtn.style.borderRadius = '4px';
+            searchBtn.style.cursor = 'pointer';
+            searchBtn.addEventListener('click', () => {
+                this.searchStreamer(searchInput.value);
+            });
+            searchContainer.appendChild(searchBtn);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.innerText = '닫기';
+            closeBtn.style.padding = '8px 16px';
+            closeBtn.style.background = '#ccc';
+            closeBtn.style.color = 'black';
+            closeBtn.style.border = 'none';
+            closeBtn.style.borderRadius = '4px';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.marginLeft = '10px';
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(searchContainer);
+            });
+            searchContainer.appendChild(closeBtn);
+
+            document.body.appendChild(searchContainer);
+        }
+
+        async searchStreamer(keyword) {
+            if (!keyword.trim()) {
+                alert('스트리머 이름을 입력해주세요.');
+                return;
+            }
+
+            log(`스트리머 검색: ${keyword}`);
+            
+            try {
+                const channelSearchAPI = new URL(`https://api.chzzk.naver.com/service/v1/search/channels`);
+                const encodedKeyword = encodeURI(keyword);
+                channelSearchAPI.searchParams.set('keyword', encodedKeyword);
+                channelSearchAPI.searchParams.set('offset', 0);
+                channelSearchAPI.searchParams.set('size', 50);
+                
+                const response = await fetch(channelSearchAPI.toString());
+                const result = await response.json();
+                
+                if (result.code !== 200) {
+                    alert('스트리머 검색에 실패했습니다.');
+                    return;
+                }
+
+                const data = result.content.data;
+                if (data.length > 0) {
+                    const channelObj = data[0].channel;
+                    const channel_id = channelObj.channelId;
+                    const channel_name = channelObj.channelName;
+                    
+                    log(`스트리머 찾음: ${channel_name} (${channel_id})`);
+                    
+                    // VOD 페이지에서 동기화 가능한 VOD 찾기
+                    const vodListUrl = new URL(`https://chzzk.naver.com/${channel_id}/videos`);
+                    vodListUrl.searchParams.set('videoType', 'REPLAY');
+                    vodListUrl.searchParams.set('sortType', 'LATEST');
+                    vodListUrl.searchParams.set('page', 1);
+                    vodListUrl.searchParams.set('p_request', 'GET_VOD');
+                    vodListUrl.searchParams.set('request_vod_ts', this.request_vod_ts);
+                    
+                    // iframe으로 VOD 페이지 로드
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = vodListUrl.toString();
+                    document.body.appendChild(iframe);
+                    
+                    // VODFinder가 처리하도록 함
+                    vodFinder = new VODFinder(this.request_vod_ts, 1);
+                    
+                } else {
+                    alert(`${keyword} 스트리머를 찾을 수 없습니다.`);
+                }
+            } catch (error) {
+                console.error('스트리머 검색 에러:', error);
+                alert('스트리머 검색 중 오류가 발생했습니다.');
+            }
+        }
+    }
+
     class VODFinder{
         constructor(request_vod_ts, pageNum){
             this.request_vod_date = new Date(request_vod_ts);
@@ -695,5 +577,10 @@ else{ // iframe 내부
             const pageNum = parseInt(pageNumStr);
             vodFinder = new VODFinder(request_vod_ts, pageNum);
         }
+    }
+    else if (p_request === "GET_CHZZK_VOD_FROM_SOOP") {
+        // SOOP에서 CHZZK 동기화 요청
+        const request_vod_ts = parseInt(request_vod_ts_str);
+        chzzkSearchHandler = new ChzzkSearchHandler(request_vod_ts);
     }
 }

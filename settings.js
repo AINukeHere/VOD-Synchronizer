@@ -14,6 +14,7 @@ class SettingsManager {
         await this.loadSettings();
         this.setupEventListeners();
         this.displaySettings();
+        this.displayVersion();
     }
 
     async loadSettings() {
@@ -42,6 +43,24 @@ class SettingsManager {
         document.getElementById('enableChzzkSoopPanel').checked = this.settings.enableChzzkSoopPanel;
         document.getElementById('enableSoopChzzkPanel').checked = this.settings.enableSoopChzzkPanel;
         document.getElementById('enableRpPanel').checked = this.settings.enableRpPanel;
+    }
+
+    displayVersion() {
+        try {
+            // Chrome 확장 프로그램의 버전 정보 가져오기
+            const manifest = chrome.runtime.getManifest();
+            const version = manifest.version;
+            const versionElement = document.getElementById('versionInfo');
+            if (versionElement) {
+                versionElement.textContent = `버전 ${version}`;
+            }
+        } catch (error) {
+            console.error('버전 정보 로드 실패:', error);
+            const versionElement = document.getElementById('versionInfo');
+            if (versionElement) {
+                versionElement.textContent = '버전 정보를 불러올 수 없습니다.';
+            }
+        }
     }
 
     collectSettings() {

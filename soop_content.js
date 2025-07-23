@@ -5,6 +5,7 @@ if (window == top) {
     let tsManager = null;
     let vodLinker = null;
     let rpPanel = null;
+    let chzzkPanel = null; // CHZZK 패널 추가
     function log(...data){
         console.log('[soop_content.js]', ...data);
     }
@@ -166,6 +167,29 @@ if (window == top) {
             vodLinker = new VODLinker();
         }
 
+        // 타임스탬프 매니저 초기화
+        if (enableTimestamp && !tsManager) {
+            log('타임스탬프 매니저 활성화');
+            tsManager = new SoopTimestampManager();
+            window.tsManager = tsManager; // window 멤버로 공유
+        } else if (enableTimestamp && tsManager) {
+            // 이미 활성화된 경우 enable 호출
+            tsManager.enable();
+        } else if (!enableTimestamp && tsManager) {
+            log('타임스탬프 매니저 비활성화');
+            tsManager.disable();
+        }
+
+        // CHZZK 패널 토글
+        if (enableChzzkPanel && !chzzkPanel) {
+            log('CHZZK 패널 활성화');
+            chzzkPanel = new ChzzkSyncPanel();
+        } else if (!enableChzzkPanel && chzzkPanel) {
+            log('CHZZK 패널 비활성화');
+            chzzkPanel.hideCompletely();
+            chzzkPanel = null;
+        }
+
         // RP 패널 토글
         if (enableRpPanel && !rpPanel) {
             log('RP 패널 활성화');
@@ -174,18 +198,6 @@ if (window == top) {
             log('RP 패널 비활성화');
             rpPanel.hideCompletely();
             rpPanel = null;
-        }
-
-        // 타임스탬프 매니저 초기화
-        if (enableTimestamp && !tsManager) {
-            log('타임스탬프 매니저 활성화');
-            tsManager = new SoopTimestampManager();
-        } else if (enableTimestamp && tsManager) {
-            // 이미 활성화된 경우 enable 호출
-            tsManager.enable();
-        } else if (!enableTimestamp && tsManager) {
-            log('타임스탬프 매니저 비활성화');
-            tsManager.disable();
         }
     }
 
