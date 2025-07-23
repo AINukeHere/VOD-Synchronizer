@@ -341,26 +341,16 @@ class RPNicknamePanel {
     }
 
     updateTheme() {
-        const themeButton = document.querySelector('#root > div > div.toolbar_container__k2trF > div.toolbar_section__IPbBC > div:nth-child(7) > button > span');
+        const darkThemeClass = document.querySelector('.theme_dark')
         
-        if (themeButton) {
-            const buttonText = themeButton.innerText;
-            let newTheme = 'dark';
-            let isDark = true;
-            if (buttonText === '어두운 테마') {
-                // 현재 밝은 테마 상태
-                newTheme = 'light';
-                isDark = false;
-            } else if (buttonText === '밝은 테마') {
-            }
-            else{
-                console.log(`알수없는 테마:${newTheme}`);
-                return;
-            }
-            
-            if (newTheme !== this.currentTheme) {
-                this.applyTheme(isDark);
-            }
+        let newTheme = 'light';
+        let isDark = false;
+        if (darkThemeClass) {
+            newTheme = 'dark';
+            isDark = true;
+        }
+        if (newTheme !== this.currentTheme) {
+            this.applyTheme(isDark);
         }
     }
 

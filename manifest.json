@@ -21,7 +21,28 @@
                 "chzzk_sync_panel.js",
                 "StreamerIDManager.js",
                 "soop_content.js"
-            ]
+            ],
+            "all_frames": true
+        },
+        {
+            "matches": ["https://ch.sooplive.co.kr/*"],
+            "js": [
+                "vod_get.js"
+            ],
+            "all_frames": true
+        },
+        {
+            "matches": ["https://vod.sooplive.co.kr/*"],
+            "js": [
+                "settings_manager.js",
+                "base_panel.js",
+                "timestamp_manager.js",
+                "soop_timestamp_manager.js",
+                "rp_nickname_panel.js",
+                "chzzk_sync_panel.js",
+                "soop_content.js"
+            ],
+            "all_frames": true
         },
         {
             "matches": ["https://chzzk.naver.com/*"],
@@ -33,13 +54,14 @@
                 "rp_nickname_panel.js",
                 "soop_sync_panel.js",
                 "chzzk_content.js"
-            ]
+            ],
+            "all_frames": true
         }
     ],
     "web_accessible_resources": [
         {
             "resources": ["rp_nicknames.json"],
-            "matches": ["https://chzzk.naver.com/*", "https://vod.sooplive.co.kr/*"]
+            "matches": ["https://chzzk.naver.com/*", "https://www.sooplive.co.kr/*", "https://ch.sooplive.co.kr/*", "https://vod.sooplive.co.kr/*"]
         }
     ],
     "commands": {
