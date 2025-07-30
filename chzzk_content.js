@@ -108,14 +108,10 @@ if (window == top) {
         addChzzkSyncButtons() {
             if (!lastIsVodPage) return;
 
-            const searchHeader = document.querySelector(
-                '#root > div > div.toolbar_container__k2trF > div.search_container__8jbrv.search_is_focus__QJ-2o > div > div.search_header__b5k9O'
-            );
+            const searchHeader = document.querySelector('div[class^="search_header_"]');
             if (searchHeader) return; // 검색 결과 없음 → 버튼 생성 X
 
-            const searchResults = document.querySelectorAll(
-                '#root > div > div.toolbar_container__k2trF > div.search_container__8jbrv.search_is_focus__QJ-2o > div > ul > li > a'
-            );
+            const searchResults = document.querySelectorAll('div[class^="search_container__"] > div > ul > li > a');
             if (!searchResults.length) return;
 
             searchResults.forEach(element => {
@@ -141,7 +137,7 @@ if (window == top) {
                         return;
                     }
                     vodLinker.curProcessBtn = button;
-                    const searchWordSpan = button.parentElement.querySelector('.search_keyword__mAhns');
+                    const searchWordSpan = button.parentElement.querySelector('[class^="search_keyword__"]');
                     
                     if (!searchWordSpan){
                         return;
@@ -556,7 +552,7 @@ else{ // iframe 내부
                         window.parent.postMessage(
                             {
                                 response: "CHZZK_VOD",
-                                vod_link: vod_link
+                                vod_link: l_vod_link
                             },
                             "https://chzzk.naver.com"
                         );
