@@ -244,7 +244,7 @@ if (window == top) {
             log("STREAMER_ID 받음:", event.data.streamer_id);
             vodLinker.clearLastRequest();
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_FINDING_VOD;
-            vodLinker.curProcessingBtn = null;
+            //vodLinker.curProcessingBtn = null; // 작업이 아직 끝나지 않았으므로 null로 초기화하면 안됨
         }
     })
 }
