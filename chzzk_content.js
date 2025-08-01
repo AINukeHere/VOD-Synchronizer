@@ -465,19 +465,7 @@ else{ // iframe 내부
                     const l_vod_idx = aTags.length-1;
                     const l_vod_link = aTags[l_vod_idx].href;
                     const l_video_id = parseInt(l_vod_link.match(/\/video\/(\d+)/)[1]);
-                    const l_video_api_url = `https://api.chzzk.naver.com/service/v2/videos/${l_video_id}`;
-                    const l_response = await fetch(l_video_api_url);
-                    const l_video_info = await l_response.json();
-                    if (l_video_info.code !== 200) {
-                        window.parent.postMessage(
-                            {
-                                response: "CHZZK_VOD_NOT_FOUND",
-                                reason: `${l_video_id} video api response ${l_video_info.code}.`
-                            },
-                            "https://chzzk.naver.com"
-                        );
-                        return;
-                    }
+                    const l_video_info = await this.getVodInfo(l_video_id);
                     const l_liveOpenDateStr = l_video_info.content.liveOpenDate;
                     const l_durationMSec = l_video_info.content.duration*1000;
                     const l_liveOpenDate = new Date(l_liveOpenDateStr.replace(' ', 'T'));
@@ -503,24 +491,20 @@ else{ // iframe 내부
                             const vod_link = aTags[mid].href;
                             const match = vod_link.match(/\/video\/(\d+)/);
                             const videoId = parseInt(match[1]);
-                            const url = `https://api.chzzk.naver.com/service/v2/videos/${videoId}`;
-                            log(`이분탐색: ${left}~[${mid}]~${right} CHZZK VOD 정보 검색중: ${url}`);
-                            const response = await fetch(url);
-                            const videoInfo = await response.json();
-                            if (videoInfo.code !== 200) {
-                                window.parent.postMessage(
-                                    {
-                                        response: "CHZZK_VOD_NOT_FOUND",
-                                        reason: `${videoId} video api response ${videoInfo.code}.`
-                                    },
-                                    "https://chzzk.naver.com"
-                                );
-                                return;
-                            }
-                            const liveOpenDateStr = videoInfo.content.liveOpenDate;
-                            const durationMSec = videoInfo.content.duration*1000;
-                            const liveOpenDate = new Date(liveOpenDateStr.replace(' ', 'T'));
-                            const liveCloseDate = new Date(liveOpenDate.getTime() + durationMSec);
+                            log(`이분탐색: ${left}~[${mid}]~${right} CHZZK VOD 정보 검색중 (videoId:${videoId})`);
+                            const videoInfo = await this.getVodInfo(videoId);
+                
+                            // 다시보기가 잘릴 경우 잘린 다시보기의 라이브 시작날짜와 동일하기 때문에 다음 다시보기의 라이브 시작날짜를 확인해야함
+                            const nextVodId = videoInfo.content.nextVideo.videoNo;
+                            const nextVodInfo = await this.getVodInfo(nextVodId);
+                            const liveOpenDate = new Date(videoInfo.content.liveOpenDate.replace(' ', 'T'));
+                            
+                            // 잘린 다시보기인 경우 다음 다시보기의 시간만큼 liveOpenDate 변수에 더해줌
+                            if (nextVodInfo.content.liveOpenDate === videoInfo.content.liveOpenDate)
+                                liveOpenDate.setTime(liveOpenDate.getTime() + nextVodInfo.content.duration*1000);
+
+                            const liveCloseDate = new Date(liveOpenDate.getTime() + videoInfo.content.duration*1000);
+
                             if (liveOpenDate <= this.request_vod_date && this.request_vod_date <= liveCloseDate) {
                                 window.parent.postMessage(
                                     {
@@ -562,6 +546,22 @@ else{ // iframe 내부
             }
             log('페이지 로딩중. 재시도');
             setTimeout(this.tryCheck.bind(this), 100);
+        }
+        async getVodInfo(videoId){
+            const url = `https://api.chzzk.naver.com/service/v2/videos/${videoId}`;
+            const response = await fetch(url);
+            const videoInfo = await response.json();
+            if (videoInfo.code !== 200) {
+                window.parent.postMessage(
+                    {
+                        response: "CHZZK_VOD_NOT_FOUND",
+                        reason: `${videoId} video api response ${videoInfo.code}.`
+                    },
+                    "https://chzzk.naver.com"
+                );
+                return;
+            }
+            return videoInfo;
         }
     }
     // URL 파라미터 처리
