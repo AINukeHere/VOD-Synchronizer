@@ -15,7 +15,7 @@ if (window !== top) {
 
             this.curProcessingBtn = null;
             this.request_vod_ts = null;
-            this.log('in iframe');
+            log('in iframe');
             this.init();
         }
         getStreamerID(nickname) {
