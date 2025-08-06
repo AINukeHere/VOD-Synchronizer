@@ -154,24 +154,28 @@ if (window !== top){
             
             let resultVODLinks = [];
             
-            // 요청날짜와 동일한 첫번째 요소와 끝 요소 인덱스 찾기
             let firstIndex = -1;
             let lastIndex = -1;
+            // allVodInfoList는 최근 순으로 정렬되어있음
             for (var i = 0; i < this.allVodInfoList.length; ++i) {
                 const vodInfo = this.allVodInfoList[i];
-
+                // 요청날짜보다 더 최근 것 중 가장 오래된 것 찾기
                 if (vodInfo.year > this.requestYear || 
                    (vodInfo.year == this.requestYear && vodInfo.month > this.requestMonth) || 
                    (vodInfo.year == this.requestYear && vodInfo.month == this.requestMonth && vodInfo.day > this.requestDay)) {
                     firstIndex = i;
                 }
-                else if (vodInfo.year < this.requestYear ||
-                    (vodInfo.year == this.requestYear && vodInfo.month < this.requestMonth) ||
-                    (vodInfo.year == this.requestYear && vodInfo.month == this.requestMonth && vodInfo.day < this.requestDay)) {
+                // 요청날짜보다 더 오래된 것 중 가장 최근 것 찾기
+                else{
                     lastIndex = i;
-                    break;
+                    if (vodInfo.year < this.requestYear ||
+                        (vodInfo.year == this.requestYear && vodInfo.month < this.requestMonth) ||
+                        (vodInfo.year == this.requestYear && vodInfo.month == this.requestMonth && vodInfo.day < this.requestDay)) {
+                        break;
+                    }
                 }
             }
+            if (firstIndex == -1) firstIndex = 0;
             for (var i = firstIndex; i <= lastIndex; ++i) {
                 const vodInfo = this.allVodInfoList[i];
                 resultVODLinks.push(vodInfo.link);
