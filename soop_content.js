@@ -237,8 +237,12 @@ if (window == top) {
             vodLinker.clearLastRequest();
             vodLinker.curProcessingBtn.innerText = BTN_TEXT_IDLE;
             vodLinker.curProcessingBtn = null;
-            checkOneByOne(vodLinks);
-            
+            if (vodLinks.length == 0){
+                alert("다시보기가 없습니다.");
+            }
+            else{
+                checkOneByOne(vodLinks);
+            }
         }
         else if (event.data.response === "STATUS_STREAM_ID_CHECKED"){
             log("STREAMER_ID 받음:", event.data.streamer_id);

@@ -82,7 +82,6 @@ if (window !== top){
                 this.allVodInfoList.push(...vodInfoList);
                 this.checkAndCreateChildPages();
                 clearInterval(intervalID);
-                this.checkAllDataReceived();
             }, 100);
         }
         
@@ -143,13 +142,15 @@ if (window !== top){
         
         createFinalVodLinkList() {
             // 날짜순으로 정렬 (오래된 순)
-            this.childVodListInfoList.sort((a, b) => {
-                if (a.year !== b.year) return a.year - b.year;
-                if (a.month !== b.month) return a.month - b.month;
-                return a.day - b.day;
-            });
-            for (var i = 0; i < this.childVodListInfoList.length; ++i) {
-                this.allVodInfoList.push(...this.childVodListInfoList[i]);
+            if (this.childVodListInfoList.length > 0) {
+                this.childVodListInfoList.sort((a, b) => {
+                    if (a.year !== b.year) return a.year - b.year;
+                    if (a.month !== b.month) return a.month - b.month;
+                    return a.day - b.day;
+                });
+                for (var i = 0; i < this.childVodListInfoList.length; ++i) {
+                    this.allVodInfoList.push(...this.childVodListInfoList[i]);
+                }
             }
             
             let resultVODLinks = [];
