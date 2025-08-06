@@ -58,6 +58,7 @@ if (window !== top){
         constructor(requestVodDatetime) {
             this.requestVodDatetime = requestVodDatetime;
             this.allVodInfoList = [];
+            this.childVodListInfoList = [];
             this.expectedChildPages = 0;
             this.receivedChildPages = 0;
             this.childIframes = [];
@@ -117,7 +118,7 @@ if (window !== top){
             log(`[PageOneVodManager] 자식 페이지 데이터 수신 (${this.receivedChildPages}/${this.expectedChildPages})`);
             
             if (childVodInfoList && childVodInfoList.length > 0) {
-                this.allVodInfoList.push(...childVodInfoList);
+                this.childVodListInfoList.push(childVodInfoList);
             }
             
             this.checkAllDataReceived();
@@ -142,33 +143,40 @@ if (window !== top){
         
         createFinalVodLinkList() {
             // 날짜순으로 정렬 (오래된 순)
-            this.allVodInfoList.sort((a, b) => {
+            this.childVodListInfoList.sort((a, b) => {
                 if (a.year !== b.year) return a.year - b.year;
                 if (a.month !== b.month) return a.month - b.month;
                 return a.day - b.day;
             });
-            
-            let resultVODLinks = [];
-            let prevMonth = 0;
-            let prevDay = 0;
-            
-            for (var i = 0; i < this.allVodInfoList.length; ++i) {
-                const vodInfo = this.allVodInfoList[i];
-                
-                if (i != 0) {
-                    if (prevMonth > this.requestMonth || prevDay > this.requestDay) {
-                        break;
-                    }
-                }
-                
-                if (vodInfo.year >= this.requestYear && vodInfo.month >= this.requestMonth && vodInfo.day >= this.requestDay) {
-                    resultVODLinks.push(vodInfo.link);
-                    prevMonth = vodInfo.month;
-                    prevDay = vodInfo.day;
-                    log(`vod added: ${vodInfo.month}-${vodInfo.day} ${vodInfo.link}`);
-                }
+            for (var i = 0; i < this.childVodListInfoList.length; ++i) {
+                this.allVodInfoList.push(...this.childVodListInfoList[i]);
             }
             
+            let resultVODLinks = [];
+            
+            // 요청날짜와 동일한 첫번째 요소와 끝 요소 인덱스 찾기
+            let firstIndex = -1;
+            let lastIndex = -1;
+            for (var i = 0; i < this.allVodInfoList.length; ++i) {
+                const vodInfo = this.allVodInfoList[i];
+
+                if (vodInfo.year > this.requestYear || 
+                   (vodInfo.year == this.requestYear && vodInfo.month > this.requestMonth) || 
+                   (vodInfo.year == this.requestYear && vodInfo.month == this.requestMonth && vodInfo.day > this.requestDay)) {
+                    firstIndex = i;
+                }
+                else if (vodInfo.year < this.requestYear ||
+                    (vodInfo.year == this.requestYear && vodInfo.month < this.requestMonth) ||
+                    (vodInfo.year == this.requestYear && vodInfo.month == this.requestMonth && vodInfo.day < this.requestDay)) {
+                    lastIndex = i;
+                    break;
+                }
+            }
+            for (var i = firstIndex; i <= lastIndex; ++i) {
+                const vodInfo = this.allVodInfoList[i];
+                resultVODLinks.push(vodInfo.link);
+                log(`vod added: ${vodInfo.year}-${vodInfo.month}-${vodInfo.day} ${vodInfo.link}`);
+            }
             return resultVODLinks;
         }
     }
