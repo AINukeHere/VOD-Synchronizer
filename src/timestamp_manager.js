@@ -1,4 +1,4 @@
-class BaseTimestampManager {
+export class BaseTimestampManager {
     constructor() {
         this.tooltip = null;
         this.observer = null;
@@ -11,14 +11,29 @@ class BaseTimestampManager {
         this.mouseCheckInterval = null;
         this.videoTag = null;
         this.isEnabled = true; // 활성화 상태 추적
+        
+        // VODSync 네임스페이스에 자동 등록
+        window.VODSync = window.VODSync || {};
+        if (window.VODSync.tsManager) {
+            console.warn('[VODSync] TimestampManager가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
+        }
+        window.VODSync.tsManager = this;
+        
         this.startMonitoring();
     }
 
+    log(...data){
+        logToExtension('[timestamp_manager.js]', ...data);
+    }
     // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
     // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
     RequestGlobalTSAsync(request_vod_ts, request_real_ts = null){
         this.request_vod_ts = request_vod_ts;
         this.request_real_ts = request_real_ts;
+    }
+
+    RequestLocalTSAsync(request_local_ts){
+        this.request_local_ts = request_local_ts;
     }
 
     startMonitoring() {
@@ -136,27 +151,38 @@ class BaseTimestampManager {
                 this.isControllableState = true;
                 this.tooltip.innerText = timestamp.toLocaleString("ko-KR");
             }
-            if (this.isPlaying() === true && this.request_vod_ts != null){
-                const streamPeriod = this.getStreamPeriod();
-                if (streamPeriod){
-
-                    if (this.request_real_ts == null){
-                        log("시차 적용하지않고 동기화 시도");
-                        if (!this.moveToGlobalTS(this.request_vod_ts, false)){
-                            window.close();
+            if (this.isPlaying() === true)
+            { 
+                // 전역 시간 동기화
+                if (this.request_vod_ts != null){
+                    const streamPeriod = this.getStreamPeriod();
+                    if (streamPeriod){
+                        if (this.request_real_ts == null){
+                            this.log("시차 적용하지않고 동기화 시도");
+                            if (!this.moveToGlobalTS(this.request_vod_ts, false)){
+                                window.close();
+                            }
                         }
-                    }
-                    else{
-                        log("시차 적용하여 동기화 시도");
-                        const currentSystemTime = Date.now();
-                        const timeDifference = currentSystemTime - this.request_real_ts;
-                        const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
-                        if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
-                            window.close();
+                        else{
+                            this.log("시차 적용하여 동기화 시도");
+                            const currentSystemTime = Date.now();
+                            const timeDifference = currentSystemTime - this.request_real_ts;
+                            const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
+                            if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
+                                window.close();
+                            }
                         }
+                        this.request_vod_ts = null;
+                        this.request_real_ts = null;
                     }
-                    this.request_vod_ts = null;
-                    this.request_real_ts = null;
+                }
+                // 로컬 시간 동기화
+                if (this.request_local_ts != null){
+                    this.log("playback time으로 동기화 시도");
+                    if (!this.moveToPlaybackTime(this.request_local_ts, false)){
+                        window.close();
+                    }
+                    this.request_local_ts = null;
                 }
             }
         }, 200);
@@ -186,7 +212,7 @@ class BaseTimestampManager {
         if (this.tooltip) {
             this.tooltip.style.display = 'block';
         }
-        console.log('[BaseTimestampManager] 활성화됨');
+        this.log('활성화됨');
     }
 
     disable() {
@@ -194,7 +220,7 @@ class BaseTimestampManager {
         if (this.tooltip) {
             this.tooltip.style.display = 'none';
         }
-        console.log('[BaseTimestampManager] 비활성화됨');
+        this.log('비활성화됨');
     }
 
     processTimestampInput(input) {
@@ -250,11 +276,11 @@ class BaseTimestampManager {
         }
         
         const playbackTime = Math.floor((globalDateTime.getTime() - streamStartDateTime.getTime()) / 1000);
-        return this.applyPlaybackTime(playbackTime, doAlert);
+        return this.moveToPlaybackTime(playbackTime, doAlert);
     }
 
     // 플랫폼별로 구현해야 하는 추상 메서드
-    applyPlaybackTime(playbackTime, doAlert = true) {
+    moveToPlaybackTime(playbackTime, doAlert = true) {
         throw new Error("applyPlaybackTime must be implemented by subclass");
     }
 } 

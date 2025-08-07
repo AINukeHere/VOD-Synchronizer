@@ -1,8 +1,10 @@
 // ===================== SOOP 동기화 패널 클래스 =====================
-class SoopSyncPanel extends BaseSyncPanel {
+import { BaseSyncPanel } from './base_panel.js';
+
+export class SoopSyncPanel extends BaseSyncPanel {
     constructor() {
         super({
-            id: 'soop-panel',
+            id: 'soop-sync-panel',
             title: 'SOOP 스트리머와 동기화',
             color: '#007bff', // 파랑
             toggleBtnText: 'VOD Synchronizer',
@@ -35,18 +37,19 @@ class SoopSyncPanel extends BaseSyncPanel {
         this.soopSyncBtn.style.fontSize = '15px';
         this.soopSyncBtn.style.fontWeight = 'bold';
         this.soopSyncBtn.style.cursor = 'pointer';
-        this.soopSyncBtn.addEventListener('click', () => {
-            this.startSearchWithIframe();
-        });
+        this.soopSyncBtn.addEventListener('click', () => this.startSearchWithIframe());
         this.buttonArea.appendChild(this.soopSyncBtn);
     }
 
     startSearchWithIframe() {
-        if (!window.tsManager || !window.tsManager.isControllableState) {
+        // VODSync 네임스페이스를 통해 tsManager 접근
+        const tsManager = window.VODSync?.tsManager;
+        
+        if (!tsManager || !tsManager.isControllableState) {
             alert("현재 VOD 정보를 가져올 수 없습니다. 타임스탬프 표시 기능이 켜져있는지 확인하세요.");
             return;
         }
-        const currentDateTime = window.tsManager.getCurDateTime();
+        const currentDateTime = tsManager.getCurDateTime();
         if (!currentDateTime) {
             alert("현재 VOD의 라이브 당시 시간을 가져올 수 없습니다.");
             return;
@@ -62,16 +65,19 @@ class SoopSyncPanel extends BaseSyncPanel {
         logToExtension('[soop_sync_panel] SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
     }
 
-    handleSoopVodList(vodLinks) {
+    async handleSoopVodList(vodLinks) {
         if (vodLinks.length == 0){
             alert('동기화 가능한 VOD가 없습니다.');
             return;
         }
-        const curDateTime = window.tsManager.getCurDateTime();
+        // VODSync 네임스페이스를 통해 tsManager 접근
+        const tsManager = window.VODSync?.tsManager;
+        
+        const curDateTime = tsManager.getCurDateTime();
         if (curDateTime){
             const request_vod_ts = curDateTime.getTime();
             const request_real_ts = Date.now();
-            const isPlaying = window.tsManager.isPlaying();
+            const isPlaying = tsManager.isPlaying();
             for (let i = 0; i < vodLinks.length; i++) {
                 const link = vodLinks[i];
                 const url = new URL(link);

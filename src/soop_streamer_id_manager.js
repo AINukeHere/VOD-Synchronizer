@@ -1,9 +1,6 @@
 if (window !== top) {
-    function log(...data){
-        logToExtension('[streamerID_get.js]', ...data);
-    }
     // SOOP 스트리머 닉네임으로부터 ID를 찾거나 다시보기 동기화까지 해줄 수 있는 클래스
-    class StreamerIDManager {
+    class SoopStreamerIDManager {
         constructor() {
             this.BTN_TEXT_IDLE = "Find VOD";
             this.BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
@@ -15,9 +12,14 @@ if (window !== top) {
 
             this.curProcessingBtn = null;
             this.request_vod_ts = null;
-            log('in iframe');
+            this.log('in iframe');
             this.init();
         }
+        
+        log(...data){
+            logToExtension('[soop_streamer_id_manager.js]', ...data);
+        }
+        
         getStreamerID(nickname) {
             const searchResults = document.querySelectorAll('#container > div.search_strm_area > ul > .strm_list');
             let streamer_id = null;
@@ -35,10 +37,10 @@ if (window !== top) {
         tryGetStreamerID(nickname) {
             return new Promise((resolve, reject) => {
                 const intervalID = setInterval(() => {
-                    log("TryGetStreamerID - soop 요청");
+                    this.log("TryGetStreamerID - soop 요청");
                     const streamer_id = this.getStreamerID(nickname);
                     if (streamer_id == null) return;
-                    log(`streamer_id 찾음: ${streamer_id}`);
+                    this.log(`streamer_id 찾음: ${streamer_id}`);
                     clearInterval(intervalID);
                     resolve(streamer_id);
                 }, 100);
@@ -58,7 +60,7 @@ if (window !== top) {
             url.searchParams.set("szStype", "di");
             url.searchParams.set("szActype", "input_field");
             url.searchParams.set("p_request", "GET_STREAMER_ID");
-            log('검색 결과 페이지 iframe 열기:', url.toString());
+            this.log('검색 결과 페이지 iframe 열기:', url.toString());
             this.searchIframe.src = url.toString();
         }
         findVodListInIframe(streamerId, targetTimestamp) {
@@ -73,7 +75,7 @@ if (window !== top) {
             const reqUrl = new URL(url.toString());
             reqUrl.searchParams.set("p_request", "GET_VOD_LIST");
             reqUrl.searchParams.set("request_vod_ts", targetDateTime.getTime());
-            log('SOOP VOD 리스트 요청:', reqUrl.toString());
+            this.log('SOOP VOD 리스트 요청:', reqUrl.toString());
             this.searchIframe.src = reqUrl.toString();
         }
         updateFindVodButtons() {
@@ -102,7 +104,7 @@ if (window !== top) {
                                 e.stopPropagation();
                                 const nicknameSpan = element.querySelector('span');
                                 const nickname = nicknameSpan.innerText;
-                                log('Find VOD 클릭:', nickname);
+                                this.log('Find VOD 클릭:', nickname);
                                 this.searchStreamerInIframe(nickname);
                             });
                         }
@@ -112,20 +114,20 @@ if (window !== top) {
         }
         handleChzzkRequest() {
             this.isChzzkRequest = true;
-            log('chzzk 요청 감지, 타임스탬프:', new Date(this.request_vod_ts).toLocaleString());
+            this.log('chzzk 요청 감지, 타임스탬프:', new Date(this.request_vod_ts).toLocaleString());
             this.updateFindVodButtons();
             window.addEventListener("message", (event) => {
                 if (event.data.response === "STREAMER_ID") {
                     this.curProcessingBtn.innerText = this.BTN_TEXT_FINDING_VOD;
                     const streamer_id = event.data.streamer_id;
-                    log('streamer_id: ', streamer_id);
+                    this.log('streamer_id: ', streamer_id);
                     if (streamer_id != null) {
                         this.findVodListInIframe(streamer_id, this.request_vod_ts);
                     }
                 }
                 if (event.data.response === "SOOP_VOD_LIST") {
                     this.curProcessingBtn.innerText = this.BTN_TEXT_IDLE;
-                    log("VOD 리스트 받음:", event.data.resultVODLinks);
+                    this.log("VOD 리스트 받음:", event.data.resultVODLinks);
                     window.parent.postMessage({
                         response: "SOOP_VOD_LIST",
                         resultVODLinks: event.data.resultVODLinks,
@@ -134,7 +136,7 @@ if (window !== top) {
             });
         }
         handleSoopRequest(params) {
-            log('soop 요청 감지, 타임스탬프:', new Date(this.request_vod_ts).toLocaleString());
+            this.log('soop 요청 감지, 타임스탬프:', new Date(this.request_vod_ts).toLocaleString());
             const request_nickname = params.get("szKeyword");
             const decoded_nickname = decodeURI(request_nickname);
             this.tryGetStreamerID(decoded_nickname)
@@ -146,7 +148,7 @@ if (window !== top) {
                     this.findVodListInIframe(streamer_id, this.request_vod_ts, "https://vod.sooplive.co.kr");
                     window.addEventListener("message", (event) => {
                         if (event.data.response === "SOOP_VOD_LIST") {
-                            log("VOD 리스트 받음:", event.data.resultVODLinks);
+                            this.log("VOD 리스트 받음:", event.data.resultVODLinks);
                             window.parent.postMessage({
                                 response: "SOOP_VOD_LIST",
                                 resultVODLinks: event.data.resultVODLinks,
@@ -156,11 +158,11 @@ if (window !== top) {
 
                 })
                 .catch(err => {
-                    log(err.message);
+                    this.log(err.message);
                 });
         }
         handleGetStreamerIDRequest(params) {
-            log("chzzk의 soop iframe의 soop iframe이 요청 감지");
+            this.log("chzzk의 soop iframe의 soop iframe이 요청 감지");
             const request_nickname = params.get("szKeyword");
             const decoded_nickname = decodeURI(request_nickname);
             this.tryGetStreamerID(decoded_nickname)
@@ -171,7 +173,7 @@ if (window !== top) {
                     }, "https://www.sooplive.co.kr");
                 })
                 .catch(err => {
-                    log(err.message);
+                    this.log(err.message);
                 });
         }
         setupSearchAreaOnlyMode() {
@@ -227,6 +229,5 @@ if (window !== top) {
             }
         }
     }
-    // 인스턴스 생성
-    new StreamerIDManager();
+    new SoopStreamerIDManager();
 }

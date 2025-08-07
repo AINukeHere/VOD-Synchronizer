@@ -1,4 +1,4 @@
-class RPNicknamePanel {
+export class RPNicknamePanel {
     constructor() {
         this.panel = null;
         this.toggleBtn = null;
@@ -15,19 +15,19 @@ class RPNicknamePanel {
     }
 
     async init() {
-        await this.loadNicknames();
-        await this.loadSelectedServer();
         this.createPanel();
         this.createToggleBtn();
         this.setupMouseTracking();
         this.startThemeMonitoring();
         this.closePanel();
         this.applyTheme(false); // 기본적으로 light 테마임
+        await this.loadNicknames();
+        await this.loadSelectedServer();
     }
 
     async loadNicknames() {
         try {
-            const response = await fetch(chrome.runtime.getURL('rp_nicknames.json'));
+            const response = await fetch(chrome.runtime.getURL('src/rp_nicknames.json'));
             const data = await response.json();
             this.nicknamesByServer = data;
             // 첫 서버를 기본 선택

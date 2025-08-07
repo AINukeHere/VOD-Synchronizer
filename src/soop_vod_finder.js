@@ -1,6 +1,6 @@
 if (window !== top){
     function log(...data){
-        logToExtension('[vod_get.js]', ...data);
+        logToExtension('[soop_vod_finder.js]', ...data);
     }
     
     // 공통 유틸리티 함수
@@ -216,7 +216,7 @@ if (window !== top){
     }
     
     // 메인 실행 로직
-    log('[vod_get.js] in iframe');
+    log('in iframe');
     const params = new URLSearchParams(window.location.search);
     const p_request = params.get("p_request");
     const pageNum = parseInt(params.get("page") || "1");

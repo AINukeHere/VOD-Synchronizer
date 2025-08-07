@@ -1,0 +1,163 @@
+
+if (window == top) {
+    let tsManager = null;
+    let chzzkVodLinker = null;
+    let lastIsVodPage = null;
+    let soopPanel = null;
+    let rpPanel = null;
+
+    function log(...data){
+        logToExtension('[chzzk_content.js:outframe]', ...data);
+    }
+
+    // URL 파라미터 처리
+    const urlParams = new URLSearchParams(window.location.search);
+    const changeSecond = urlParams.get('change_second');
+    const url_request_vod_ts = urlParams.get("request_vod_ts");
+    const url_request_real_ts = urlParams.get("request_real_ts");
+    
+    // URL 파라미터 처리를 위한 함수
+    function handleUrlParameters() {
+        if (changeSecond) {
+            log('change_second 파라미터 감지:', changeSecond);            
+            tsManager.RequestLocalTSAsync(parseInt(changeSecond));
+                        
+            // URL에서 change_second 파라미터 제거
+            const url = new URL(window.location.href);
+            url.searchParams.delete('change_second');
+            window.history.replaceState({}, '', url.toString());
+        }
+        if (url_request_vod_ts){
+            const request_vod_ts = parseInt(url_request_vod_ts);
+            if (url_request_real_ts){ // 페이지 로딩 시간을 추가해야하는 경우.
+                const request_real_ts = parseInt(url_request_real_ts);
+                tsManager?.RequestGlobalTSAsync(request_vod_ts, request_real_ts);
+            }
+            else{
+                tsManager?.RequestGlobalTSAsync(request_vod_ts);
+            }
+            
+            // url 지우기
+            const url = new URL(window.location.href);
+            url.searchParams.delete('request_vod_ts');
+            url.searchParams.delete('request_real_ts');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }    
+    
+    // 설정에 따라 기능 초기화
+    async function initializeFeatures() {
+        // CHZZK 플랫폼에서 필요한 클래스들 구성
+        const classConfig = {
+            'ChzzkTimestampManager': 'src/chzzk_timestamp_manager.js',
+            'ChzzkVODLinker': 'src/chzzk_vod_linker.js',
+            'SoopSyncPanel': 'src/soop_sync_panel.js',
+            'RPNicknamePanel': 'src/rp_nickname_panel.js',
+        };
+        
+        // 클래스 로더를 통해 필요한 클래스들 로드
+        const classes = await window.VODSync.classLoader.loadClasses(classConfig);
+        
+        // 필요한 클래스들 생성
+        tsManager = new classes.ChzzkTimestampManager();
+        chzzkVodLinker = new classes.ChzzkVODLinker();
+        soopPanel = new classes.SoopSyncPanel();
+        rpPanel = new classes.RPNicknamePanel();
+    
+        // URL 파라미터 처리
+        handleUrlParameters();
+
+        // 설정 로딩이 완료될 때까지 기다림
+        await window.VODSync.SettingsManager.waitForLoad();
+        
+        await updateFeaturesState();
+        
+        // 설정 변경 감지
+        window.VODSync.SettingsManager.onSettingsChanged(async (newSettings) => {
+            log('설정 변경 감지, 기능 업데이트 중...');
+            await updateFeaturesState();
+        });
+    }
+
+    
+    // 기능 업데이트 함수
+    async function updateFeaturesState() {
+        const enableSoopPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableChzzkSoopPanel');
+        const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
+        const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
+
+        log('기능 업데이트:', {
+                enableSoopPanel,
+                enableRpPanel,
+                enableTimestamp
+            });
+
+        // SOOP 패널 토글
+        if (enableSoopPanel) {
+            log('SOOP 패널 활성화');
+            soopPanel.closePanel();
+        } else {
+            log('SOOP 패널 비활성화');
+            soopPanel.hideCompletely();
+        }
+
+        // RP 패널 토글
+        if (enableRpPanel) {
+            log('RP 패널 활성화');
+            rpPanel.closePanel();
+        } else {
+            log('RP 패널 비활성화');
+            rpPanel.hideCompletely();
+        }
+
+        // 타임스탬프 매니저 초기화
+        if (enableTimestamp) {
+            log('타임스탬프 매니저 활성화');
+            tsManager.enable();
+        } else {
+            log('타임스탬프 매니저 비활성화');
+            tsManager.disable();
+        }
+    }
+
+    // 기능 초기화 실행
+    initializeFeatures();
+
+    // VOD 플레이어 페이지 여부를 지속적으로 갱신
+    async function checkVodPageAndTogglePanel() {
+        const isVodPage = window.location.pathname.includes('/video/');
+        if (isVodPage !== lastIsVodPage) {
+            lastIsVodPage = isVodPage;
+            // 상태가 바뀔때 패널을 숨기거나 표시함.
+            if (isVodPage) {
+                if (soopPanel) soopPanel.closePanel();
+                if (rpPanel) rpPanel.closePanel();
+            } else {
+                if (soopPanel) soopPanel.hideCompletely();
+                if (rpPanel) rpPanel.hideCompletely();
+            }
+        }
+    }
+    setInterval(checkVodPageAndTogglePanel, 500);
+}
+else{ // iframe 내부
+
+    // URL 파라미터 처리
+    const urlParams = new URLSearchParams(window.location.search);
+    const p_request = urlParams.get('p_request');
+    const request_vod_ts_str = urlParams.get('request_vod_ts');
+    if (p_request === "GET_VOD"){
+        const request_vod_ts = parseInt(request_vod_ts_str);
+        const pageNumStr = urlParams.get('page');
+        if (pageNumStr){
+            (async () => {
+                const pageNum = parseInt(pageNumStr);
+                const ChzzkVODFinderClass = await window.VODSync?.classLoader.loadClass('ChzzkVODFinder', 'src/chzzk_vod_finder.js');
+                new ChzzkVODFinderClass(request_vod_ts, pageNum);
+            })();
+        }
+    }
+    else if (p_request === "GET_CHZZK_VOD_FROM_SOOP") {
+        // SOOP에서 CHZZK 동기화 요청
+    }
+}

@@ -25,7 +25,7 @@ chrome.commands.onCommand.addListener((command) => {
 // 설정창 생성 함수
 function createSettingsWindow() {
     chrome.windows.create({
-        url: chrome.runtime.getURL('settings.html'),
+        url: chrome.runtime.getURL('src/settings.html'),
         type: 'popup',
         width: 550,
         height: 750,
@@ -47,17 +47,17 @@ chrome.windows.onRemoved.addListener((windowId) => {
 });
 
 // 창이 포커스를 잃을 때 다시 포커스 가져오기
-chrome.windows.onFocusChanged.addListener((windowId) => {
-    if (settingsWindowId !== null && windowId !== settingsWindowId) {
-        // 설정창이 열려있고 다른 창이 포커스를 받았을 때
-        chrome.windows.get(settingsWindowId, (window) => {
-            if (!chrome.runtime.lastError && window) {
-                // 설정창이 여전히 존재하면 포커스 가져오기
-                chrome.windows.update(settingsWindowId, { focused: true });
-            }
-        });
-    }
-});
+// chrome.windows.onFocusChanged.addListener((windowId) => {
+//     if (settingsWindowId !== null && windowId !== settingsWindowId) {
+//         // 설정창이 열려있고 다른 창이 포커스를 받았을 때
+//         chrome.windows.get(settingsWindowId, (window) => {
+//             if (!chrome.runtime.lastError && window) {
+//                 // 설정창이 여전히 존재하면 포커스 가져오기
+//                 chrome.windows.update(settingsWindowId, { focused: true });
+//             }
+//         });
+//     }
+// });
 
 // 로그 관리 기능
 let logs = [];

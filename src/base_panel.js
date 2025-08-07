@@ -1,5 +1,5 @@
 // ===================== BasePanel 부모 클래스 =====================
-class BaseSyncPanel {
+export class BaseSyncPanel {
     constructor(config) {
         this.config = {
             id: config.id,
@@ -20,6 +20,14 @@ class BaseSyncPanel {
         this.isPanelVisible = true;
         this.lastMouseMoveTime = Date.now();
         this.mouseCheckInterval = null;
+        
+        // VODSync 네임스페이스에 자동 등록
+        window.VODSync = window.VODSync || {};
+        window.VODSync.panels = window.VODSync.panels || {};
+        if (window.VODSync.panels[this.config.id]) {
+            console.warn(`[VODSync] Panel '${this.config.id}'가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.`);
+        }
+        window.VODSync.panels[this.config.id] = this;
         
         this.init();
     }

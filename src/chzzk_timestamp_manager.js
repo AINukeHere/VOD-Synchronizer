@@ -1,8 +1,14 @@
-class ChzzkTimestampManager extends BaseTimestampManager {
+import { BaseTimestampManager } from './timestamp_manager.js';
+
+export class ChzzkTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
         this.videoId = null;
         this.videoInfo = null;
+    }
+
+    log(...data){
+        logToExtension('[chzzk_timestamp_manager.js]', ...data);
     }
 
     async fetchVideoInfo(videoId) {
@@ -14,7 +20,7 @@ class ChzzkTimestampManager extends BaseTimestampManager {
             const data = await response.json();
             return data;
         } catch (error) {
-            console.log('[chzzk_timestamp_manager.js] Error fetching video info:', error);
+            this.log('Error fetching video info:', error);
             return null;
         }
     }
@@ -28,12 +34,12 @@ class ChzzkTimestampManager extends BaseTimestampManager {
         const startTime = new Date(videoInfo.content.liveOpenDate);
 
         if (isNaN(startTime.getTime())) {
-            console.log('[chzzk_timestamp_manager.js] 유효하지 않은 방송 시작 시간입니다.');
+            this.log('유효하지 않은 방송 시작 시간입니다.');
             return null;
         }
 
         if (isNaN(currentTime) || currentTime < 0) {
-            console.log('[chzzk_timestamp_manager.js] 유효하지 않은 재생 시간입니다.');
+            this.log('유효하지 않은 재생 시간입니다.');
             return null;
         }
 
@@ -55,14 +61,14 @@ class ChzzkTimestampManager extends BaseTimestampManager {
             if (!newVideoTag || !newVideoId) return;
             
             if (newVideoTag !== this.videoTag || newVideoId !== this.videoId) {
-                console.log('[chzzk_timestamp_manager.js] VOD 변경 감지됨! 요소 업데이트 중...');
+                this.log('VOD 변경 감지됨! 요소 업데이트 중...');
                 this.videoTag = newVideoTag;
                 this.videoId = newVideoId;
                 
                 // 새로운 VOD 정보 가져오기
                 this.videoInfo = await this.fetchVideoInfo(this.videoId);
                 if (this.videoInfo) {
-                    console.log('[chzzk_timestamp_manager.js] VOD 정보 가져오기 성공:', this.videoInfo);
+                    this.log('VOD 정보 가져오기 성공:', this.videoInfo);
                 }
             }
         });
@@ -92,12 +98,12 @@ class ChzzkTimestampManager extends BaseTimestampManager {
         return timestamp;
     }
 
-    // chzzk용 applyPlaybackTime 메서드 구현
-    applyPlaybackTime(playbackTime, doAlert = true) {
+    // chzzk용 moveToPlaybackTime 메서드 구현
+    moveToPlaybackTime(playbackTime, doAlert = true) {
         // chzzk에서는 URL 파라미터로 시간 변경을 지원하지 않으므로 비디오 태그를 직접 제어
         if (this.videoTag && this.videoTag.tagName === 'VIDEO') {
             this.videoTag.currentTime = playbackTime;
-            console.log('[chzzk_timestamp_manager.js] 비디오 시간을', playbackTime, '초로 변경했습니다.');
+            this.log('비디오 시간을', playbackTime, '초로 변경했습니다.');
             return true;
         } else {
             if (doAlert) {

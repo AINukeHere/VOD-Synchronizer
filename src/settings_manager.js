@@ -65,4 +65,5 @@ class SettingsManager {
 }
 
 // 전역 설정 관리자 인스턴스
-window.vodSyncSettings = new SettingsManager(); 
+window.VODSync = window.VODSync || {};
+window.VODSync.SettingsManager = new SettingsManager(); 

@@ -1,8 +1,14 @@
-class SoopTimestampManager extends BaseTimestampManager {
+import { BaseTimestampManager } from './timestamp_manager.js';
+
+export class SoopTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
         this.playTimeTag = null;
         this.streamPeriodTag = null;
+    }
+        
+    log(...data){
+        logToExtension('[soop_timestamp_manager.js]', ...data);
     }
 
     calculateTimestamp(broadcastInfo, playbackTimeStr) {
@@ -16,13 +22,13 @@ class SoopTimestampManager extends BaseTimestampManager {
         const startTime = new Date(match[1]);
 
         if (isNaN(startTime.getTime())) {
-            console.log('[soop_timestamp_manager.js] 유효하지 않은 방송 시작 시간입니다.');
+            this.log('유효하지 않은 방송 시작 시간입니다.');
             return null;
         }
 
         const playbackMatch = playbackTimeStr.match(/(\d{2}):(\d{2}):(\d{2})/);
         if (!playbackMatch) {
-            console.log('[soop_timestamp_manager.js] 올바른 재생 시간 형식이 아닙니다.');
+            this.log('올바른 재생 시간 형식이 아닙니다.');
             return null;
         }
 
@@ -45,7 +51,7 @@ class SoopTimestampManager extends BaseTimestampManager {
 
             if (!newPlayTimeTag || !newStreamPeriodTag) return;
             if (newPlayTimeTag !== this.playTimeTag || newStreamPeriodTag !== this.streamPeriodTag || newVideoTag !== this.videoTag) {
-                console.log('[soop_timestamp_manager.js] VOD 변경 감지됨! 요소 업데이트 중...');
+                this.log('VOD 변경 감지됨! 요소 업데이트 중...');
                 this.playTimeTag = newPlayTimeTag;
                 this.streamPeriodTag = newStreamPeriodTag;
                 this.videoTag = newVideoTag;
@@ -76,8 +82,8 @@ class SoopTimestampManager extends BaseTimestampManager {
         return timestamp;
     }
 
-    // soop용 applyPlaybackTime 메서드 구현
-    applyPlaybackTime(playbackTime, doAlert = true) {
+    // soop용 moveToPlaybackTime 메서드 구현
+    moveToPlaybackTime(playbackTime, doAlert = true) {
         const url = new URL(window.location.href);
         url.searchParams.delete('change_global_ts');
         url.searchParams.delete('request_system_time');
