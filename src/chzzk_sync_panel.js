@@ -7,7 +7,7 @@ export class ChzzkSyncPanel extends BaseSyncPanel {
             id: 'chzzk-sync-panel',
             title: 'CHZZK 스트리머와 동기화',
             color: '#00d564', // 치지직 초록
-            toggleBtnText: 'CHZZK 동기화',
+            toggleBtnText: 'CHZZK과 동기화',
             toggleBtnWidth: '160px',
             toggleBtnTop: '340px'
         });

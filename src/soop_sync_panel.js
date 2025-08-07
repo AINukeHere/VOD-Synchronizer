@@ -7,7 +7,7 @@ export class SoopSyncPanel extends BaseSyncPanel {
             id: 'soop-sync-panel',
             title: 'SOOP 스트리머와 동기화',
             color: '#007bff', // 파랑
-            toggleBtnText: 'VOD Synchronizer',
+            toggleBtnText: 'SOOP과 동기화',
             toggleBtnWidth: '180px',
             toggleBtnTop: '290px'
         });
