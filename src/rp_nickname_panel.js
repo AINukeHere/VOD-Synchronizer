@@ -23,6 +23,7 @@ export class RPNicknamePanel {
         this.applyTheme(false); // 기본적으로 light 테마임
         await this.loadNicknames();
         await this.loadSelectedServer();
+        this.renderTableBody();
     }
 
     async loadNicknames() {
@@ -32,6 +33,15 @@ export class RPNicknamePanel {
             this.nicknamesByServer = data;
             // 첫 서버를 기본 선택
             this.currentServer = Object.keys(data)[0] || null;
+            const header = this.panel.querySelector('div');
+            const serverSelectArea = header?.querySelector('div');
+            const serverSelect = serverSelectArea?.querySelector('select');
+            Object.keys(this.nicknamesByServer).forEach(server => {
+                const option = document.createElement('option');
+                option.value = server;
+                option.innerText = server;
+                serverSelect.appendChild(option);
+            });
             logToExtension('[RPNicknamePanel] 서버별 RP 닉네임 데이터 로드 완료:', Object.keys(data));
         } catch (error) {
             logToExtension('[RPNicknamePanel] RP 닉네임 데이터 로드 실패:', error);
@@ -124,12 +134,6 @@ export class RPNicknamePanel {
         serverSelect.style.border = '1px solid rgba(40,167,69,1)';
         serverSelect.style.background = 'rgba(255,255,255,1)';
         serverSelect.style.cursor = 'pointer';
-        Object.keys(this.nicknamesByServer).forEach(server => {
-            const option = document.createElement('option');
-            option.value = server;
-            option.innerText = server;
-            serverSelect.appendChild(option);
-        });
         serverSelect.value = this.currentServer;
         serverSelect.addEventListener('change', (e) => {
             this.currentServer = e.target.value;
@@ -207,7 +211,6 @@ export class RPNicknamePanel {
 
         // 테이블 바디
         this.tbody = document.createElement('tbody');
-        this.renderTableBody();
         table.appendChild(this.tbody);
         this.tableContainer.appendChild(table);
         this.panel.appendChild(this.tableContainer);
