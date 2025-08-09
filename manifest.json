@@ -31,7 +31,7 @@
         },
         {
             "matches": ["https://ch.sooplive.co.kr/*"],
-            "js": ["src/module/soop_vod_finder.js"],
+            "js": ["src/soop_vod_finder_content.js"],
             "all_frames": true
         },
         {

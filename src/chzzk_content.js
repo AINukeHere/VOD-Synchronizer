@@ -152,11 +152,12 @@ else{ // iframe 내부
         const request_vod_ts = parseInt(request_vod_ts_str);
         const pageNumStr = urlParams.get('page');
         if (pageNumStr){
-            (async () => {
-                const pageNum = parseInt(pageNumStr);
-                const ChzzkVODFinderClass = await window.VODSync?.classLoader.loadClass('ChzzkVODFinder', 'src/module/chzzk_vod_finder.js');
+            const pageNum = parseInt(pageNumStr);
+            window.VODSync.classLoader.loadClass('ChzzkVODFinder', 'src/module/chzzk_vod_finder.js').then(ChzzkVODFinderClass => {
                 new ChzzkVODFinderClass(request_vod_ts, pageNum);
-            })();
+            }).catch(error => {
+                log('클래스 로드 실패:', error);
+            });
         }
     }
     else if (p_request === "GET_CHZZK_VOD_FROM_SOOP") {
