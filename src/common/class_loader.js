@@ -50,8 +50,8 @@ class ClassLoader {
         }
 
         const parentClassPaths = {
-            'BaseTimestampManager': 'src/timestamp_manager.js',
-            'BaseSyncPanel': 'src/base_panel.js'
+            'BaseTimestampManager': 'src/module/timestamp_manager.js',
+            'BaseSyncPanel': 'src/module/base_panel.js'
         };
 
         const filePath = parentClassPaths[parentClassName];
@@ -88,9 +88,9 @@ class ClassLoader {
     }
 }
 
-        // VODSync 네임스페이스에 ClassLoader 인스턴스 생성
-        window.VODSync = window.VODSync || {};
-        if (window.VODSync.classLoader) {
-            console.warn('[VODSync] ClassLoader가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
-        }
-        window.VODSync.classLoader = new ClassLoader(); 
+// VODSync 네임스페이스에 ClassLoader 인스턴스 생성
+window.VODSync = window.VODSync || {};
+if (window.VODSync.classLoader) {
+    console.warn('[VODSync] ClassLoader가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
+}
+window.VODSync.classLoader = new ClassLoader(); 

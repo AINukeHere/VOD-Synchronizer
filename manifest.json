@@ -18,33 +18,25 @@
                 "https://chzzk.naver.com/*"
             ],
             "js": [
-                "src/log_manager.js",
-                "src/settings_manager.js",
-                "src/class_loader.js"
+                "src/common/log_manager.js",
+                "src/common/settings_manager.js",
+                "src/common/class_loader.js"
             ],
             "all_frames": true
         },
         {
             "matches": ["https://www.sooplive.co.kr/*"],
-            "js": ["src/soop_content.js"]
-        },
-        {
-            "matches": ["https://www.sooplive.co.kr/*"],
-            "js": ["src/soop_streamer_id_manager.js"],
+            "js": ["src/soop_content.js"],
             "all_frames": true
         },
         {
             "matches": ["https://ch.sooplive.co.kr/*"],
-            "js": ["src/soop_vod_finder.js"],
+            "js": ["src/module/soop_vod_finder.js"],
             "all_frames": true
         },
         {
             "matches": ["https://vod.sooplive.co.kr/*"],
             "js": ["src/soop_content.js"]
-        },
-        {
-            "matches": ["https://chzzk.naver.com/*"],
-            "js": ["src/chzzk_content.js"]
         },
         {
             "matches": ["https://chzzk.naver.com/*"],
@@ -55,19 +47,19 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "src/rp_nicknames.json",
-                "src/timestamp_manager.js",
-                "src/soop_timestamp_manager.js",
-                "src/chzzk_timestamp_manager.js",
-                "src/base_panel.js",
-                "src/soop_sync_panel.js",
-                "src/chzzk_sync_panel.js",
-                "src/rp_nickname_panel.js",
-                "src/soop_streamer_id_manager.js",
-                "src/soop_vod_finder.js",
-                "src/chzzk_vod_linker.js",
-                "src/chzzk_vod_finder.js",
-                "src/soop_vod_linker.js"
+                "data/rp_nicknames.json",
+                "src/module/timestamp_manager.js",
+                "src/module/soop_timestamp_manager.js",
+                "src/module/chzzk_timestamp_manager.js",
+                "src/module/base_panel.js",
+                "src/module/soop_sync_panel.js",
+                "src/module/chzzk_sync_panel.js",
+                "src/module/rp_nickname_panel.js",
+                "src/module/soop_streamer_id_manager.js",
+                "src/module/soop_vod_finder.js",
+                "src/module/chzzk_vod_linker.js",
+                "src/module/chzzk_vod_finder.js",
+                "src/module/soop_vod_linker.js"
             ],
             "matches": ["https://chzzk.naver.com/*", "https://www.sooplive.co.kr/*", "https://ch.sooplive.co.kr/*", "https://vod.sooplive.co.kr/*"]
         }

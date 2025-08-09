@@ -49,10 +49,10 @@ if (window == top) {
     async function initializeFeatures() {
         // CHZZK 플랫폼에서 필요한 클래스들 구성
         const classConfig = {
-            'ChzzkTimestampManager': 'src/chzzk_timestamp_manager.js',
-            'ChzzkVODLinker': 'src/chzzk_vod_linker.js',
-            'SoopSyncPanel': 'src/soop_sync_panel.js',
-            'RPNicknamePanel': 'src/rp_nickname_panel.js',
+            'ChzzkTimestampManager': 'src/module/chzzk_timestamp_manager.js',
+            'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
+            'SoopSyncPanel': 'src/module/soop_sync_panel.js',
+            'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
         };
         
         // 클래스 로더를 통해 필요한 클래스들 로드
@@ -121,10 +121,12 @@ if (window == top) {
     }
 
     // 기능 초기화 실행
-    initializeFeatures();
+    initializeFeatures().catch(error => {
+        log('기능 초기화 중 오류 발생:', error);
+    });
 
     // VOD 플레이어 페이지 여부를 지속적으로 갱신
-    async function checkVodPageAndTogglePanel() {
+    function checkVodPageAndTogglePanel() {
         const isVodPage = window.location.pathname.includes('/video/');
         if (isVodPage !== lastIsVodPage) {
             lastIsVodPage = isVodPage;
@@ -152,7 +154,7 @@ else{ // iframe 내부
         if (pageNumStr){
             (async () => {
                 const pageNum = parseInt(pageNumStr);
-                const ChzzkVODFinderClass = await window.VODSync?.classLoader.loadClass('ChzzkVODFinder', 'src/chzzk_vod_finder.js');
+                const ChzzkVODFinderClass = await window.VODSync?.classLoader.loadClass('ChzzkVODFinder', 'src/module/chzzk_vod_finder.js');
                 new ChzzkVODFinderClass(request_vod_ts, pageNum);
             })();
         }

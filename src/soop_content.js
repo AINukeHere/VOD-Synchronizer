@@ -5,7 +5,7 @@ if (window == top) {
     let rpPanel = null;
     
     function log(...data){
-        logToExtension('[soop_content.js]', ...data);
+        logToExtension('[soop_content.js:top]', ...data);
     }
     log('loaded');
 
@@ -13,10 +13,10 @@ if (window == top) {
     async function initializeFeatures() {
         // SOOP 플랫폼에서 필요한 클래스들 구성
         const classConfig = {
-            'SoopTimestampManager': 'src/soop_timestamp_manager.js',
-            'SoopVODLinker': 'src/soop_vod_linker.js',
-            'ChzzkSyncPanel': 'src/chzzk_sync_panel.js',
-            'RPNicknamePanel': 'src/rp_nickname_panel.js'
+            'SoopTimestampManager': 'src/module/soop_timestamp_manager.js',
+            'SoopVODLinker': 'src/module/soop_vod_linker.js',
+            'ChzzkSyncPanel': 'src/module/chzzk_sync_panel.js',
+            'RPNicknamePanel': 'src/module/rp_nickname_panel.js'
         };
         
         // 클래스 로더를 통해 필요한 클래스들 로드
@@ -105,6 +105,28 @@ if (window == top) {
     }
 
     // 기능 초기화 실행
-    initializeFeatures();
+    initializeFeatures().catch(error => {
+        log('기능 초기화 중 오류 발생:', error);
+    });
 
+}
+else {    
+    function log(...data){
+        logToExtension('[soop_content.js:iframe]', ...data);
+    }
+    log('loaded');
+
+    // 설정에 따라 기능 초기화
+    async function initializeFeatures() {
+        // SOOP 플랫폼에서 필요한 클래스들 구성
+        const classConfig = {
+            'SoopStreamerIDManager': 'src/module/soop_streamer_id_manager.js'
+        };
+        const classes = await window.VODSync.classLoader.loadClasses(classConfig);
+        new classes.SoopStreamerIDManager();
+    }
+    // 기능 초기화 실행
+    initializeFeatures().catch(error => {
+        log('기능 초기화 중 오류 발생:', error);
+    });
 }
