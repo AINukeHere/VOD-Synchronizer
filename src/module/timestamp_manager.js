@@ -208,7 +208,7 @@ export class BaseTimestampManager {
 
     // 활성화/비활성화 메서드
     enable() {
-        this.isHideCompletly = true;
+        this.isHideCompletly = false;
         if (this.tooltip) {
             this.tooltip.style.display = 'block';
         }
@@ -216,7 +216,7 @@ export class BaseTimestampManager {
     }
 
     disable() {
-        this.isHideCompletly = false;
+        this.isHideCompletly = true;
         if (this.tooltip) {
             this.tooltip.style.display = 'none';
         }
