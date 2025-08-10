@@ -218,8 +218,8 @@ export class BaseSyncPanel {
     }
 
     hideCompletely() {
-        this.panel.style.display = 'none';
-        this.toggleBtn.style.display = 'none';
+        this.panel.style.right = `-${this.config.width}`;
+        this.toggleBtn.style.right = `-${this.config.toggleBtnWidth}`;
     }
 
     // 자식 클래스에서 오버라이드할 메서드들

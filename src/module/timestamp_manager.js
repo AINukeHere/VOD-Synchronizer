@@ -10,7 +10,7 @@ export class BaseTimestampManager {
         this.isTooltipVisible = true;
         this.mouseCheckInterval = null;
         this.videoTag = null;
-        this.isEnabled = true; // 활성화 상태 추적
+        this.isHideCompletly = false; // 툴팁 숨기기 상태
         
         // VODSync 네임스페이스에 자동 등록
         window.VODSync = window.VODSync || {};
@@ -45,7 +45,7 @@ export class BaseTimestampManager {
     setupMouseTracking() {
         // 마우스 움직임 감지 - 시간만 업데이트
         document.addEventListener('mousemove', () => {
-            if (!this.isEnabled) return;
+            if (this.isHideCompletly) return;
             this.lastMouseMoveTime = Date.now();
             this.showTooltip();
         });
@@ -57,7 +57,7 @@ export class BaseTimestampManager {
 
         // 0.2초마다 마우스 상태 체크
         this.mouseCheckInterval = setInterval(() => {
-            if (!this.isEnabled) return;
+            if (this.isHideCompletly) return;
             const currentTime = Date.now();
             const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
             
@@ -143,7 +143,7 @@ export class BaseTimestampManager {
 
     updateTooltip() {
         setInterval(() => {
-            if (!this.tooltip || this.isEditing || !this.isEnabled) return;
+            if (!this.tooltip || this.isEditing) return;
             
             const timestamp = this.getCurDateTime();
             
@@ -208,19 +208,19 @@ export class BaseTimestampManager {
 
     // 활성화/비활성화 메서드
     enable() {
-        this.isEnabled = true;
+        this.isHideCompletly = true;
         if (this.tooltip) {
             this.tooltip.style.display = 'block';
         }
-        this.log('활성화됨');
+        this.log('툴팁 나타남');
     }
 
     disable() {
-        this.isEnabled = false;
+        this.isHideCompletly = false;
         if (this.tooltip) {
             this.tooltip.style.display = 'none';
         }
-        this.log('비활성화됨');
+        this.log('툴팁 숨김');
     }
 
     processTimestampInput(input) {
