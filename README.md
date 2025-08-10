@@ -69,19 +69,38 @@ VOD-Synchronizer/
 │   ├── module/           # 핵심 기능 모듈
 │   │   ├── base_panel.js        # 패널 기본 클래스
 │   │   ├── timestamp_manager.js # 타임스탬프 관리 기본 클래스
-│   │   ├── soop_*.js           # SOOP 전용 구현
-│   │   └── chzzk_*.js          # CHZZK 전용 구현
-│   ├── soop_content.js   # SOOP 페이지용 content script
-│   ├── chzzk_content.js  # CHZZK 페이지용 content script
-│   └── background.js     # 백그라운드 서비스 워커
+│   │   ├── soop_timestamp_manager.js    # SOOP 타임스탬프 관리
+│   │   ├── soop_sync_panel.js          # SOOP 동기화 패널
+│   │   ├── soop_streamer_id_manager.js # SOOP 스트리머 ID 관리
+│   │   ├── soop_vod_finder.js          # SOOP VOD 검색
+│   │   ├── soop_vod_linker.js          # SOOP VOD 링킹
+│   │   ├── chzzk_timestamp_manager.js  # CHZZK 타임스탬프 관리
+│   │   ├── chzzk_sync_panel.js         # CHZZK 동기화 패널
+│   │   ├── chzzk_vod_finder.js         # CHZZK VOD 검색
+│   │   ├── chzzk_vod_linker.js         # CHZZK VOD 링킹
+│   │   └── rp_nickname_panel.js        # RP 닉네임 패널
+│   ├── soop_content.js          # SOOP 페이지용 content script
+│   ├── chzzk_content.js         # CHZZK 페이지용 content script
+│   ├── soop_vod_finder_content.js      # SOOP VOD 검색용 iframe content script
+│   ├── content.user.js          # TemperMonkey 사용자 스크립트
+│   ├── settings.html            # 설정 페이지
+│   ├── settings.js              # 설정 관리 스크립트
+│   └── background.js            # 백그라운드 서비스 워커
 ├── data/                 # 데이터 파일
-└── manifest.json         # 확장 프로그램 매니페스트
+│   ├── rp_nicknames.json        # RP 닉네임 데이터
+│   └── rp_nicknames_old.json   # 이전 RP 닉네임 데이터
+├── doc/                  # 문서
+│   └── communication_flow.md    # 통신 흐름 문서
+├── manifest.json         # 확장 프로그램 매니페스트
+└── LICENSE               # MIT 라이선스
 ```
 
 ### 핵심 아키텍처
 - **모듈화된 설계**: 각 플랫폼별로 독립적인 구현체를 가짐
-- **동적 클래스 로딩**: 필요한 클래스만 필요할 때 로드
+- **동적 클래스 로딩**: 필요한 클래스만 필요할 때 로드하여 메모리 효율성 향상
 - **상속 기반 구조**: 공통 기능은 기본 클래스에서, 플랫폼별 특성은 파생 클래스에서 구현
+- **iframe 통신 시스템**: 크로스 플랫폼 동기화를 위한 안전한 통신 프로토콜
+- **설정 기반 기능 제어**: 사용자 설정에 따라 기능 활성화/비활성화
 
 ## 계획중인 추가 기능
 - 추가 스트리밍 플랫폼 지원
@@ -129,9 +148,11 @@ VOD-Synchronizer/
 - CHZZK 동기화 시 너무 빠른 요청을 하면 네이버에서 조치를 취할 수 있습니다.
 
 ## 업데이트 내역
-### 0.0.9.3
+### 0.0.9.3 (현재 버전)
 - CHZZK 동기화 기능 개선 및 안정성 향상
 - 타임스탬프 툴팁 투명화 기능 개선
+- iframe 통신 프로토콜 최적화
+- 에러 처리 및 로깅 시스템 개선
 
 ### 0.0.9
 - CHZZK 동기화를 지원합니다. 다시보기를 시청할때 치지직 기본 검색창에 스트리머를 검색하면 Find VOD 버튼이 생성됩니다. 누르면 동기화가능한 VOD를 찾습니다.<br/>
@@ -140,6 +161,9 @@ VOD-Synchronizer/
 - 키보드 마우스 입력이 2초이상 없거나 마우스가 페이지 밖을 벗어나면 타임스탬프 툴팁이 거의 투명화됩니다.
 ### 0.0.8
 - 정식 배포됨
+
+### TemperMonkey 스크립트
+- **버전 0.1.1**: GreasyFork에서 제공되는 사용자 스크립트 버전
 ## 라이선스
 
 이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 `LICENSE` 파일을 참고하세요. 

@@ -3,5 +3,5 @@
 *.pem
 *.zip
 
-doc
+data/.singleLine.md
 data_processing
