@@ -59,8 +59,9 @@ export class SoopSyncPanel extends BaseSyncPanel {
         const targetTimestamp = currentDateTime.getTime();
         const url = new URL(`https://www.sooplive.co.kr/search`);
         url.searchParams.set('only_search', '1');
-        url.searchParams.set("p_request", "GET_SOOP_VOD_FROM_CHZZK");
+        url.searchParams.set("p_request", "GET_VOD_LIST");
         url.searchParams.set("request_vod_ts", `${targetTimestamp}`);
+        url.searchParams.set("request_from", "CHZZK");
         this.iframe.src = url.toString();
         logToExtension('[soop_sync_panel] SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
     }

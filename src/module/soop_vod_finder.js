@@ -137,6 +137,7 @@ export class PageOneVodManager {
             resultVODLinks: finalVodLinks
         };
         window.parent.postMessage(message, "https://www.sooplive.co.kr");
+        window.close();
     }
     
     createFinalVodLinkList() {
@@ -212,6 +213,7 @@ export class ChildPageVodManager {
                 resultVODInfos: vodInfoList
             };
             window.parent.postMessage(message, window.origin);
+            window.close();
             clearInterval(intervalID);
         }, 100);
     }

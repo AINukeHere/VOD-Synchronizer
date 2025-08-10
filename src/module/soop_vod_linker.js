@@ -66,11 +66,12 @@ export class SoopVODLinker{
         url.searchParams.set("szStype", "di");
         url.searchParams.set("szActype", "input_field");
         const reqUrl = new URL(url.toString());
-        reqUrl.searchParams.set("p_request", "GET_SOOP_VOD_FROM_SOOP");
+        reqUrl.searchParams.set("p_request", "GET_VOD_LIST");
+        reqUrl.searchParams.set("request_from", "SOOP");
         reqUrl.searchParams.set("request_vod_ts", tsManager.getCurDateTime().getTime());
         // `https://www.sooplive.co.kr/search?szLocation=total_search&szSearchType=streamer&szKeyword=${encodedNickname}&szStype=di&szActype=input_field`;
         this.log(`find with ${reqUrl.toString()}`);
-        this.lastRequest = "GET_SOOP_VOD_FROM_SOOP";
+        this.lastRequest = "GET_VOD_LIST";
         this.lastRequestFailedMessage = `스트리머 ID를 찾을 수 없습니다. 검색페이지: ${url.toString()}`;
         this.lastRequestTimeout = setTimeout(() => {
             alert(this.lastRequestFailedMessage);
