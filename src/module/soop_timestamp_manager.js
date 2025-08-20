@@ -85,8 +85,8 @@ export class SoopTimestampManager extends BaseTimestampManager {
     // soop용 moveToPlaybackTime 메서드 구현
     moveToPlaybackTime(playbackTime, doAlert = true) {
         const url = new URL(window.location.href);
-        url.searchParams.delete('change_global_ts');
-        url.searchParams.delete('request_system_time');
+        url.searchParams.delete('request_vod_ts');
+        url.searchParams.delete('request_real_ts');
         url.searchParams.set('change_second', playbackTime);
         window.location.replace(url.toString());
         return true;

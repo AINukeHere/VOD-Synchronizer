@@ -26,7 +26,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 5. 우측 상단의 "개발자 모드"를 활성화합니다.
 6. "압축해제된 확장 프로그램을 로드합니다" 버튼을 클릭하고, 압축을 푼 폴더를 선택합니다.
 
-### 방법 2: TemperMonkey를 사용하는 경우
+### 방법 2: TemperMonkey를 사용하는 경우 (SOOP 동기화만 지원)
 1. [https://greasyfork.org/ko/scripts/541829-vod-synchronizer](https://greasyfork.org/ko/scripts/541829-vod-synchronizer)에서 스크립트를 설치하세요.
 
 
@@ -57,64 +57,6 @@ CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다. 우측 �
 - SOOP 스트리머 VOD 동기화
 - RP 닉네임 패널
 
-## 프로젝트 구조
-
-```
-VOD-Synchronizer/
-├── src/
-│   ├── common/           # 공통 유틸리티
-│   │   ├── class_loader.js      # 동적 클래스 로딩 시스템
-│   │   ├── log_manager.js       # 로그 관리
-│   │   └── settings_manager.js  # 설정 관리
-│   ├── module/           # 핵심 기능 모듈
-│   │   ├── base_panel.js        # 패널 기본 클래스
-│   │   ├── timestamp_manager.js # 타임스탬프 관리 기본 클래스
-│   │   ├── soop_timestamp_manager.js    # SOOP 타임스탬프 관리
-│   │   ├── soop_sync_panel.js          # SOOP 동기화 패널
-│   │   ├── soop_streamer_id_manager.js # SOOP 스트리머 ID 관리
-│   │   ├── soop_vod_finder.js          # SOOP VOD 검색
-│   │   ├── soop_vod_linker.js          # SOOP VOD 링킹
-│   │   ├── chzzk_timestamp_manager.js  # CHZZK 타임스탬프 관리
-│   │   ├── chzzk_sync_panel.js         # CHZZK 동기화 패널
-│   │   ├── chzzk_vod_finder.js         # CHZZK VOD 검색
-│   │   ├── chzzk_vod_linker.js         # CHZZK VOD 링킹
-│   │   └── rp_nickname_panel.js        # RP 닉네임 패널
-│   ├── soop_content.js          # SOOP 페이지용 content script
-│   ├── chzzk_content.js         # CHZZK 페이지용 content script
-│   ├── soop_vod_finder_content.js      # SOOP VOD 검색용 iframe content script
-│   ├── content.user.js          # TemperMonkey 사용자 스크립트
-│   ├── settings.html            # 설정 페이지
-│   ├── settings.js              # 설정 관리 스크립트
-│   └── background.js            # 백그라운드 서비스 워커
-├── data/                 # 데이터 파일
-│   ├── rp_nicknames.json        # RP 닉네임 데이터
-│   └── rp_nicknames_old.json   # 이전 RP 닉네임 데이터
-├── doc/                  # 문서
-│   └── communication_flow.md    # 통신 흐름 문서
-├── manifest.json         # 확장 프로그램 매니페스트
-└── LICENSE               # MIT 라이선스
-```
-
-### 핵심 아키텍처
-- **모듈화된 설계**: 각 플랫폼별로 독립적인 구현체를 가짐
-- **동적 클래스 로딩**: 필요한 클래스만 필요할 때 로드하여 메모리 효율성 향상
-- **상속 기반 구조**: 공통 기능은 기본 클래스에서, 플랫폼별 특성은 파생 클래스에서 구현
-- **iframe 통신 시스템**: 크로스 플랫폼 동기화를 위한 안전한 통신 프로토콜
-- **설정 기반 기능 제어**: 사용자 설정에 따라 기능 활성화/비활성화
-
-## 계획중인 추가 기능
-- 추가 스트리밍 플랫폼 지원
-- 고급 동기화 옵션
-
-## 아키텍처 및 원리
-
-### 기술적 구조
-이 확장 프로그램은 모듈화된 클래스 기반 아키텍처를 사용합니다:
-
-- **BaseTimestampManager**: 타임스탬프 관리의 기본 클래스
-- **BaseSyncPanel**: 동기화 패널의 기본 클래스  
-- **ClassLoader**: 동적 클래스 로딩 시스템
-- **플랫폼별 구현**: SOOP과 CHZZK 각각에 대한 전용 매니저 클래스
 
 ### 동작 원리
 
@@ -135,6 +77,10 @@ VOD-Synchronizer/
 - CHZZK VOD에서 SOOP 스트리머를 검색하여 동기화 가능한 VOD를 찾습니다.
 - 비공식 CHZZK API를 사용하여 스트리머 검색 및 VOD 목록을 가져옵니다.
 
+### 이 프로젝트의 원리에 대해 더 궁금한 개발자이신가요?
+- 프로젝트 구조는 [여기](./doc/README.md)를 확인해보세요.
+- 로직 구조는 [여기](./doc/communication_flow.md)를 확인해보세요.
+
 ## QnA
 ### 1. 이거 안전한거에요? 원리가 뭐에요
 그냥 사람이 해야하는 일 자동화한겁니다.
@@ -144,11 +90,9 @@ VOD-Synchronizer/
 
 ## 알려진 문제
 - 스트리밍에 문제가 있어 다시보기 영상 자체가 중간에 편집된 경우 동기화가 어긋날 수 있습니다.
-- 한달 동안 다시보기가 60개가 넘는 경우 페이지가 넘어가서 못찾을 수도 있습니다.
-- CHZZK 동기화 시 너무 빠른 요청을 하면 네이버에서 조치를 취할 수 있습니다.
 
 ## 업데이트 내역
-### 0.0.9.3 (현재 버전)
+### 0.0.9.3
 - CHZZK 동기화 기능 개선 및 안정성 향상
 - 타임스탬프 툴팁 투명화 기능 개선
 - iframe 통신 프로토콜 최적화
