@@ -77,7 +77,7 @@ if (window == top) {
         });
 
         // CHZZK 패널 토글
-        if (enableChzzkPanel) {
+        if (false && enableChzzkPanel) { // 미구현
             log('CHZZK 패널 활성화');
             chzzkPanel.closePanel();
         } else {
