@@ -9,7 +9,6 @@ venv/
 env/
 ENV/
 
-*.py
 
 # Ignore deployment files
 *.crx
