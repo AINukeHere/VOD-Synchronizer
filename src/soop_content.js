@@ -15,7 +15,7 @@ if (window == top) {
         const classConfig = {
             'SoopTimestampManager': 'src/module/soop_timestamp_manager.js',
             'SoopVODLinker': 'src/module/soop_vod_linker.js',
-            'ChzzkSyncPanel': 'src/module/chzzk_sync_panel.js',
+            'ChzzkSyncPanel': 'src/module/chzzk_sync_panel.js', // 아직 미구현
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js'
         };
         
@@ -64,7 +64,8 @@ if (window == top) {
     }
     // 기능 업데이트 함수
     async function updateFeaturesState(classes) {
-        const enableChzzkPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSoopChzzkPanel');
+        const enableChzzkPanel = false; // 미구현 TODO: 구현필요
+        // const enableChzzkPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSoopChzzkPanel');
         const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
         const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
 
@@ -77,7 +78,7 @@ if (window == top) {
         });
 
         // CHZZK 패널 토글
-        if (false && enableChzzkPanel) { // 미구현
+        if (enableChzzkPanel) {
             log('CHZZK 패널 활성화');
             chzzkPanel.closePanel();
         } else {

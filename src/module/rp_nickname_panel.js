@@ -1,3 +1,4 @@
+const TEXT_TITLE = 'RP 닉네임 사전';
 export class RPNicknamePanel {
     constructor() {
         this.panel = null;
@@ -107,7 +108,7 @@ export class RPNicknamePanel {
 
         // 왼쪽: 타이틀
         const headerTitle = document.createElement('span');
-        headerTitle.innerText = 'RP 닉네임 매핑';
+        headerTitle.innerText = TEXT_TITLE;
         headerTitle.style.flex = '1 1 auto';
         headerTitle.style.textAlign = 'left';
         headerTitle.style.background = 'none';
