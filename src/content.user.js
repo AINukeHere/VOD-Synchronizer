@@ -2,7 +2,7 @@
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
 // @version      0.1.2
-// @description  SOOP VOD 동기화 - 60개 넘으면 다음 페이지 검색 지원
+// @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
 // @match        https://ch.sooplive.co.kr/*
@@ -15,47 +15,6 @@
 
 (function() {
     'use strict';
-
-    // 간소화된 클래스 로더 (Tampermonkey용)
-    class SimpleClassLoader {
-        constructor() {
-            this.loadedClasses = new Map();
-        }
-
-        // 클래스 파일을 동적으로 로드
-        async loadClass(className, filePath) {
-            if (this.loadedClasses.has(className)) {
-                return this.loadedClasses.get(className);
-            }
-
-            try {
-                // 동적 import를 사용하여 클래스 로드
-                const module = await import(filePath);
-                const ClassConstructor = module[className] || module.default;
-                
-                if (ClassConstructor) {
-                    this.loadedClasses.set(className, ClassConstructor);
-                    return ClassConstructor;
-                } else {
-                    throw new Error(`Class ${className} not found in ${filePath}`);
-                }
-            } catch (error) {
-                console.error(`Failed to load class ${className} from ${filePath}:`, error);
-                throw error;
-            }
-        }
-
-        // 사용자가 지정한 클래스들을 로드
-        async loadClasses(classConfig) {
-            const classes = {};
-            
-            for (const [className, filePath] of Object.entries(classConfig)) {
-                classes[className] = await this.loadClass(className, filePath);
-            }
-            
-            return classes;
-        }
-    }
 
     // 간소화된 로깅 함수
     function log(...data) {
