@@ -15,10 +15,9 @@ ENV/
 *.pem
 *.zip
 
-# Build artifacts
+# Build, Test Build artifacts
 VOD-Synchronizer_*.zip
-build_extension.py
-build.bat
+VOD-Synchronizer-Test
 
 # Development files
 data/.singleLine.md
