@@ -38,11 +38,16 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 
 ### SOOP VOD
 SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으로 활성화됩니다.
-<br/> 예시 영상<br/> 
+#### <br/>데모 영상(스토리 담느라 쓸데없이 김)<br/> 
 [![Video Label](https://img.youtube.com/vi/mipj1jn488M/0.jpg)](https://youtu.be/mipj1jn488M)
 
 ### CHZZK VOD
-CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다. 우측 파란색 버튼을 클릭하여 SOOP 스트리머와 동기화할 수 있습니다.
+CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다.
+<br/>우측 파란색 버튼을 클릭하여 SOOP 스트리머와 동기화할 수 있습니다.<br/>
+
+#### <br/>데모 영상(CHZZK --> SOOP --> SOOP)<br/> 
+[![Video Label](https://img.youtube.com/vi/ILtVKUIkyGg/0.jpg)](https://youtu.be/ILtVKUIkyGg)
+
 
 ## 지원 플랫폼
 
@@ -88,7 +93,7 @@ CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다. 우측 �
 ### 2. 다시보기를 지우거나 해당 시간대의 VOD가 없으면 어떡해요?
 당연히 못 보는거죠 뭐. 없는걸 만들거나 다시보기를 저장해두는 서버가 있는 게  아니라 그냥 사용자 계정으로 대신 검색해주는 기능일 뿐입니다.
 
-### 3. Find VOD 버튼을 눌렀는데 탭이 1개만 나오고 바로 닫혀요.
+### 3. SOOP과 동기화하려고 Find VOD 버튼을 눌렀는데 탭이 1개만 나오고 바로 닫혀요.
 주소 표시줄에 팝업 차단 표시가 있나요? 팝업을 허용해주세요.
 
 ## 알려진 문제
