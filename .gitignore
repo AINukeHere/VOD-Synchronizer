@@ -15,5 +15,17 @@ ENV/
 *.pem
 *.zip
 
+# Build artifacts
+VOD-Synchronizer_*.zip
+build_extension.py
+build.bat
+
+# Development files
 data/.singleLine.md
-data_processing
+data_processing/
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

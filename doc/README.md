@@ -28,8 +28,7 @@ VOD-Synchronizer/
 │   ├── settings.js              # 설정 관리 스크립트
 │   └── background.js            # 백그라운드 서비스 워커
 ├── data/                 # 데이터 파일
-│   ├── rp_nicknames.json        # RP 닉네임 데이터
-│   └── rp_nicknames_old.json   # 이전 RP 닉네임 데이터
+│   └── rp_nicknames.json        # RP 닉네임 데이터
 ├── doc/                  # 문서
 │   └── communication_flow.md    # 통신 흐름 문서
 ├── manifest.json         # 확장 프로그램 매니페스트

@@ -40,21 +40,17 @@ SOOP VOD 플레이어 페이지에 접속하면 확장 프로그램이 자동으
 ### CHZZK VOD
 CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다. 우측 파란색 버튼을 클릭하여 SOOP 스트리머와 동기화할 수 있습니다.
 
-## 지원 사이트
-- **SOOP**: https://www.sooplive.co.kr, https://ch.sooplive.co.kr, https://vod.sooplive.co.kr
-- **CHZZK**: https://chzzk.naver.com
-
-
 ## 지원 플랫폼
 
-### SOOP (완전 지원)
+### SOOP
 - VOD 타임스탬프 표시 및 편집
-- 다른 스트리머 VOD 동기화
+- 다른 SOOP 스트리머 VOD 동기화
 - RP 닉네임 패널
 
-### CHZZK (완전 지원)
+### CHZZK
 - VOD 타임스탬프 표시 및 편집
-- SOOP 스트리머 VOD 동기화
+- 다른 CHZZK 스트리머 VOD 동기화
+- 다른 SOOP 스트리머 VOD 동기화
 - RP 닉네임 패널
 
 
