@@ -45,8 +45,8 @@ export class SoopTimestampManager extends BaseTimestampManager {
         const config = { childList: true, subtree: true };
 
         this.observer = new MutationObserver(() => {
-            const newPlayTimeTag = document.querySelector('#player > div.player_ctrlBox > div.ctrlBox > div.ctrl > div.time_display > span.time-current');
-            const newStreamPeriodTag = document.querySelector("#player_area > div.wrapping.player_bottom > div.broadcast_information > div:nth-child(2) > div.cnt_info > ul > li:nth-child(2) > span");
+            const newPlayTimeTag = document.querySelector('span.time-current');
+            const newStreamPeriodTag = document.querySelector("span.broad_time[tip*='방송시간']");
             const newVideoTag = document.querySelector('#video');
 
             if (!newPlayTimeTag || !newStreamPeriodTag) return;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.1.3
+// @version      0.1.5
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -630,8 +630,8 @@
                 const config = { childList: true, subtree: true };
 
                 this.observer = new MutationObserver(() => {
-                    const newPlayTimeTag = document.querySelector('#player > div.player_ctrlBox > div.ctrlBox > div.ctrl > div.time_display > span.time-current');
-                    const newStreamPeriodTag = document.querySelector("#player_area > div.wrapping.player_bottom > div.broadcast_information > div:nth-child(2) > div.cnt_info > ul > li:nth-child(2) > span");
+                    const newPlayTimeTag = document.querySelector('span.time-current');
+                    const newStreamPeriodTag = document.querySelector("span.broad_time[tip*='방송시간']");
                     const newVideoTag = document.querySelector('#video');
 
                     if (!newPlayTimeTag || !newStreamPeriodTag) return;
