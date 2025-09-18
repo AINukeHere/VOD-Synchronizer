@@ -6,14 +6,10 @@ export class SoopStreamerIDManager {
         this.BTN_TEXT_IDLE = "Find VOD";
         this.BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
         this.BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
-        this.searchIframe = document.createElement('iframe');
-        this.searchIframe.style.display = 'none';
-        document.body.appendChild(this.searchIframe);
 
         this.curProcessingBtn = null;
         this.request_vod_ts = null;
         this.parentOrigin = null;
-        this.log('in iframe');
         this.init();
     }
     
@@ -156,7 +152,7 @@ export class SoopStreamerIDManager {
         const monthsParam = `${year}${String(month).padStart(2, "0")}`;
         const url = new URL(`https://www.sooplive.co.kr/station/${streamerId}/vod/review`);
         const reqUrl = new URL(url.toString());
-        reqUrl.searchParams.set("p_request", "GET_VOD_LIST");
+        reqUrl.searchParams.set("p_request", "GET_VOD_LIST_NEW_SOOP");
         reqUrl.searchParams.set("request_vod_ts", targetDateTime.getTime());
         this.log('SOOP VOD 리스트 요청:', reqUrl.toString());
         this.searchIframe.src = reqUrl.toString();
@@ -195,6 +191,8 @@ export class SoopStreamerIDManager {
     init() {
         const params = new URLSearchParams(window.location.search);
         const p_request = params.get("p_request");
+        if (p_request == "GET_VOD_LIST_NEW_SOOP") { return; }
+
         const url_request_vod_ts = params.get("request_vod_ts");
         if (url_request_vod_ts)
             this.request_vod_ts = parseInt(url_request_vod_ts);
@@ -204,6 +202,7 @@ export class SoopStreamerIDManager {
         url.searchParams.delete('request_vod_ts');
         url.searchParams.delete('request_from');
         window.history.replaceState({}, '', url.toString());
+
         if (p_request === "GET_VOD_LIST") {
             this.handleGetVodListRequest(params);
         } else if (p_request === "GET_STREAMER_ID") {
@@ -212,6 +211,11 @@ export class SoopStreamerIDManager {
         if (params.get('only_search') === '1') {
             this.setupSearchAreaOnlyMode();
         }
+
+        this.searchIframe = document.createElement('iframe');
+        this.searchIframe.src = "about:blank";
+        this.searchIframe.style.display = 'none';
+        document.body.appendChild(this.searchIframe);
 
         window.addEventListener("message", (event) => {
             // CHZZK VOD 페이지에서 Soop Sync Panel에서 열린 경우 따로 스트리머 ID를 찾아야함. 찾는 iframe을 생성하면 응답을 받아야함
@@ -233,5 +237,6 @@ export class SoopStreamerIDManager {
                 }, this.parentOrigin);
             }
         });
+        this.log('init complete');
     }
 }

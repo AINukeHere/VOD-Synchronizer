@@ -34,15 +34,17 @@ function parseDateFromText(innerText) {
     }
 }
 export class SoopVODFinder {
-    constructor(requestVodDatetime) {
-        this.requestVodDatetime = requestVodDatetime;
-        this.vodInfoList = [];
-        this._i = 0;
-        this.MAX_RETRY_COUNT = 10;
-        
-        this.requestYear = requestVodDatetime.getFullYear();
-        this.requestMonth = requestVodDatetime.getMonth() + 1;
-        this.requestDay = requestVodDatetime.getDate();
+    constructor() {
+        const params = new URLSearchParams(window.location.search);
+        const p_request = params.get("p_request");
+        if (p_request === "GET_VOD_LIST_NEW_SOOP") {
+            this.requestVodDatetime = new Date(parseInt(params.get("request_vod_ts")));
+            
+            this.requestYear = this.requestVodDatetime.getFullYear();
+            this.requestMonth = this.requestVodDatetime.getMonth() + 1;
+            this.requestDay = this.requestVodDatetime.getDate();
+            this.start();
+        }
     }
     log(...data){
         logToExtension('[SoopVODFinder]', ...data);
@@ -64,59 +66,35 @@ export class SoopVODFinder {
     }
 
     async getVodInfoList() {
-        let filterOpenButton = null;
-        for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-            this.log(`필터 열기 버튼 찾기(${this._i}/${this.MAX_RETRY_COUNT})`);
-            const filterOpenButtons = document.querySelectorAll('[class*="__soopui__FilterList-module__btnFilter___"]');
-            if (filterOpenButtons.length == 1) {
-                filterOpenButton = filterOpenButtons[0];
-                break;
-            }
-            this.log(`filterOpenButtons length is not 1. It was: ${filterOpenButtons.length}`);
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
+        // MutationObserver로 필터 열기 버튼 대기
+        this.log('필터 열기 버튼 찾기 시작');
+        const filterOpenButton = await this.waitForElement('[class*="__soopui__FilterList-module__btnFilter___"]', 1, 15000);
+        if (!filterOpenButton) {
             this.log('필터 열기 버튼 찾기 실패');
             return null;
         }
         this.log('필터 열기');
         filterOpenButton.click();
 
-        let dateSelectorOpenButton = null;
-        for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-            this.log(`날짜 선택기 열기 버튼 찾기(${this._i}/${this.MAX_RETRY_COUNT})`);
-            const dateSelectorOpenButtons = document.querySelectorAll('[class*="__soopui__InputBox-module__iconOnly__"]');
-            if (dateSelectorOpenButtons.length == 1) {
-                dateSelectorOpenButton = dateSelectorOpenButtons[0];
-                break;
-            }
-            this.log(`dateSelectorOpenButtons length is not 1. It was: ${dateSelectorOpenButtons.length}`);
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
+        // MutationObserver로 날짜 선택기 열기 버튼 대기
+        this.log('날짜 선택기 열기 버튼 찾기 시작');
+        const dateSelectorOpenButton = await this.waitForElement('[class*="__soopui__InputBox-module__iconOnly__"]', 1, 15000);
+        if (!dateSelectorOpenButton) {
             this.log('날짜 선택기 열기 버튼 찾기 실패');
             return null;
         }
         this.log('날짜 선택기 열기');
         dateSelectorOpenButton.click();
 
-        let yearDropdownButton = null;
-        let monthDropdownButton = null;
-        for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-            this.log(`년월 선택기 열기 버튼 찾기(${this._i}/${this.MAX_RETRY_COUNT})`);
-            const yearMonthDropdownOpenButtons = document.querySelectorAll('[class*="__soopui__Dropdown-module__dropDownButton__"]');
-            if (yearMonthDropdownOpenButtons.length == 2) {
-                yearDropdownButton = yearMonthDropdownOpenButtons[0];
-                monthDropdownButton = yearMonthDropdownOpenButtons[1];
-                break;
-            }
-            this.log(`yearDropdownOpenButtons length is not 2. It was: ${yearMonthDropdownOpenButtons.length}`);
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
+        // MutationObserver로 년월 선택기 열기 버튼 대기
+        this.log('년월 선택기 열기 버튼 찾기 시작');
+        const yearMonthDropdownButtons = await this.waitForElement('[class*="__soopui__Dropdown-module__dropDownButton__"]', 2, 15000);
+        if (!yearMonthDropdownButtons || yearMonthDropdownButtons.length < 2) {
             this.log('년월 선택기 열기 버튼 찾기 실패');
             return null;
         }
+        const yearDropdownButton = yearMonthDropdownButtons[0];
+        const monthDropdownButton = yearMonthDropdownButtons[1];
 
         const startDate = new Date(this.requestVodDatetime.getTime() - 1 * 24 * 60 * 60 * 1000);
         const endDate = new Date(this.requestVodDatetime.getTime() + 1 * 24 * 60 * 60 * 1000);
@@ -126,14 +104,10 @@ export class SoopVODFinder {
         await this.setFilter(yearDropdownButton, monthDropdownButton, endDate); // 두번째 호출하면 끝날짜가 설정됨
         this.log('기간 필터 끝날짜 설정 완료');
 
-        let applyButton = null;
-        for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-            this.log(`적용 버튼 찾기(${this._i}/${this.MAX_RETRY_COUNT})`);
-            applyButton = document.querySelector('[class*="__soopui__DatepickerWrapper-module__button__"]');
-            if (applyButton) break; 
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
+        // MutationObserver로 적용 버튼 대기
+        this.log('적용 버튼 찾기 시작');
+        const applyButton = await this.waitForElement('[class*="__soopui__DatepickerWrapper-module__button__"]', 1, 15000);
+        if (!applyButton) {
             this.log('적용 버튼 찾기 실패');
             return null;
         }
@@ -141,26 +115,25 @@ export class SoopVODFinder {
         applyButton.click();
 
         const oldVodListBox = document.querySelector('[class*="VodList_itemListBox__"]');
-        oldVodListBox.style.display = 'none';
-        for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-            this.log(`VOD 리스트 박스 업데이트 검사(${this._i}/${this.MAX_RETRY_COUNT})`);
-            const newVodListBox = document.querySelector('[class*="VodList_itemListBox__"]');
-            if (newVodListBox && newVodListBox.style.display != 'none') {
-                const vodList_itemContainers = newVodListBox.querySelectorAll('[class*="VodList_itemContainer__"]');
-                this.log(`VOD 리스트 박스 업데이트 검사 완료: ${vodList_itemContainers.length}`);
-                if (0 < vodList_itemContainers.length) {
-                    break;
-                }
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
-            this.log('VOD 리스트 박스 업데이트 검사 통과 실패');
-            return null;
+        if (oldVodListBox) {
+            oldVodListBox.style.display = 'none';
         }
 
+        // MutationObserver로 VOD 리스트 박스 업데이트 대기
+        this.log('VOD 리스트 박스 업데이트 대기 시작');
+        const vodListBox = await this.waitForElementWithCondition(
+            '[class*="VodList_itemListBox__"]',
+            (element) => element.style.display !== 'none' && element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0,
+            20000
+        );
+        if (!vodListBox) {
+            this.log('VOD 리스트 박스 업데이트 실패');
+            return null;
+        }
+        const vodList_itemContainers = vodListBox.querySelectorAll('[class*="VodList_itemContainer__"]');
+        this.log(`VOD 리스트 박스 업데이트 완료: ${vodList_itemContainers.length}개 항목`);
+
         const vodInfoList = [];
-        const vodList_itemContainers = document.querySelectorAll('[class*="VodList_itemContainer__"]');
         for(var i = 0; i < vodList_itemContainers.length; ++i){
             const vodList_itemContainer = vodList_itemContainers[i];
             const vodDateElement = vodList_itemContainer.querySelectorAll('[class*="__soopui__ThumbnailMoreInfo-module__md__"]')[1];
@@ -187,17 +160,13 @@ export class SoopVODFinder {
             this.triggerMouseDown(yearDropdownOpenButton);
             this.triggerMouseUp(yearDropdownOpenButton);
             
-            let yearDropdownList = null;
-            for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-                this.log(`[setFilter] yearDropdownList 찾기(${this._i}/${this.MAX_RETRY_COUNT})`);
-                yearDropdownList = document.querySelector('[class*="__soopui__DropdownList-module__dropdownItem__"]');
-                if (yearDropdownList) break;
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            if (this._i == this.MAX_RETRY_COUNT) {
-                this.log('[setFilter] yearDropdownList 찾기 실패');
-                return false;
-            }
+        // MutationObserver로 yearDropdownList 대기
+        this.log('[setFilter] yearDropdownList 찾기 시작');
+        const yearDropdownList = await this.waitForElement('[class*="__soopui__DropdownList-module__dropdownItem__"]', 1, 10000);
+        if (!yearDropdownList) {
+            this.log('[setFilter] yearDropdownList 찾기 실패');
+            return false;
+        }
             for (var i = 0; i < yearDropdownList.childNodes.length; ++i) {
                 const yearDropdownItem = yearDropdownList.childNodes[i];
                 if (parseInt(yearDropdownItem.innerText) == year) {
@@ -206,30 +175,26 @@ export class SoopVODFinder {
                 }
             }
             
-            for (this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i) {
-                this.log(`[setFilter] 년도 선택 innerText검사(${this._i}/${this.MAX_RETRY_COUNT})`);
-                if (parseInt(yearDropdownOpenButton.innerText) == year) {
-                    break;
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            if (this._i == this.MAX_RETRY_COUNT) {
-                this.log('[setFilter] 년도 선택 innerText검사 통과 실패');
-                return false;
-            }
+        // MutationObserver로 년도 선택 완료 대기
+        this.log('[setFilter] 년도 선택 완료 대기 시작');
+        const yearSelected = await this.waitForElementWithCondition(
+            '[class*="__soopui__Dropdown-module__dropDownButton__"]',
+            (element) => parseInt(element.innerText) === year,
+            10000
+        );
+        if (!yearSelected) {
+            this.log('[setFilter] 년도 선택 실패');
+            return false;
+        }
         }
         this.log('[setFilter] monthDropdown 열기');
         this.triggerMouseDown(monthDropdownOpenButton);
         this.triggerMouseUp(monthDropdownOpenButton);
 
-        let monthDropdownList = null;
-        for(this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i){
-            this.log(`[setFilter] monthDropdownList 찾기(${this._i}/${this.MAX_RETRY_COUNT})`);
-            monthDropdownList = document.querySelector('[class*="__soopui__DropdownList-module__dropdownItem__"]');
-            if (monthDropdownList) break;
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
+        // MutationObserver로 monthDropdownList 대기
+        this.log('[setFilter] monthDropdownList 찾기 시작');
+        const monthDropdownList = await this.waitForElement('[class*="__soopui__DropdownList-module__dropdownItem__"]', 1, 10000);
+        if (!monthDropdownList) {
             this.log('[setFilter] monthDropdownList 찾기 실패');
             return false;
         }
@@ -242,15 +207,15 @@ export class SoopVODFinder {
             }
         }
 
-        for (this._i = 0; this._i < this.MAX_RETRY_COUNT; ++this._i) {
-            this.log(`[setFilter] 월 선택 innerText검사(${this._i}/${this.MAX_RETRY_COUNT})`);
-            if (parseInt(monthDropdownOpenButton.innerText) == month) {
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        if (this._i == this.MAX_RETRY_COUNT) {
-            this.log('[setFilter] 월 선택 innerText검사 통과 실패');
+        // MutationObserver로 월 선택 완료 대기
+        this.log('[setFilter] 월 선택 완료 대기 시작');
+        const monthSelected = await this.waitForElementWithCondition(
+            '[class*="__soopui__Dropdown-module__dropDownButton__"]',
+            (element) => parseInt(element.innerText) === month,
+            10000
+        );
+        if (!monthSelected) {
+            this.log('[setFilter] 월 선택 실패');
             return false;
         }
 
@@ -296,6 +261,87 @@ export class SoopVODFinder {
         
         element.dispatchEvent(mouseUpEvent);
     }
+
+    // MutationObserver를 사용한 효율적인 요소 대기
+    async waitForElement(selector, expectedCount = 1, timeout = 10000) {
+        return new Promise((resolve) => {
+            // 먼저 이미 존재하는지 확인
+            const existingElements = document.querySelectorAll(selector);
+            if (existingElements.length === expectedCount) {
+                resolve(expectedCount === 1 ? existingElements[0] : existingElements);
+                return;
+            }
+
+            let timeoutId;
+            const observer = new MutationObserver((mutations) => {
+                const elements = document.querySelectorAll(selector);
+                if (elements.length === expectedCount) {
+                    observer.disconnect();
+                    clearTimeout(timeoutId);
+                    resolve(expectedCount === 1 ? elements[0] : elements);
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeOldValue: true
+            });
+
+            // 타임아웃 설정
+            timeoutId = setTimeout(() => {
+                observer.disconnect();
+                const elements = document.querySelectorAll(selector);
+                this.log(`요소 대기 타임아웃: ${selector} (${elements.length}/${expectedCount})`);
+                resolve(expectedCount === 1 ? elements[0] : elements);
+            }, timeout);
+        });
+    }
+
+    // 특정 조건을 만족하는 요소 대기
+    async waitForElementWithCondition(selector, condition, timeout = 10000) {
+        return new Promise((resolve) => {
+            const checkElements = () => {
+                const elements = document.querySelectorAll(selector);
+                for (let element of elements) {
+                    if (condition(element)) {
+                        return element;
+                    }
+                }
+                return null;
+            };
+
+            // 먼저 이미 존재하는지 확인
+            const existingElement = checkElements();
+            if (existingElement) {
+                resolve(existingElement);
+                return;
+            }
+
+            let timeoutId;
+            const observer = new MutationObserver((mutations) => {
+                const element = checkElements();
+                if (element) {
+                    observer.disconnect();
+                    clearTimeout(timeoutId);
+                    resolve(element);
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true
+            });
+
+            timeoutId = setTimeout(() => {
+                observer.disconnect();
+                this.log(`조건부 요소 대기 타임아웃: ${selector}`);
+                resolve(null);
+            }, timeout);
+        });
+    }
     sendFinalResult(vodInfoList) {
         const finalVodLinks = this.createFinalVodLinkList(vodInfoList);
         log(`최종 VOD 링크 수: ${finalVodLinks.length}`);
@@ -308,19 +354,7 @@ export class SoopVODFinder {
         window.close();
     }
     
-    createFinalVodLinkList(vodInfoList) {
-        // 날짜순으로 정렬 (오래된 순)
-        // if (this.childVodListInfoList.length > 0) {
-        //     this.childVodListInfoList.sort((a, b) => {
-        //         if (a.year !== b.year) return a.year - b.year;
-        //         if (a.month !== b.month) return a.month - b.month;
-        //         return a.day - b.day;
-        //     });
-        //     for (var i = 0; i < this.childVodListInfoList.length; ++i) {
-        //         this.allVodInfoList.push(...this.childVodListInfoList[i]);
-        //     }
-        // }
-        
+    createFinalVodLinkList(vodInfoList) {        
         let resultVODLinks = [];
         
         let firstIndex = -1;
