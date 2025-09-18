@@ -123,9 +123,7 @@ else {
         'SoopVODFinder': 'src/module/soop_vod_finder.js'
     };
     window.VODSync.classLoader.loadClasses(classConfig).then(classes => {
-        const soopVODFinder = new classes.SoopVODFinder();
-        if (!soopVODFinder.isInitialized) {
-            new classes.SoopStreamerIDManager();
-        }
+        new classes.SoopVODFinder();
+        new classes.SoopStreamerIDManager();
     });
 }
