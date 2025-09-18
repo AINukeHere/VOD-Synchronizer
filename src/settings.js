@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 문의하기 기능
 function showInquiryAlert(event) {
     event.preventDefault();
-    if (confirm('카카오톡 1:1 오픈채팅입니다.\n버그 신고, 기능 요청, 사용법 문의 등 언제든지 편하게 문의해주세요!\n아 그리고 잘 찾아보면 송금버튼도 있더라구요? ㅎㅎ')) {
+    if (confirm('카카오톡 1:1 오픈채팅입니다.\n버그 신고, 기능 요청, 사용법 문의 등 언제든지 편하게 문의해주세요!\n아 그리고 잘 찾아보면 송금버튼도... 앜!')) {
         window.open('https://open.kakao.com/o/sqBqEFSh');
     }
 } 
