@@ -40,7 +40,7 @@
                     const year = uploadDate.getFullYear();
                     const month = uploadDate.getMonth() + 1;
                     const day = uploadDate.getDate();
-                    logToExtension(`일전 형식 파싱: ${daysAgo}일전 -> ${year}-${month}-${day}`);
+                    log(`일전 형식 파싱: ${daysAgo}일전 -> ${year}-${month}-${day}`);
                     return { year, month, day };
                 }
                 // HH시간전 형식인지 체크
@@ -52,7 +52,7 @@
                     const year = uploadDate.getFullYear();
                     const month = uploadDate.getMonth() + 1;
                     const day = uploadDate.getDate();
-                    logToExtension(`시간전 형식 파싱: ${hoursAgo}시간전 -> ${year}-${month}-${day}`);
+                    log(`시간전 형식 파싱: ${hoursAgo}시간전 -> ${year}-${month}-${day}`);
                     return { year, month, day };
                 } else {
                     // YYYY-MM-DD 형식 처리
