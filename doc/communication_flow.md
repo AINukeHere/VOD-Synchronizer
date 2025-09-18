@@ -7,8 +7,7 @@ sequenceDiagram
     participant User as 사용자
     participant VODLinker as SoopVODLinker<br/>"https://www.vod.sooplive.co.kr"
     participant StreamerManager as SoopStreamerIDManager<br/>"https://www.sooplive.co.kr"
-    participant PageManager as PageOneVodManager<br/>"https://ch.sooplive.co.kr"
-    participant ChildManager as ChildPageVodManager<br/>"https://ch.sooplive.co.kr"
+    participant VODFinder as SoopVODFinder<br/>"https://www.sooplive.co.kr"
     participant TimestampManager as SoopTimestampManager<br/>"https://www.vod.sooplive.co.kr"
 
     User->>VODLinker: 스트리머 이름 입력
@@ -19,15 +18,11 @@ sequenceDiagram
     
     StreamerManager->>StreamerManager: 스트리머 ID 검색
     StreamerManager->>VODLinker: STREAMER_ID_FOUND 메시지
-    StreamerManager->>PageManager: VOD 검색 iframe 생성
+    StreamerManager->>VODFinder: VOD 검색 iframe 생성
     
-    PageManager->>PageManager: 첫 번째 페이지 VOD 리스트 읽기
-    PageManager->>ChildManager: 추가 검색 페이지 iframe 생성 (ChildPageVodManager들)
-    
-    ChildManager->>ChildManager: 추가 페이지 VOD 리스트 읽기
-    ChildManager->>PageManager: VOD 정보 수집하여 전달
-    PageManager->>PageManager: 요청된 타임스탬프가 포함될 수 있는 VOD 후보들 선별
-    PageManager->>VODLinker: SOOP_VOD_LIST 메시지 (선별된 VOD 링크들)
+    VODFinder->>VODFinder: VOD 리스트 읽기
+    VODFinder->>VODFinder: 요청된 타임스탬프가 포함될 수 있는 VOD 후보들 선별
+    VODFinder->>VODLinker: SOOP_VOD_LIST 메시지 (선별된 VOD 링크들)
     
     VODLinker->>TimestampManager: 새 탭에서 VOD 열기
     TimestampManager->>TimestampManager: 타임스탬프 동기화 시도
@@ -82,8 +77,6 @@ sequenceDiagram
     participant StreamerManager as SoopStreamerIDManager<br/>"https://www.sooplive.co.kr"
     participant ChildStreamerManager as Child SoopStreamerIDManager<br/>"https://www.sooplive.co.kr"
     participant VodFinder as SoopVodFinder<br/>"https://www.sooplive.co.kr"
-    participant PageManager as PageOneVodManager<br/>"https://ch.sooplive.co.kr"
-    participant ChildManager as ChildPageVodManager<br/>"https://ch.sooplive.co.kr"
     participant TimestampManager as SoopTimestampManager<br/>"https://www.sooplive.co.kr"
 
     User->>SoopPanel: SOOP 검색 버튼 클릭
@@ -99,12 +92,9 @@ sequenceDiagram
     ChildStreamerManager->>StreamerManager: 스트리머 ID 전달
     StreamerManager->>VodFinder: VOD 검색 iframe 생성
     
-    VodFinder->>PageManager: PageOneVodManager 생성
-    PageManager->>ChildManager: ChildPageVodManager들 생성
-    
-    ChildManager->>PageManager: VOD 정보 수집
-    PageManager->>VodFinder: SOOP_VOD_INFO_LIST 메시지
-    VodFinder->>StreamerManager: SOOP_VOD_LIST 메시지
+    VodFinder->>VodFinder: VOD 리스트 읽기
+    VodFinder->>VodFinder: 요청된 타임스탬프가 포함될 수 있는 VOD 후보들 선별
+    VodFinder->>StreamerManager: SOOP_VOD_LIST 메시지 (선별된 VOD 링크들)
     StreamerManager->>SoopPanel: SOOP_VOD_LIST 메시지
     
     SoopPanel->>TimestampManager: 새 탭에서 SOOP VOD 열기
@@ -114,22 +104,6 @@ sequenceDiagram
 
 ## 4. SOOP 다시보기 → CHZZK 스트리머 동기화 흐름
 
-> **⚠️ 미구현 상태** - 현재 개발 중인 기능입니다.
-
-```mermaid
-sequenceDiagram
-    participant User as 사용자
-    participant ChzzkPanel as ChzzkSyncPanel<br/>"https://www.sooplive.co.kr"
-    participant ChzzkIframe as CHZZK iframe<br/>"https://chzzk.naver.com"
-    participant TimestampManager as ChzzkTimestampManager<br/>"https://chzzk.naver.com"
-
-    User->>ChzzkPanel: CHZZK 검색 버튼 클릭
-    ChzzkPanel->>ChzzkPanel: 현재 SOOP VOD 타임스탬프 추출
-    ChzzkPanel->>ChzzkIframe: iframe 생성 (CHZZK 검색)
-    
-    ChzzkIframe-->>ChzzkPanel: CHZZK VOD 링크 또는 NOT_FOUND
-    ChzzkPanel->>TimestampManager: 새 탭에서 CHZZK VOD 링크 열기
-    TimestampManager->>TimestampManager: 타임스탬프 동기화 시도
-```
+> **⚠️ 미구현 상태** - 개발 예정인 기능입니다.
 
  
