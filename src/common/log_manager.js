@@ -13,7 +13,7 @@ function logToExtension(...args) {
             // Background script에 접근할 수 없는 경우 콘솔에 출력
             console.error(...args);
         });
-        console.log(...args);
+        // console.log(...args);
     } catch (error) {
         console.log(...args);
     }

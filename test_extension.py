@@ -33,7 +33,7 @@ def create_test_extension():
         'src/background.js',
         'src/chzzk_content.js',
         'src/soop_content.js',
-        'src/soop_vod_finder_content.js',
+        # 'src/soop_vod_finder_content.js',
         'src/settings.html',
         'src/settings.js',
         

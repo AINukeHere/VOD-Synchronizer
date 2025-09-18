@@ -101,6 +101,9 @@ class SettingsManager {
             }
         });
 
+        // 문의하기 링크
+        document.getElementById('inquiryLink').addEventListener('click', showInquiryAlert);
+
         // 데이터 관리 섹션 접기/펼치기
         const dataManagementHeader = document.querySelector('.collapsible-header');
         const dataManagementContent = document.getElementById('dataManagementContent');
@@ -303,4 +306,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupTabs();
     setupLogs();
-}); 
+});
+
+// 문의하기 기능
+function showInquiryAlert(event) {
+    event.preventDefault();
+    if (confirm('카카오톡 1:1 오픈채팅입니다.\n버그 신고, 기능 요청, 사용법 문의 등 언제든지 편하게 문의해주세요!\n아 그리고 잘 찾아보면 송금버튼도 있더라구요? ㅎㅎ')) {
+        window.open('https://open.kakao.com/o/sqBqEFSh');
+    }
+} 
