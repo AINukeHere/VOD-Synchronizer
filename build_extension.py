@@ -31,7 +31,6 @@ def create_build_script():
         'src/background.js',
         'src/chzzk_content.js',
         'src/soop_content.js',
-        'src/soop_vod_finder_content.js',
         'src/settings.html',
         'src/settings.js',
         
