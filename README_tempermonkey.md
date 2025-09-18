@@ -13,13 +13,9 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 
 ## 설치 방법
 
-### 방법 1: GitHub에서 다운로드 (개별 확장프로그램으로 설치)
-1. [저장소](https://github.com/AINukeHere/VOD-Synchronizer)의 우측 상단에 있는 초록색 "Code" 버튼을 클릭합니다.
-2. "Download ZIP"을 선택하여 파일을 다운로드합니다.
-3. 다운로드한 ZIP 파일을 원하는 위치에 압축을 풉니다.
-4. 크롬 브라우저에서 확장 프로그램 관리(chrome://extensions)로 이동합니다.
-5. 우측 상단의 "개발자 모드"를 활성화합니다.
-6. "압축해제된 확장 프로그램을 로드합니다" 버튼을 클릭하고, 압축을 푼 폴더를 선택합니다.
+### 방법 1: Chrome Web Store에서 설치 (개별 확장프로그램으로 설치)
+1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-synchronizer/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Synchronizer를 설치하세요.
+2. "Chrome에 추가" 버튼을 클릭하여 설치를 완료하세요.
 
 ### 방법 2: TemperMonkey를 사용하는 경우
 1. Tempermonkey 설치
@@ -46,6 +42,9 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - 스트리밍에 문제가 있어 다시보기 영상 자체가 중간에 편집된 경우 동기화가 어긋날 수 있습니다.
 
 ## 업데이트 내역
+### 0.2.0
+- 개편된 SOOP 방송국에 동작하도록 수정했습니다.
+
 ### 0.1.5
 - 다른 스크립트와 충돌할 가능성이 있는 부분을 수정했습니다.
 

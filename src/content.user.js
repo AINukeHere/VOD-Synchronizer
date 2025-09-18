@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.1.5
+// @version      0.2.0
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -23,12 +23,26 @@
 
     // iframe 내부에서 실행되는 경우 (VOD 검색 및 스트리머 ID 검색)
     if (window !== top) {
-        // ch.sooplive.co.kr에서 VOD 검색
-        if (window.location.hostname === 'ch.sooplive.co.kr') {
-            log('[VOD 검색] iframe에서 실행됨');
+        
+        // www.sooplive.co.kr에서 스트리머 ID 검색
+        if (window.location.hostname === 'www.sooplive.co.kr') {
             
+            
+            log('[VOD 검색] iframe에서 실행됨');            
             // VOD 파서 (n시간 전 파싱 지원)
             function parseDateFromText(innerText) {
+                // N일 전 형식인지 체크
+                const dayAgoMatch = innerText.match(/(\d+)일 전/);
+                if (dayAgoMatch) {
+                    const daysAgo = parseInt(dayAgoMatch[1]);
+                    const uploadDate = new Date();
+                    uploadDate.setDate(uploadDate.getDate() - daysAgo);
+                    const year = uploadDate.getFullYear();
+                    const month = uploadDate.getMonth() + 1;
+                    const day = uploadDate.getDate();
+                    logToExtension(`일전 형식 파싱: ${daysAgo}일전 -> ${year}-${month}-${day}`);
+                    return { year, month, day };
+                }
                 // HH시간전 형식인지 체크
                 const timeAgoMatch = innerText.match(/(\d+)시간 전/);
                 if (timeAgoMatch) {
@@ -38,7 +52,7 @@
                     const year = uploadDate.getFullYear();
                     const month = uploadDate.getMonth() + 1;
                     const day = uploadDate.getDate();
-                    log(`시간전 형식 파싱: ${hoursAgo}시간전 -> ${year}-${month}-${day}`);
+                    logToExtension(`시간전 형식 파싱: ${hoursAgo}시간전 -> ${year}-${month}-${day}`);
                     return { year, month, day };
                 } else {
                     // YYYY-MM-DD 형식 처리
@@ -49,120 +63,317 @@
                     return { year, month, day };
                 }
             }
-
-            function getVodInfoList() {
-                const textToExplainEmpty = document.querySelector('#contents > div > div > section > section.vod-list > ul > li > p');
-                if (textToExplainEmpty && textToExplainEmpty.innerText === '등록된 VOD가 없습니다.'){
-                    return [];
+            class SoopVODFinder {
+                constructor() {
+                    const params = new URLSearchParams(window.location.search);
+                    const p_request = params.get("p_request");
+                    if (p_request === "GET_VOD_LIST_NEW_SOOP") {
+                        this.requestVodDatetime = new Date(parseInt(params.get("request_vod_ts")));
+                        
+                        this.requestYear = this.requestVodDatetime.getFullYear();
+                        this.requestMonth = this.requestVodDatetime.getMonth() + 1;
+                        this.requestDay = this.requestVodDatetime.getDate();
+                        this.start();
+                    }
                 }
-                const dateSpanElements = document.querySelectorAll('#contents > div > div > section > section.vod-list > ul > li > div.vod-info > div > span.date');
-                const vodLinkList = document.querySelectorAll('#contents > div > div > section > section.vod-list > ul > li > div.vod-info > p > a');
-                if (dateSpanElements.length == 0) return null;
-                if (vodLinkList.length == 0) return null;
-                log("date length", dateSpanElements.length);
-                log("link length", vodLinkList.length);
-                
-                const vodInfoList = [];
-                for (var i = 0; i < dateSpanElements.length; ++i){
-                    const innerText = dateSpanElements[i].innerText;
-                    const { year, month, day } = parseDateFromText(innerText);
-                    const vodInfo = {
-                        year: year,
-                        month: month,
-                        day: day,
-                        link: vodLinkList[i].href
-                    };
-                    vodInfoList.push(vodInfo);
-                }
-                return vodInfoList;
-            }
-
-            // 페이지 1에서 동작하는 메인 매니저 클래스
-            class PageOneVodManager {
-                constructor(requestVodDatetime) {
-                    this.requestVodDatetime = requestVodDatetime;
-                    this.allVodInfoList = [];
-                    this.childVodListInfoList = [];
-                    this.expectedChildPages = 0;
-                    this.receivedChildPages = 0;
-                    this.childIframes = [];
-                    
-                    this.requestYear = requestVodDatetime.getFullYear();
-                    this.requestMonth = requestVodDatetime.getMonth() + 1;
-                    this.requestDay = requestVodDatetime.getDate();
-                }
-                
                 log(...data){
-                    log('[PageOneVodManager]', ...data);
+                    console.log('[SoopVODFinder]', ...data);
                 }
                 
                 start() {
-                    this.log('시작' + window.location.toString());
-                    this.tryGetCurrentPageVodInfo();
+                    log('시작' + window.location.toString());
+                    this.getVodInfoList().then((vodInfoList) => {
+                        if (vodInfoList === null) {
+                            log('VOD 정보 수집 실패. 5초 후 재시도');
+                            setTimeout(() => {
+                                this.start();
+                            }, 5000);
+                            return;
+                        }
+                        log('현재 페이지 VOD 정보 수집 완료:', vodInfoList.length);
+                        this.sendFinalResult(vodInfoList);
+                    });
                 }
-                
-                tryGetCurrentPageVodInfo() {
-                    const intervalID = setInterval(() => {
-                        const vodInfoList = getVodInfoList();
-                        if (vodInfoList === null) return;
-                        
-                        this.log('현재 페이지 VOD 정보 수집 완료:', vodInfoList.length);
-                        this.allVodInfoList.push(...vodInfoList);
-                        this.checkAndCreateChildPages();
-                        clearInterval(intervalID);
-                    }, 100);
+            
+                async getVodInfoList() {
+                    // MutationObserver로 필터 열기 버튼 대기
+                    this.log('필터 열기 버튼 찾기 시작');
+                    const filterOpenButton = await this.waitForElement('[class*="__soopui__FilterList-module__btnFilter___"]', 1, 15000);
+                    if (!filterOpenButton) {
+                        this.log('필터 열기 버튼 찾기 실패');
+                        return null;
+                    }
+                    this.log('필터 열기');
+                    filterOpenButton.click();
+            
+                    // MutationObserver로 날짜 선택기 열기 버튼 대기
+                    this.log('날짜 선택기 열기 버튼 찾기 시작');
+                    const dateSelectorOpenButton = await this.waitForElement('[class*="__soopui__InputBox-module__iconOnly__"]', 1, 15000);
+                    if (!dateSelectorOpenButton) {
+                        this.log('날짜 선택기 열기 버튼 찾기 실패');
+                        return null;
+                    }
+                    this.log('날짜 선택기 열기');
+                    dateSelectorOpenButton.click();
+            
+                    // MutationObserver로 년월 선택기 열기 버튼 대기
+                    this.log('년월 선택기 열기 버튼 찾기 시작');
+                    const yearMonthDropdownButtons = await this.waitForElement('[class*="__soopui__Dropdown-module__dropDownButton__"]', 2, 15000);
+                    if (!yearMonthDropdownButtons || yearMonthDropdownButtons.length < 2) {
+                        this.log('년월 선택기 열기 버튼 찾기 실패');
+                        return null;
+                    }
+                    const yearDropdownButton = yearMonthDropdownButtons[0];
+                    const monthDropdownButton = yearMonthDropdownButtons[1];
+            
+                    const startDate = new Date(this.requestVodDatetime.getTime() - 1 * 24 * 60 * 60 * 1000);
+                    const endDate = new Date(this.requestVodDatetime.getTime() + 1 * 24 * 60 * 60 * 1000);
+                    this.log(`기간 필터: ${startDate} ~ ${endDate}`);
+                    await this.setFilter(yearDropdownButton, monthDropdownButton, startDate); // 첫번째 호출하면 시작날짜가 설정됨
+                    this.log('기간 필터 시작날짜 설정 완료');
+                    await this.setFilter(yearDropdownButton, monthDropdownButton, endDate); // 두번째 호출하면 끝날짜가 설정됨
+                    this.log('기간 필터 끝날짜 설정 완료');
+            
+                    // MutationObserver로 적용 버튼 대기
+                    this.log('적용 버튼 찾기 시작');
+                    const applyButton = await this.waitForElement('[class*="__soopui__DatepickerWrapper-module__button__"]', 1, 15000);
+                    if (!applyButton) {
+                        this.log('적용 버튼 찾기 실패');
+                        return null;
+                    }
+                    this.log('기간 필터 적용');
+                    applyButton.click();
+            
+                    const oldVodListBox = document.querySelector('[class*="VodList_itemListBox__"]');
+                    if (oldVodListBox) {
+                        oldVodListBox.style.display = 'none';
+                    }
+            
+                    // MutationObserver로 VOD 리스트 박스 업데이트 대기
+                    this.log('VOD 리스트 박스 업데이트 대기 시작');
+                    const vodListBox = await this.waitForElementWithCondition(
+                        '[class*="VodList_itemListBox__"]',
+                        (element) => element.style.display !== 'none' && element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0,
+                        20000
+                    );
+                    if (!vodListBox) {
+                        this.log('VOD 리스트 박스 업데이트 실패');
+                        return null;
+                    }
+                    const vodList_itemContainers = vodListBox.querySelectorAll('[class*="VodList_itemContainer__"]');
+                    this.log(`VOD 리스트 박스 업데이트 완료: ${vodList_itemContainers.length}개 항목`);
+            
+                    const vodInfoList = [];
+                    for(var i = 0; i < vodList_itemContainers.length; ++i){
+                        const vodList_itemContainer = vodList_itemContainers[i];
+                        const vodDateElement = vodList_itemContainer.querySelectorAll('[class*="__soopui__ThumbnailMoreInfo-module__md__"]')[1];
+                        const link = vodList_itemContainer.querySelector('a').href;
+                        const { year, month, day } = parseDateFromText(vodDateElement.innerText);
+                        const vodInfo = {
+                            year: year,
+                            month: month,
+                            day: day,
+                            link: link
+                        };
+                        this.log(vodInfo);
+                        vodInfoList.push(vodInfo);
+                    }
+                    return vodInfoList;
                 }
-                
-                checkAndCreateChildPages() {
-                    const pages = document.querySelectorAll('#contents > div > div > section > section.vod-srh_wrap > div > a');
-                    this.expectedChildPages = pages.length - 2; // 첫 번째 페이지와 다음페이지 넘김버튼 제외
+                async setFilter(yearDropdownOpenButton, monthDropdownOpenButton, startDate) {
+                    const year = startDate.getFullYear();
+                    const month = startDate.getMonth() + 1;
+                    const day = startDate.getDate();
+            
+                    if (parseInt(yearDropdownOpenButton.innerText) !== year) {
+                        this.log('[setFilter] yearDropdown 열기');
+                        this.triggerMouseDown(yearDropdownOpenButton);
+                        this.triggerMouseUp(yearDropdownOpenButton);
                         
-                    this.log(`추가 페이지 수: ${this.expectedChildPages}`);
+                    // MutationObserver로 yearDropdownList 대기
+                    this.log('[setFilter] yearDropdownList 찾기 시작');
+                    const yearDropdownList = await this.waitForElement('[class*="__soopui__DropdownList-module__dropdownItem__"]', 1, 10000);
+                    if (!yearDropdownList) {
+                        this.log('[setFilter] yearDropdownList 찾기 실패');
+                        return false;
+                    }
+                        for (var i = 0; i < yearDropdownList.childNodes.length; ++i) {
+                            const yearDropdownItem = yearDropdownList.childNodes[i];
+                            if (parseInt(yearDropdownItem.innerText) == year) {
+                                this.triggerMouseDown(yearDropdownItem);
+                                break;
+                            }
+                        }
+                        
+                    // MutationObserver로 년도 선택 완료 대기
+                    this.log('[setFilter] 년도 선택 완료 대기 시작');
+                    const yearSelected = await this.waitForElementWithCondition(
+                        '[class*="__soopui__Dropdown-module__dropDownButton__"]',
+                        (element) => parseInt(element.innerText) === year,
+                        10000
+                    );
+                    if (!yearSelected) {
+                        this.log('[setFilter] 년도 선택 실패');
+                        return false;
+                    }
+                    }
+                    this.log('[setFilter] monthDropdown 열기');
+                    this.triggerMouseDown(monthDropdownOpenButton);
+                    this.triggerMouseUp(monthDropdownOpenButton);
+            
+                    // MutationObserver로 monthDropdownList 대기
+                    this.log('[setFilter] monthDropdownList 찾기 시작');
+                    const monthDropdownList = await this.waitForElement('[class*="__soopui__DropdownList-module__dropdownItem__"]', 1, 10000);
+                    if (!monthDropdownList) {
+                        this.log('[setFilter] monthDropdownList 찾기 실패');
+                        return false;
+                    }
+            
+                    for (var i = 0; i < monthDropdownList.childNodes.length; ++i) {
+                        const monthDropdownItem = monthDropdownList.childNodes[i];
+                        if (parseInt(monthDropdownItem.innerText) == month) {
+                            this.triggerMouseDown(monthDropdownItem);
+                            break;
+                        }
+                    }
+            
+                    // MutationObserver로 월 선택 완료 대기
+                    this.log('[setFilter] 월 선택 완료 대기 시작');
+                    const monthSelected = await this.waitForElementWithCondition(
+                        '[class*="__soopui__Dropdown-module__dropDownButton__"]',
+                        (element) => parseInt(element.innerText) === month,
+                        10000
+                    );
+                    if (!monthSelected) {
+                        this.log('[setFilter] 월 선택 실패');
+                        return false;
+                    }
+            
+                    const daySelectButtons = document.querySelectorAll('.rdrDay:not(.rdrDayPassive)');
+                    for (var i = 0; i < daySelectButtons.length; ++i) {
+                        const daySelectButton = daySelectButtons[i];
+                        if (parseInt(daySelectButton.innerText) == day) {
+                            this.triggerMouseDown(daySelectButton);
+                            this.triggerMouseUp(daySelectButton);
+                            break;
+                        }
+                    }
+                }
+                triggerMouseDown(element) {
+                    const mouseDownEvent = new MouseEvent('mousedown', {
+                        bubbles: true,
+                        cancelable: true,
+                        button: 0,        // 왼쪽 마우스 버튼
+                        buttons: 1,       // 마우스 다운 상태
+                        clientX: 0,       // 마우스 X 좌표
+                        clientY: 0,       // 마우스 Y 좌표
+                        screenX: 0,       // 화면 X 좌표
+                        screenY: 0        // 화면 Y 좌표
+                    });
                     
-                    if (this.expectedChildPages > 0) {
-                        // 자식 페이지로부터 메시지 수신 대기
-                        window.addEventListener('message', (event) => {
-                            if (event.data.response === "SOOP_VOD_INFO_LIST") {
-                                this.handleChildPageData(event.data.resultVODInfos);
+                    element.dispatchEvent(mouseDownEvent);
+                }
+                triggerMouseUp(element) {
+                    const mouseUpEvent = new MouseEvent('mouseup', {
+                        bubbles: true,
+                        cancelable: true,
+                        button: 0,        // 왼쪽 마우스 버튼
+                        buttons: 0,       // 마우스 업 상태
+                        clientX: 0,
+                        clientY: 0,
+                        screenX: 0,
+                        screenY: 0
+                    });
+                    
+                    element.dispatchEvent(mouseUpEvent);
+                }
+            
+                // MutationObserver를 사용한 효율적인 요소 대기
+                async waitForElement(selector, expectedCount = 1, timeout = 10000) {
+                    return new Promise((resolve) => {
+                        // 먼저 이미 존재하는지 확인
+                        const existingElements = document.querySelectorAll(selector);
+                        if (existingElements.length === expectedCount) {
+                            resolve(expectedCount === 1 ? existingElements[0] : existingElements);
+                            return;
+                        }
+            
+                        let timeoutId;
+                        const observer = new MutationObserver((mutations) => {
+                            const elements = document.querySelectorAll(selector);
+                            if (elements.length === expectedCount) {
+                                observer.disconnect();
+                                clearTimeout(timeoutId);
+                                resolve(expectedCount === 1 ? elements[0] : elements);
                             }
                         });
-                        for (var i = 1; i < pages.length - 1; ++i) {
-                            const page = pages[i];
-                            const iframe = document.createElement('iframe');
-                            iframe.src = page.href;
-                            iframe.style.display = 'none';
-                            document.body.appendChild(iframe);
-                            this.childIframes.push(iframe); 
+            
+                        observer.observe(document.body, {
+                            childList: true,
+                            subtree: true,
+                            attributes: true,
+                            attributeOldValue: true
+                        });
+            
+                        // 타임아웃 설정
+                        timeoutId = setTimeout(() => {
+                            observer.disconnect();
+                            const elements = document.querySelectorAll(selector);
+                            this.log(`요소 대기 타임아웃: ${selector} (${elements.length}/${expectedCount})`);
+                            resolve(expectedCount === 1 ? elements[0] : elements);
+                        }, timeout);
+                    });
+                }
+            
+                // 특정 조건을 만족하는 요소 대기
+                async waitForElementWithCondition(selector, condition, timeout = 10000) {
+                    return new Promise((resolve) => {
+                        const checkElements = () => {
+                            const elements = document.querySelectorAll(selector);
+                            for (let element of elements) {
+                                if (condition(element)) {
+                                    return element;
+                                }
+                            }
+                            return null;
+                        };
+            
+                        // 먼저 이미 존재하는지 확인
+                        const existingElement = checkElements();
+                        if (existingElement) {
+                            resolve(existingElement);
+                            return;
                         }
-                    } else {
-                        // 추가 페이지가 없으면 바로 결과 전송
-                        this.sendFinalResult();
-                    }
+            
+                        let timeoutId;
+                        const observer = new MutationObserver((mutations) => {
+                            const element = checkElements();
+                            if (element) {
+                                observer.disconnect();
+                                clearTimeout(timeoutId);
+                                resolve(element);
+                            }
+                        });
+            
+                        observer.observe(document.body, {
+                            childList: true,
+                            subtree: true,
+                            attributes: true
+                        });
+            
+                        timeoutId = setTimeout(() => {
+                            observer.disconnect();
+                            this.log(`조건부 요소 대기 타임아웃: ${selector}`);
+                            resolve(null);
+                        }, timeout);
+                    });
                 }
-                
-                handleChildPageData(childVodInfoList) {
-                    this.receivedChildPages++;
-                    this.log(`자식 페이지 데이터 수신 (${this.receivedChildPages}/${this.expectedChildPages})`);
-                    
-                    if (childVodInfoList && childVodInfoList.length > 0) {
-                        this.childVodListInfoList.push(childVodInfoList);
-                    }
-                    
-                    this.checkAllDataReceived();
-                }
-                
-                checkAllDataReceived() {
-                    if (this.receivedChildPages >= this.expectedChildPages) {
-                        this.sendFinalResult();
-                    }
-                }
-                
-                sendFinalResult() {
-                    const finalVodLinks = this.createFinalVodLinkList();
-                    this.log(`최종 VOD 링크 수: ${finalVodLinks.length}`);
+                sendFinalResult(vodInfoList) {
+                    const finalVodLinks = this.createFinalVodLinkList(vodInfoList);
+                    log(`최종 VOD 링크 수: ${finalVodLinks.length}`);
                     
                     const message = {
-                        response: "VOD_LIST",
+                        response: "SOOP_VOD_LIST",
                         request_datetime: this.requestVodDatetime,
                         resultVODLinks: finalVodLinks
                     };
@@ -170,26 +381,13 @@
                     window.close();
                 }
                 
-                createFinalVodLinkList() {
-                    // 날짜순으로 정렬 (오래된 순)
-                    if (this.childVodListInfoList.length > 0) {
-                        this.childVodListInfoList.sort((a, b) => {
-                            if (a.year !== b.year) return a.year - b.year;
-                            if (a.month !== b.month) return a.month - b.month;
-                            return a.day - b.day;
-                        });
-                        for (var i = 0; i < this.childVodListInfoList.length; ++i) {
-                            this.allVodInfoList.push(...this.childVodListInfoList[i]);
-                        }
-                    }
-                    
+                createFinalVodLinkList(vodInfoList) {        
                     let resultVODLinks = [];
                     
                     let firstIndex = -1;
                     let lastIndex = -1;
-                    // allVodInfoList는 최근 순으로 정렬되어있음
-                    for (var i = 0; i < this.allVodInfoList.length; ++i) {
-                        const vodInfo = this.allVodInfoList[i];
+                    for (var i = 0; i < vodInfoList.length; ++i) {
+                        const vodInfo = vodInfoList[i];
                         // 요청날짜보다 더 최근 것 중 가장 오래된 것 찾기
                         if (vodInfo.year > this.requestYear || 
                            (vodInfo.year == this.requestYear && vodInfo.month > this.requestMonth) || 
@@ -208,72 +406,14 @@
                     }
                     if (firstIndex == -1) firstIndex = 0;
                     for (var i = firstIndex; i <= lastIndex; ++i) {
-                        const vodInfo = this.allVodInfoList[i];
+                        const vodInfo = vodInfoList[i];
                         resultVODLinks.push(vodInfo.link);
-                        this.log(`vod added: ${vodInfo.year}-${vodInfo.month}-${vodInfo.day} ${vodInfo.link}`);
+                        log(`vod added: ${vodInfo.year}-${vodInfo.month}-${vodInfo.day} ${vodInfo.link}`);
                     }
                     return resultVODLinks;
                 }
             }
-
-            // 페이지 2 이상에서 동작하는 자식 페이지 매니저 클래스
-            class ChildPageVodManager {
-                constructor(requestVodDatetime) {
-                    this.requestVodDatetime = requestVodDatetime;
-                }
-                
-                log(...data){
-                    log('[ChildPageVodManager]', ...data);
-                }
-                
-                start() {
-                    this.log('시작' + window.location.toString());
-                    this.tryGetVodInfo();
-                }
-                
-                tryGetVodInfo() {
-                    const intervalID = setInterval(() => {
-                        const vodInfoList = getVodInfoList();
-                        if (vodInfoList === null) return;
-                            
-                        this.log('VOD 정보 수집 완료:', vodInfoList.length);
-                        
-                        // 부모 페이지(PageOneVodManager)로 데이터 전송
-                        const message = {
-                            response: "SOOP_VOD_INFO_LIST",
-                            resultVODInfos: vodInfoList
-                        };
-                        window.parent.postMessage(message, window.origin);
-                        window.close();
-                        clearInterval(intervalID);
-                    }, 100);
-                }
-            }
-
-            // VOD 검색 요청 처리
-            const params = new URLSearchParams(window.location.search);
-            const p_request = params.get("p_request");
-            const pageNum = parseInt(params.get("page") || "1");
-            
-            if (p_request === "GET_VOD_LIST") {
-                const global_ts = params.get("req_global_ts");
-                const request_datetime = new Date(parseInt(global_ts));
-                
-                if (pageNum === 1) {
-                    // 페이지 1: 메인 매니저 실행
-                    const pageOneManager = new PageOneVodManager(request_datetime);
-                    pageOneManager.start();
-                } else {
-                    // 페이지 2 이상: 자식 페이지 매니저 실행
-                    const childManager = new ChildPageVodManager(request_datetime);
-                    childManager.start();
-                }
-            }
-        }
-        
-        // www.sooplive.co.kr에서 스트리머 ID 검색
-        if (window.location.hostname === 'www.sooplive.co.kr') {
-            log('[스트리머 ID 검색] iframe에서 실행됨');
+            new SoopVODFinder();
             
             function GetStreamerID(nickname){
                 const searchResults = document.querySelectorAll('#container > div.search_strm_area > ul > .strm_list');
@@ -697,21 +837,15 @@
                 this.updateFindVODButtons();
             }
             
-            findVODList(streamer_id){
+            findVODList(streamerId){
                 this.curProcessingBtn.innerText = BTN_TEXT_FINDING_VOD;
                 const datetime = tsManager.getCurDateTime();
-                const year = datetime.getFullYear();
-                const month = datetime.getMonth()+1;
-                const monthsParam = `${year}${String(month).padStart(2,"0")}`;
 
-                const url = new URL(`https://ch.sooplive.co.kr/${streamer_id}/vods/review`);
-                url.searchParams.set("page",1);
-                url.searchParams.set("months",`${monthsParam}${monthsParam}`);
-                url.searchParams.set("perPage", 60);
+                const url = new URL(`https://www.sooplive.co.kr/station/${streamerId}/vod/review`);
                 const reqUrl = new URL(url.toString());
-                reqUrl.searchParams.set("p_request", "GET_VOD_LIST");
-                reqUrl.searchParams.set("req_global_ts", datetime.getTime());
-                log('VOD List 요청: ', reqUrl.toString());
+                reqUrl.searchParams.set("p_request", "GET_VOD_LIST_NEW_SOOP");
+                reqUrl.searchParams.set("request_vod_ts", datetime.getTime());
+                log('SOOP VOD 리스트 요청:', reqUrl.toString());
                 this.iframe.src = reqUrl.toString();
             }
             
@@ -810,7 +944,7 @@
         
         // 메시지 리스너 설정
         window.addEventListener('message', (event) => {
-            if (event.data.response === "VOD_LIST"){
+            if (event.data.response === "SOOP_VOD_LIST"){
                 const vodLinks = event.data.resultVODLinks;
                 const request_datetime = event.data.request_datetime;
                 log("VOD_LIST 받음:", vodLinks);
