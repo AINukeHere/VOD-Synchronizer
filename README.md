@@ -33,9 +33,9 @@
 1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-synchronizer/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Synchronizer를 설치하세요.
 2. "Chrome에 추가" 버튼을 클릭하여 설치를 완료하세요.
 
-### 방법 2: GitHub에서 다운로드 (개발자용 혹은 스토어에 게시되기전에 미리 체험용)
-1. [이 저장소](https://github.com/AINukeHere/VOD-Synchronizer)의 우측 상단에 있는 초록색 "Code" 버튼을 클릭합니다.
-2. "Download ZIP"을 선택하여 파일을 다운로드합니다.
+### 방법 2: GitHub Releases에서 다운로드 (개발자용 혹은 스토어에 게시되기전에 미리 체험용)
+1. [이 저장소](https://github.com/AINukeHere/VOD-Synchronizer)의 우측에 있는 [Releases](https://github.com/AINukeHere/VOD-Synchronizer/releases)를 클릭합니다.
+2. 원하는 버전의 릴리즈 Assets에서 VOD-Synchronizer_로 시작하는 zip파일을 다운로드합니다.
 3. 다운로드한 ZIP 파일을 원하는 위치에 압축을 풉니다.
 4. 크롬 브라우저에서 확장 프로그램 관리(chrome://extensions)로 이동합니다.
 5. 우측 상단의 "개발자 모드"를 활성화합니다.
