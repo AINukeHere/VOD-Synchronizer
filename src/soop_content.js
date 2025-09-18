@@ -117,17 +117,37 @@ else {
     }
     log('loaded');
 
-    // 설정에 따라 기능 초기화
-    async function initializeFeatures() {
-        // SOOP 플랫폼에서 필요한 클래스들 구성
-        const classConfig = {
-            'SoopStreamerIDManager': 'src/module/soop_streamer_id_manager.js'
-        };
-        const classes = await window.VODSync.classLoader.loadClasses(classConfig);
-        new classes.SoopStreamerIDManager();
+    const params = new URLSearchParams(window.location.search);
+    const p_request = params.get("p_request");
+    const request_from = params.get("request_from");
+    if (request_from) {
+        log('SoopStreamerIDManager 클래스 로드');
+        async function initializeFeatures() {
+            // SOOP 플랫폼에서 필요한 클래스들 구성
+            const classConfig = {
+                'SoopStreamerIDManager': 'src/module/soop_streamer_id_manager.js'
+            };
+            const classes = await window.VODSync.classLoader.loadClasses(classConfig);
+            new classes.SoopStreamerIDManager();
+        }
+        // 기능 초기화 실행
+        initializeFeatures().catch(error => {
+            log('기능 초기화 중 오류 발생:', error);
+        });
     }
-    // 기능 초기화 실행
-    initializeFeatures().catch(error => {
-        log('기능 초기화 중 오류 발생:', error);
-    });
+    else if (p_request === "GET_VOD_LIST") {
+        log('SoopVODFinder 클래스 로드');
+        const request_vod_ts = params.get("request_vod_ts");
+        const request_vod_datetime = new Date(parseInt(request_vod_ts));
+        
+        // 클래스 로더를 통해 필요한 클래스들 로드
+        window.VODSync.classLoader.loadClasses({
+            'SoopVODFinder': 'src/module/soop_vod_finder.js'
+        }).then(classes => {
+            const soopVODFinder = new classes.SoopVODFinder(request_vod_datetime);
+            soopVODFinder.start();
+        }).catch(error => {
+            log('클래스 로드 실패:', error);
+        });
+    }
 }

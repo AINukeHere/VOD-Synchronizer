@@ -154,10 +154,7 @@ export class SoopStreamerIDManager {
         const year = targetDateTime.getFullYear();
         const month = targetDateTime.getMonth() + 1;
         const monthsParam = `${year}${String(month).padStart(2, "0")}`;
-        const url = new URL(`https://ch.sooplive.co.kr/${streamerId}/vods/review`);
-        url.searchParams.set("page", 1);
-        url.searchParams.set("months", `${monthsParam}${monthsParam}`);
-        url.searchParams.set("perPage", 60);
+        const url = new URL(`https://www.sooplive.co.kr/station/${streamerId}/vod/review`);
         const reqUrl = new URL(url.toString());
         reqUrl.searchParams.set("p_request", "GET_VOD_LIST");
         reqUrl.searchParams.set("request_vod_ts", targetDateTime.getTime());
