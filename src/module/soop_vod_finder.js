@@ -123,13 +123,24 @@ export class SoopVODFinder {
         this.log('VOD 리스트 박스 업데이트 대기 시작');
         const vodListBox = await this.waitForElementWithCondition(
             '[class*="VodList_itemListBox__"]',
-            (element) => element.style.display !== 'none' && element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0,
+            (element) => {
+                // 리스트 박스가 보이는 상태이고
+                if (element.style.display === 'none') return false;
+                
+                // VOD 아이템이 있거나 "등록된 VOD가 없습니다" 메시지가 있는 경우
+                const hasVodItems = element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0;
+                const hasEmptyMessage = element.querySelector('[class*="__soopui__Empty-module__empty__"]') !== null;
+                
+                return hasVodItems || hasEmptyMessage;
+            },
             20000
         );
         if (!vodListBox) {
             this.log('VOD 리스트 박스 업데이트 실패');
             return null;
         }
+        
+        // VOD 아이템이 있는지 확인
         const vodList_itemContainers = vodListBox.querySelectorAll('[class*="VodList_itemContainer__"]');
         this.log(`VOD 리스트 박스 업데이트 완료: ${vodList_itemContainers.length}개 항목`);
 

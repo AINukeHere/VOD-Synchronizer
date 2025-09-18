@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.2.0
+// @version      0.2.1
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -18,7 +18,7 @@
 
     // 간소화된 로깅 함수
     function log(...data) {
-        console.log('[VOD Sync]', ...data);
+        console.debug('[VOD Sync]', ...data);
     }
 
     // iframe 내부에서 실행되는 경우 (VOD 검색 및 스트리머 ID 검색)
@@ -77,7 +77,7 @@
                     }
                 }
                 log(...data){
-                    console.log('[SoopVODFinder]', ...data);
+                    log('[SoopVODFinder]', ...data);
                 }
                 
                 start() {
@@ -153,13 +153,24 @@
                     this.log('VOD 리스트 박스 업데이트 대기 시작');
                     const vodListBox = await this.waitForElementWithCondition(
                         '[class*="VodList_itemListBox__"]',
-                        (element) => element.style.display !== 'none' && element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0,
+                        (element) => {
+                            // 리스트 박스가 보이는 상태이고
+                            if (element.style.display === 'none') return false;
+                            
+                            // VOD 아이템이 있거나 "등록된 VOD가 없습니다" 메시지가 있는 경우
+                            const hasVodItems = element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0;
+                            const hasEmptyMessage = element.querySelector('[class*="__soopui__Empty-module__empty__"]') !== null;
+                            
+                            return hasVodItems || hasEmptyMessage;
+                        },
                         20000
                     );
                     if (!vodListBox) {
                         this.log('VOD 리스트 박스 업데이트 실패');
                         return null;
                     }
+                    
+                    // VOD 아이템이 있는지 확인
                     const vodList_itemContainers = vodListBox.querySelectorAll('[class*="VodList_itemContainer__"]');
                     this.log(`VOD 리스트 박스 업데이트 완료: ${vodList_itemContainers.length}개 항목`);
             
@@ -948,8 +959,12 @@
                 const vodLinks = event.data.resultVODLinks;
                 const request_datetime = event.data.request_datetime;
                 log("VOD_LIST 받음:", vodLinks);
-                
-                checkOneByOne(vodLinks, request_datetime.getTime());
+                if (vodLinks.length == 0){
+                    alert("다시보기가 없습니다.");
+                }
+                else{
+                    checkOneByOne(vodLinks, request_datetime.getTime());
+                }
                 vodLinker.curProcessingBtn.innerText = "Find VOD";
                 vodLinker.curProcessingBtn = null;
             }
