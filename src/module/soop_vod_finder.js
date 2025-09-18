@@ -231,10 +231,8 @@ export class SoopVODFinder {
     }
     triggerMouseDown(element) {
         const mouseDownEvent = new MouseEvent('mousedown', {
-            view: window,
             bubbles: true,
             cancelable: true,
-            isTrusted: true,
             button: 0,        // 왼쪽 마우스 버튼
             buttons: 1,       // 마우스 다운 상태
             clientX: 0,       // 마우스 X 좌표
@@ -247,10 +245,8 @@ export class SoopVODFinder {
     }
     triggerMouseUp(element) {
         const mouseUpEvent = new MouseEvent('mouseup', {
-            view: window,
             bubbles: true,
             cancelable: true,
-            isTrusted: true,
             button: 0,        // 왼쪽 마우스 버튼
             buttons: 0,       // 마우스 업 상태
             clientX: 0,

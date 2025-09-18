@@ -147,9 +147,6 @@ export class SoopStreamerIDManager {
     }
     findVodListInIframe(streamerId, targetTimestamp) {
         const targetDateTime = new Date(targetTimestamp);
-        const year = targetDateTime.getFullYear();
-        const month = targetDateTime.getMonth() + 1;
-        const monthsParam = `${year}${String(month).padStart(2, "0")}`;
         const url = new URL(`https://www.sooplive.co.kr/station/${streamerId}/vod/review`);
         const reqUrl = new URL(url.toString());
         reqUrl.searchParams.set("p_request", "GET_VOD_LIST_NEW_SOOP");
