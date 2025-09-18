@@ -169,7 +169,7 @@ def main():
     os.makedirs('icons', exist_ok=True)
     
     # Required sizes for Chrome extension
-    sizes = [16, 32, 48, 128]
+    sizes = [16, 32, 48, 128, 256, 512]
     
     print("Generating Chrome Web Store compliant synchronization icons with exact 16px padding...")
     

@@ -1,6 +1,19 @@
 # VOD Synchronizer
 
-VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스트리머의 시점이나 채팅이 궁금할때 다른 스트리머의 VOD를 찾아서 볼 수 있게 해주는 크롬 확장 프로그램입니다. 
+<table align="center">
+  <tr>
+    <td style="">
+      <img src="icons/icon_512.png" alt="VOD Synchronizer Icon" width="256" height="256">
+    </td>
+    <td style="">
+      <h1 style="font-size: 5em; margin: 0; white-space: nowrap;">VOD Synchronizer</h1>
+    </td>
+  </tr>
+</table>
+
+SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스트리머의 시점이나 채팅이 궁금할때 다른 스트리머의 VOD를 찾아서 볼 수 있게 해주는 크롬 확장 프로그램입니다.
+
+[주요 기능](#주요-기능) • [설치 방법](#설치-방법) • [사용 예시](#사용-예시) • [지원 플랫폼](#지원-플랫폼) • [동작 원리](#동작-원리) • [QnA](#qna) • [알려진 문제](#알려진-문제) • [업데이트 내역](#업데이트-내역) • [라이선스](#라이선스)
 
 ## 주요 기능
 
