@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "VOD Synchronizer",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "SOOP, CHZZK 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화",
     "author": "AINukeHere",
     "homepage_url": "https://github.com/AINukeHere/VOD-Synchronizer",
@@ -14,8 +14,7 @@
     "content_scripts": [
         {
             "matches": [
-                "https://www.sooplive.co.kr/*", 
-                "https://ch.sooplive.co.kr/*", 
+                "https://www.sooplive.co.kr/*",
                 "https://vod.sooplive.co.kr/*", 
                 "https://chzzk.naver.com/*"
             ],
@@ -58,7 +57,7 @@
                 "src/module/chzzk_vod_finder.js",
                 "src/module/soop_vod_linker.js"
             ],
-            "matches": ["https://chzzk.naver.com/*", "https://www.sooplive.co.kr/*", "https://ch.sooplive.co.kr/*", "https://vod.sooplive.co.kr/*"]
+            "matches": ["https://chzzk.naver.com/*", "https://www.sooplive.co.kr/*", "https://vod.sooplive.co.kr/*"]
         }
     ],
     "commands": {
