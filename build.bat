@@ -13,5 +13,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM 명령행 인수 처리
+if "%1"=="" (
+    set MODE=all
+) else (
+    set MODE=%1
+)
+
 REM 빌드 스크립트 실행
-python build_extension.py
+python build_extension.py %MODE%
