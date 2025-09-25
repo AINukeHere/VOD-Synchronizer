@@ -137,7 +137,7 @@
                     // 검색 기간 정하기 - 설정에서 가져오기
                     const searchRangeHours = rangeHours;
                     const startDate = new Date(this.requestVodDatetime.getTime() - searchRangeHours * 60 * 60 * 1000);
-                    const endDate = new Date(this.requestVodDatetime.getTime() + searchRangeHours * 60 * 60 * 1000);
+                    let endDate = new Date(this.requestVodDatetime.getTime() + searchRangeHours * 60 * 60 * 1000);
                     // 끝 날짜가 현재날짜보다 뒤가 되지는 않도록 처리
                     if (endDate > new Date()) {
                         endDate = new Date();
@@ -393,6 +393,7 @@
                 sendFinalResult(vodInfoList) {
                     const message = {
                         response: "SOOP_VOD_LIST",
+                        request_datetime: this.requestVodDatetime,
                         resultVODLinks: null
                     };
                     if (vodInfoList) {
@@ -400,7 +401,7 @@
                         this.log(`최종 VOD 링크 수: ${finalVodLinks.length}`);
                         message.resultVODLinks = finalVodLinks;
                     }
-                    window.parent.postMessage(message, "https://www.sooplive.co.kr");
+                    window.parent.postMessage(message, "https://vod.sooplive.co.kr"); // 이 스크립트에선 중간자가 없으므로 부모가 vod페이지임
                     window.close();
                 }
                 

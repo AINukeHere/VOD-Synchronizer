@@ -107,7 +107,7 @@ export class SoopVODFinder {
         // 검색 기간 정하기 - 설정에서 가져오기
         const searchRangeHours = rangeHours;
         const startDate = new Date(this.requestVodDatetime.getTime() - searchRangeHours * 60 * 60 * 1000);
-        const endDate = new Date(this.requestVodDatetime.getTime() + searchRangeHours * 60 * 60 * 1000);
+        let endDate = new Date(this.requestVodDatetime.getTime() + searchRangeHours * 60 * 60 * 1000);
         // 끝 날짜가 현재날짜보다 뒤가 되지는 않도록 처리
         if (endDate > new Date()) {
             endDate = new Date();
