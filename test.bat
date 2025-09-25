@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo VOD Synchronizer Build Script
+echo VOD Synchronizer Test Build Script
 echo ========================================
 echo.
 
@@ -13,5 +13,5 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 빌드 스크립트 실행
-python build_extension.py
+REM 테스트 빌드 스크립트 실행
+python test_extension.py

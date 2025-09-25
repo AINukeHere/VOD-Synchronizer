@@ -20,7 +20,7 @@ class SettingsManager {
     async loadSettings() {
         try {
             const result = await chrome.storage.sync.get('vodSyncSettings');
-            this.settings = result.vodSyncSettings || this.defaultSettings;
+            this.settings = { ...this.defaultSettings, ...result.vodSyncSettings };
         } catch (error) {
             console.error('설정 로드 실패:', error);
             this.settings = this.defaultSettings;
@@ -68,7 +68,8 @@ class SettingsManager {
             enableTimestamp: document.getElementById('enableTimestamp').checked,
             enableChzzkSoopPanel: document.getElementById('enableChzzkSoopPanel').checked,
             enableSoopChzzkPanel: document.getElementById('enableSoopChzzkPanel').checked,
-            enableRpPanel: document.getElementById('enableRpPanel').checked
+            enableRpPanel: document.getElementById('enableRpPanel').checked,
+            searchRangeHours: parseInt(document.getElementById('searchRangeHours').value) || 24
         };
     }
 

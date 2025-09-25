@@ -38,8 +38,12 @@ export class SoopVODLinker{
             this.clearLastRequest();
             this.curProcessingBtn.innerText = BTN_TEXT_IDLE;
             this.curProcessingBtn = null;
-            if (vodLinks.length == 0){
-                alert("다시보기가 없습니다.");
+            if (vodLinks === null)
+            {
+                alert("다시보기 동기화 실패. 문제가 반복되면 문의바람.");
+            }
+            else if (vodLinks.length == 0){
+                alert("동기화할 다시보기가 없습니다.");
             }
             else{
                 this.checkOneByOne(vodLinks);

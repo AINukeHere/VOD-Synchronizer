@@ -38,47 +38,55 @@ export class SoopVODFinder {
         const params = new URLSearchParams(window.location.search);
         const p_request = params.get("p_request");
         if (p_request === "GET_VOD_LIST_NEW_SOOP") {
-            this.requestVodDatetime = new Date(parseInt(params.get("request_vod_ts")));
-            
+            const rangeHours = params.get("range_hours");
+            const request_vod_ts = params.get("request_vod_ts");
+
+            this.requestVodDatetime = new Date(parseInt(request_vod_ts));
+            this.rangeHours = rangeHours ? parseInt(rangeHours) : 24; // 검색 기간 범위 디폴트 24시간
+
             this.requestYear = this.requestVodDatetime.getFullYear();
             this.requestMonth = this.requestVodDatetime.getMonth() + 1;
             this.requestDay = this.requestVodDatetime.getDate();
+
             this.start();
         }
     }
     log(...data){
         logToExtension('[SoopVODFinder]', ...data);
     }
-    
-    start() {
-        log('시작' + window.location.toString());
-        this.getVodInfoList().then((vodInfoList) => {
-            if (vodInfoList === null) {
-                log('VOD 정보 수집 실패. 5초 후 재시도');
-                setTimeout(() => {
-                    this.start();
-                }, 5000);
-                return;
+
+    async start() {
+        let vodInfoList = null;
+        this.log('시작' + window.location.toString());
+        for(let iteration = 0; iteration < 10; ++iteration){
+            vodInfoList = await this.getVodInfoList(this.rangeHours, iteration);
+            if (vodInfoList === null || vodInfoList.length < 60) {
+                this.log('현재 페이지 VOD 정보 수집 완료:', vodInfoList?.length);
+                break;
             }
-            log('현재 페이지 VOD 정보 수집 완료:', vodInfoList.length);
-            this.sendFinalResult(vodInfoList);
-        });
+            this.log('60개이상 검색되었으므로 검색 기간을 줄여서 재검색');
+            this.rangeHours = this.rangeHours / 2;
+        }
+        this.sendFinalResult(vodInfoList);
     }
 
-    async getVodInfoList() {
-        // MutationObserver로 필터 열기 버튼 대기
-        this.log('필터 열기 버튼 찾기 시작');
-        const filterOpenButton = await this.waitForElement('[class*="__soopui__FilterList-module__btnFilter___"]', 1, 15000);
-        if (!filterOpenButton) {
-            this.log('필터 열기 버튼 찾기 실패');
-            return null;
+    async getVodInfoList(rangeHours, iteration) {
+        // 처음에만 필터를 여는 코드를 실행
+        if (iteration == 0) {
+            // MutationObserver로 필터 열기 버튼 대기
+            this.log('필터 열기 버튼 찾기 시작');
+            const filterOpenButton = await this.waitForElement('[class*="__soopui__FilterList-module__btnFilter___"]', 1, 5000);
+            if (!filterOpenButton) {
+                this.log('필터 열기 버튼 찾기 실패');
+                return null;
+            }
+            this.log('필터 열기');
+            filterOpenButton.click();
         }
-        this.log('필터 열기');
-        filterOpenButton.click();
 
         // MutationObserver로 날짜 선택기 열기 버튼 대기
         this.log('날짜 선택기 열기 버튼 찾기 시작');
-        const dateSelectorOpenButton = await this.waitForElement('[class*="__soopui__InputBox-module__iconOnly__"]', 1, 15000);
+        const dateSelectorOpenButton = await this.waitForElement('[class*="__soopui__InputBox-module__iconOnly__"]', 1, 5000);
         if (!dateSelectorOpenButton) {
             this.log('날짜 선택기 열기 버튼 찾기 실패');
             return null;
@@ -88,7 +96,7 @@ export class SoopVODFinder {
 
         // MutationObserver로 년월 선택기 열기 버튼 대기
         this.log('년월 선택기 열기 버튼 찾기 시작');
-        const yearMonthDropdownButtons = await this.waitForElement('[class*="__soopui__Dropdown-module__dropDownButton__"]', 2, 15000);
+        const yearMonthDropdownButtons = await this.waitForElement('[class*="__soopui__Dropdown-module__dropDownButton__"]', 2, 5000);
         if (!yearMonthDropdownButtons || yearMonthDropdownButtons.length < 2) {
             this.log('년월 선택기 열기 버튼 찾기 실패');
             return null;
@@ -96,8 +104,14 @@ export class SoopVODFinder {
         const yearDropdownButton = yearMonthDropdownButtons[0];
         const monthDropdownButton = yearMonthDropdownButtons[1];
 
-        const startDate = new Date(this.requestVodDatetime.getTime() - 1 * 24 * 60 * 60 * 1000);
-        const endDate = new Date(this.requestVodDatetime.getTime() + 1 * 24 * 60 * 60 * 1000);
+        // 검색 기간 정하기 - 설정에서 가져오기
+        const searchRangeHours = rangeHours;
+        const startDate = new Date(this.requestVodDatetime.getTime() - searchRangeHours * 60 * 60 * 1000);
+        const endDate = new Date(this.requestVodDatetime.getTime() + searchRangeHours * 60 * 60 * 1000);
+        // 끝 날짜가 현재날짜보다 뒤가 되지는 않도록 처리
+        if (endDate > new Date()) {
+            endDate = new Date();
+        }
         this.log(`기간 필터: ${startDate} ~ ${endDate}`);
         await this.setFilter(yearDropdownButton, monthDropdownButton, startDate); // 첫번째 호출하면 시작날짜가 설정됨
         this.log('기간 필터 시작날짜 설정 완료');
@@ -106,7 +120,7 @@ export class SoopVODFinder {
 
         // MutationObserver로 적용 버튼 대기
         this.log('적용 버튼 찾기 시작');
-        const applyButton = await this.waitForElement('[class*="__soopui__DatepickerWrapper-module__button__"]', 1, 15000);
+        const applyButton = await this.waitForElement('[class*="__soopui__DatepickerWrapper-module__button__"]', 1, 5000);
         if (!applyButton) {
             this.log('적용 버튼 찾기 실패');
             return null;
@@ -115,25 +129,22 @@ export class SoopVODFinder {
         applyButton.click();
 
         const oldVodListBox = document.querySelector('[class*="VodList_itemListBox__"]');
-        if (oldVodListBox) {
-            oldVodListBox.style.display = 'none';
-        }
+        const oldVodListItems = oldVodListBox.querySelectorAll('[class*="VodList_itemContainer__"]');
+        oldVodListItems.forEach(item => item.classList.add('oldVodListItems'));
 
         // MutationObserver로 VOD 리스트 박스 업데이트 대기
         this.log('VOD 리스트 박스 업데이트 대기 시작');
         const vodListBox = await this.waitForElementWithCondition(
             '[class*="VodList_itemListBox__"]',
-            (element) => {
-                // 리스트 박스가 보이는 상태이고
-                if (element.style.display === 'none') return false;
-                
+            (element) => {           
+                const vodItem = element.querySelectorAll('[class*="VodList_itemContainer__"]:not(.oldVodListItems)');
+                const vodItemCount = vodItem.length;
                 // VOD 아이템이 있거나 "등록된 VOD가 없습니다" 메시지가 있는 경우
-                const hasVodItems = element.querySelectorAll('[class*="VodList_itemContainer__"]').length > 0;
+                const hasVodItems = vodItemCount > 0;
                 const hasEmptyMessage = element.querySelector('[class*="__soopui__Empty-module__empty__"]') !== null;
-                
                 return hasVodItems || hasEmptyMessage;
             },
-            20000
+            5000
         );
         if (!vodListBox) {
             this.log('VOD 리스트 박스 업데이트 실패');
@@ -350,13 +361,15 @@ export class SoopVODFinder {
         });
     }
     sendFinalResult(vodInfoList) {
-        const finalVodLinks = this.createFinalVodLinkList(vodInfoList);
-        log(`최종 VOD 링크 수: ${finalVodLinks.length}`);
-        
         const message = {
             response: "SOOP_VOD_LIST",
-            resultVODLinks: finalVodLinks
+            resultVODLinks: null
         };
+        if (vodInfoList) {
+            const finalVodLinks = this.createFinalVodLinkList(vodInfoList);
+            this.log(`최종 VOD 링크 수: ${finalVodLinks.length}`);
+            message.resultVODLinks = finalVodLinks;
+        }
         window.parent.postMessage(message, "https://www.sooplive.co.kr");
         window.close();
     }
@@ -388,7 +401,7 @@ export class SoopVODFinder {
         for (var i = firstIndex; i <= lastIndex; ++i) {
             const vodInfo = vodInfoList[i];
             resultVODLinks.push(vodInfo.link);
-            log(`vod added: ${vodInfo.year}-${vodInfo.month}-${vodInfo.day} ${vodInfo.link}`);
+            this.log(`vod added: ${vodInfo.year}-${vodInfo.month}-${vodInfo.day} ${vodInfo.link}`);
         }
         return resultVODLinks;
     }

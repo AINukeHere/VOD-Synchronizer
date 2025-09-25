@@ -151,6 +151,7 @@ export class SoopStreamerIDManager {
         const reqUrl = new URL(url.toString());
         reqUrl.searchParams.set("p_request", "GET_VOD_LIST_NEW_SOOP");
         reqUrl.searchParams.set("request_vod_ts", targetDateTime.getTime());
+        reqUrl.searchParams.set("range_hours", 24*3);
         this.log('SOOP VOD 리스트 요청:', reqUrl.toString());
         this.searchIframe.src = reqUrl.toString();
     }
