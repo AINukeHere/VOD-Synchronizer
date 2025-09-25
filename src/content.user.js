@@ -5,7 +5,6 @@
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
-// @match        https://ch.sooplive.co.kr/*
 // @match        https://www.sooplive.co.kr/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
