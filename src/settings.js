@@ -69,7 +69,6 @@ class SettingsManager {
             enableChzzkSoopPanel: document.getElementById('enableChzzkSoopPanel').checked,
             enableSoopChzzkPanel: document.getElementById('enableSoopChzzkPanel').checked,
             enableRpPanel: document.getElementById('enableRpPanel').checked,
-            searchRangeHours: parseInt(document.getElementById('searchRangeHours').value) || 24
         };
     }
 
