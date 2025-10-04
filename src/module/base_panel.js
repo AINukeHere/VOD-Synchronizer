@@ -32,6 +32,9 @@ export class BaseSyncPanel {
         this.init();
     }
     
+    log(...data){
+        logToExtension('[BaseSyncPanel]', ...data);
+    }
     init() {
         this.createPanel();
         this.createToggleBtn();

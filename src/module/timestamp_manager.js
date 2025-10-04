@@ -1,7 +1,7 @@
 export class BaseTimestampManager {
     constructor() {
+        this.videoTag = null;
         this.tooltip = null;
-        this.observer = null;
         this.isEditing = false;
         this.request_vod_ts = null;
         this.request_real_ts = null;
@@ -9,7 +9,6 @@ export class BaseTimestampManager {
         this.lastMouseMoveTime = Date.now();
         this.isTooltipVisible = true;
         this.mouseCheckInterval = null;
-        this.videoTag = null;
         this.isHideCompletly = false; // 툴팁 숨기기 상태
         
         // VODSync 네임스페이스에 자동 등록
@@ -24,6 +23,12 @@ export class BaseTimestampManager {
 
     log(...data){
         logToExtension('[timestamp_manager.js]', ...data);
+    }
+    warn(...data){
+        warnToExtension('[timestamp_manager.js]', ...data);
+    }
+    error(...data){
+        errorToExtension('[timestamp_manager.js]', ...data);
     }
     // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
     // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
@@ -145,15 +150,15 @@ export class BaseTimestampManager {
         setInterval(() => {
             if (!this.tooltip || this.isEditing) return;
             
-            const timestamp = this.getCurDateTime();
+            const dateTime = this.getCurDateTime();
             
-            if (timestamp) {
+            if (dateTime) {
                 this.isControllableState = true;
-                this.tooltip.innerText = timestamp.toLocaleString("ko-KR");
+                this.tooltip.innerText = dateTime.toLocaleString("ko-KR");
             }
             if (this.isPlaying() === true)
             { 
-                // 전역 시간 동기화
+                // 전역 시간 동기화 요청 체크
                 if (this.request_vod_ts != null){
                     const streamPeriod = this.getStreamPeriod();
                     if (streamPeriod){
@@ -164,9 +169,9 @@ export class BaseTimestampManager {
                             }
                         }
                         else{
-                            this.log("시차 적용하여 동기화 시도");
                             const currentSystemTime = Date.now();
                             const timeDifference = currentSystemTime - this.request_real_ts;
+                            this.log("시차 적용하여 동기화 시도. 시차: " + timeDifference);
                             const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
                             if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
                                 window.close();
@@ -176,7 +181,7 @@ export class BaseTimestampManager {
                         this.request_real_ts = null;
                     }
                 }
-                // 로컬 시간 동기화
+                // 로컬 시간 동기화 요청 체크
                 if (this.request_local_ts != null){
                     this.log("playback time으로 동기화 시도");
                     if (!this.moveToPlaybackTime(this.request_local_ts, false)){
@@ -256,6 +261,12 @@ export class BaseTimestampManager {
         this.moveToGlobalTS(globalDateTime.getTime());
     }
 
+    /**
+     * @description 전역 시간으로 영상 시간 맞춤
+     * @param {number} globalTS
+     * @param {boolean} doAlert 
+     * @returns 
+     */
     moveToGlobalTS(globalTS, doAlert = true) {
         const streamPeriod = this.getStreamPeriod();
         if (!streamPeriod) {
@@ -279,7 +290,11 @@ export class BaseTimestampManager {
         return this.moveToPlaybackTime(playbackTime, doAlert);
     }
 
-    // 플랫폼별로 구현해야 하는 추상 메서드
+    /**
+     * @description 영상 시간을 설정
+     * @param {number} playbackTime 
+     * @param {boolean} doAlert 
+     */
     moveToPlaybackTime(playbackTime, doAlert = true) {
         throw new Error("applyPlaybackTime must be implemented by subclass");
     }

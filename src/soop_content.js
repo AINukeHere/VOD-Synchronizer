@@ -1,4 +1,6 @@
+// SOOP 플랫폼에서 실행되는 경우
 if (window == top) {
+    let soopAPI = null;
     let tsManager = null;
     let vodLinker = null;
     let chzzkPanel = null;
@@ -13,6 +15,7 @@ if (window == top) {
     async function initializeFeatures() {
         // SOOP 플랫폼에서 필요한 클래스들 구성
         const classConfig = {
+            'SoopAPI': 'src/module/soop_api.js',
             'SoopTimestampManager': 'src/module/soop_timestamp_manager.js',
             'SoopVODLinker': 'src/module/soop_vod_linker.js',
             'ChzzkSyncPanel': 'src/module/chzzk_sync_panel.js', // 아직 미구현
@@ -23,6 +26,7 @@ if (window == top) {
         const classes = await window.VODSync.classLoader.loadClasses(classConfig);
 
         // 필요한 클래스들 생성
+        soopAPI = new classes.SoopAPI();
         tsManager = new classes.SoopTimestampManager();
         vodLinker = new classes.SoopVODLinker();
         chzzkPanel = new classes.ChzzkSyncPanel();
@@ -69,8 +73,6 @@ if (window == top) {
         const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
         const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
 
-        //origin에 따라 기능 모듈 로드
-        const origin = window.location.origin;
         log('기능 업데이트:', {
             enableChzzkPanel,
             enableRpPanel,
@@ -111,19 +113,20 @@ if (window == top) {
     });
 
 }
-else {    
+// 타 플랫폼에서 실행되는 경우(iframe)
+else {
     function log(...data){
         logToExtension('[soop_content.js:iframe]', ...data);
     }
     log('loaded');
 
-    // SOOP 플랫폼에서 필요한 클래스들 구성
+    // 필요한 클래스들 구성
     const classConfig = {
-        'SoopStreamerIDManager': 'src/module/soop_streamer_id_manager.js',
-        'SoopVODFinder': 'src/module/soop_vod_finder.js'
+        'SoopAPI': 'src/module/soop_api.js',
+        'SoopVODLinker': 'src/module/soop_vod_linker.js'
     };
     window.VODSync.classLoader.loadClasses(classConfig).then(classes => {
-        new classes.SoopVODFinder();
-        new classes.SoopStreamerIDManager();
+        new classes.SoopAPI();
+        new classes.SoopVODLinker();
     });
 }

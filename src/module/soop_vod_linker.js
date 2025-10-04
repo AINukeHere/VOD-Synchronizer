@@ -1,91 +1,39 @@
-
 const BTN_TEXT_IDLE = "Sync VOD";
 
 // SOOP 검색창에 동기화 버튼 추가. 버튼 누르면 동기화 시작
 export class SoopVODLinker{
     constructor(){
-        this.lastRequest = null;
-        this.lastRequestFailedMessage = null;
-        this.buttons=[];
-        this.curProcessingBtn = null;
-        this.iframe=null;
-        this.requestSystemTime = null; // VOD List 요청한 시스템 시간 저장
-        
-        // VODSync 네임스페이스에 자동 등록
-        window.VODSync = window.VODSync || {};
-        if (window.VODSync.soopVODLinker) {
-            console.warn('[VODSync] SoopVODLinker가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
+        if (window !== top){
+            const searchParams = new URLSearchParams(window.location.search);
+            if (searchParams.get('only_search') === '1'){
+                this.setupSearchAreaOnlyMode();
+            }
+            window.addEventListener('message', this.handleWindowMessage.bind(this));
+            this.getRequestVodDate = () => {return new Date(this.request_vod_ts);}
+            this.processRequestRealTS = (url) => {
+                if (this.request_real_ts){
+                    url.searchParams.set('request_real_ts', this.request_real_ts);
+                }
+            }
         }
-        window.VODSync.soopVODLinker = this;
-        
-        this.SoopSyncButtonManagement(); 
+        else{
+            this.getRequestVodDate = () => {return window.VODSync?.tsManager?.getCurDateTime();}
+            this.processRequestRealTS = (url) => {
+                if (window.VODSync?.tsManager?.isPlaying()){ // 재생 중인경우 페이지 로딩 시간을 보간하기위해 탭 연 시점을 전달
+                    const request_real_ts = Date.now();
+                    url.searchParams.set('request_real_ts', request_real_ts);
+                }
+            }
+        }
+        this.startSyncButtonManagement(); 
     }
 
     log(...data){
         logToExtension('[SoopVODLinker]', ...data);
     }
-    // 동기화 버튼 onclick 핸들러
-    async handleFindVODButtonClick(e, button, element){
-        e.preventDefault();       // a 태그의 기본 이동 동작 막기
-        e.stopPropagation();      // 이벤트 버블링 차단
-        const nicknameSpan = element.querySelector('span');
-        const streamerNickname = nicknameSpan.innerText;
-        button.innerText = `${streamerNickname}의 ID 검색 중...`;
-        const streamerId = await this.GetStreamerID(nicknameSpan.innerText);
-        if (!streamerId){
-            alert("스트리머 ID를 찾을 수 없습니다.");
-            button.innerText = BTN_TEXT_IDLE;
-            return;
-        }
-        this.log(`스트리머 ID: ${streamerId}`);
-        const tsManager = window.VODSync?.tsManager;
-        if (!tsManager){
-            alert("타임스탬프 기능을 감지하지 못했습니다.");
-            button.innerText = BTN_TEXT_IDLE;
-            return;
-        }
-        const video_ts = tsManager.getCurDateTime();
-        const search_range_hours = 24;
-        const start_date = new Date(video_ts.getTime() - search_range_hours * 60 * 60 * 1000);
-        const end_date = new Date(video_ts.getTime() + search_range_hours * 60 * 60 * 1000);
-        this.log(`start_date: ${start_date}, end_date: ${end_date}`);
-        button.innerText = `${streamerId}의 VOD 검색 중...`;
-        const vodList = await this.GetSoopVOD_List(streamerId, start_date, end_date);
-        if (vodList.data.length === 0){
-            alert("동기화할 다시보기가 없습니다.");
-            button.innerText = BTN_TEXT_IDLE;
-            return;
-        }
-        for(const vod of vodList.data){
-            const period = await this.GetSoopVOD_period(vod.title_no);
-            if (period === null){
-                continue;
-            }
-            const splitres = period.split(' ~ ');
-            const start_date = new Date(splitres[0]);
-            const end_date = new Date(splitres[1]);
-            if (start_date <= video_ts && video_ts <= end_date){
-                const url = new URL(`https://vod.sooplive.co.kr/player/${vod.title_no}`);
-                const request_vod_ts = video_ts.getTime();
-                url.searchParams.set('request_vod_ts', request_vod_ts);
-                if (tsManager.isPlaying()){ // 재생 중인경우 페이지 로딩 시간을 보간하기위해 탭 연 시점을 전달
-                    const request_real_ts = Date.now();
-                    url.searchParams.set('request_real_ts', request_real_ts);
-                }
-                window.open(url, "_blank");
-                this.log(`VOD 링크: ${url.toString()}`);
-                button.innerText = BTN_TEXT_IDLE;
-                return;
-            }
-        }
-        button.innerText = BTN_TEXT_IDLE;
-    }
     // 주기적으로 동기화 버튼 생성 및 업데이트
-    SoopSyncButtonManagement(){
-        setInterval(() => {
-            const tsManager = window.VODSync?.tsManager;
-            if (!tsManager || !tsManager.isControllableState) return;
-            
+    startSyncButtonManagement(){
+        setInterval(() => {            
             const searchResults = document.querySelectorAll('#areaSuggest > ul > li > a');
             if (!searchResults) return;
 
@@ -108,61 +56,93 @@ export class SoopVODLinker{
             });
         }, 500);
     }
-    /**
-     * @description Get Soop VOD Period
-     * @param {Number} videoId 
-     * @returns {string} period or null
-     */
-    async GetSoopVOD_period(videoId) {
-        const a = await fetch("https://api.m.sooplive.co.kr/station/video/a/view", {
-            "headers": {
-                "accept": "application/json, text/plain, */*",
-                "content-type": "application/x-www-form-urlencoded",
-                "Referer": `https://vod.sooplive.co.kr/player/${videoId}`
-            },
-            "body": `nTitleNo=${videoId}&nApiLevel=11&nPlaylistIdx=0`,
-            "method": "POST"
-        });
-        if (a.status !== 200){
-            return null;
+    // 동기화 버튼 onclick 핸들러
+    async handleFindVODButtonClick(e, button, element){
+        e.preventDefault();       // a 태그의 기본 이동 동작 막기
+        e.stopPropagation();      // 이벤트 버블링 차단
+        const nicknameSpan = element.querySelector('span');
+        const streamerNickname = nicknameSpan.innerText;
+        button.innerText = `${streamerNickname}의 ID 검색 중...`;
+        const streamerId = await window.VODSync.soopAPI.GetStreamerID(streamerNickname);
+        if (!streamerId){
+            alert("스트리머 ID를 찾을 수 없습니다.");
+            button.innerText = BTN_TEXT_IDLE;
+            return;
         }
-        const b = await a.json();
-        return b.data.write_tm;
-    }
-    async GetStreamerID(nickname){
-        const encodedNickname = encodeURI(nickname);
-        const url = new URL('https://sch.sooplive.co.kr/api.php');
-        url.searchParams.set("m", "searchHistory");
-        url.searchParams.set("d", encodedNickname);
-        this.log(`GetStreamerID: ${url.toString()}`);
-        const res = await fetch(url.toString());
-        if (res.status !== 200){
-            return null;
+        this.log(`스트리머 ID: ${streamerId}`);
+
+        let reqVodDate = this.getRequestVodDate();
+        if (!reqVodDate){
+            this.warn("타임스탬프 정보를 받지 못했습니다.");
+            button.innerText = BTN_TEXT_IDLE;
+            return;
         }
-        const b = await res.json();
-        return b.suggest_bj[0].user_id;
+
+        const search_range_hours = 24*3;
+        const start_date = new Date(reqVodDate.getTime() - search_range_hours * 60 * 60 * 1000);
+        const end_date = new Date(reqVodDate.getTime() + search_range_hours * 60 * 60 * 1000);
+        button.innerText = `${streamerId}의 VOD 검색 중...`;
+        const vodList = await window.VODSync.soopAPI.GetSoopVOD_List(streamerId, start_date, end_date);
+        for(const vod of vodList.data){
+            const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(vod.title_no);
+            if (vodInfo === null){
+                continue;
+            }
+            const period = vodInfo.data.write_tm;
+            const splitres = period.split(' ~ ');
+            const start_date = new Date(splitres[0]);
+            const end_date = new Date(splitres[1]);
+            if (start_date <= reqVodDate && reqVodDate <= end_date){
+                const url = new URL(`https://vod.sooplive.co.kr/player/${vod.title_no}`);
+                const request_vod_ts = reqVodDate.getTime();
+                url.searchParams.set('request_vod_ts', request_vod_ts);
+                this.processRequestRealTS(url);
+                window.open(url, "_blank");
+                this.log(`VOD 링크: ${url.toString()}`);
+                button.innerText = BTN_TEXT_IDLE;
+                return;
+            }
+        }
+        alert("동기화할 다시보기가 없습니다.");
+        button.innerText = BTN_TEXT_IDLE;
     }
-    /**
-     * @description Get Soop VOD List
-     * @param {string} streamerId 
-     * @param {Date} start_date
-     * @param {Date} end_date
-     * @returns 
-     */
-    async GetSoopVOD_List(streamerId, start_date, end_date){
-        const start_date_str = start_date.toISOString().slice(0, 10).replace(/-/g, '');
-        const end_date_str = end_date.toISOString().slice(0, 10).replace(/-/g, '');
-        const url = new URL(`https://chapi.sooplive.co.kr/api/${streamerId}/vods/review`);
-        url.searchParams.set("keyword", "");
-        url.searchParams.set("orderby", "reg_date");
-        url.searchParams.set("page", "1");
-        url.searchParams.set("field", "title,contents,user_nick,user_id");
-        url.searchParams.set("per_page", "60");
-        url.searchParams.set("start_date", start_date_str);
-        url.searchParams.set("end_date", end_date_str);
-        this.log(`GetSoopVOD_List: ${url.toString()}`);
-        const res = await fetch(url.toString());
-        const b = await res.json();
-        return b;
+    // 검색 결과 페이지에서 검색 결과 영역만 남기고 나머지는 숨기게 함. (SOOP sync panel에서 iframe으로 열릴 때 사용)
+    setupSearchAreaOnlyMode() {
+        (function waitForGnbAndSearchArea() {
+            const gnb = document.querySelector('#soop-gnb');
+            const searchArea = document.querySelector('.sc-hvigdm.khASjK.topSearchArea');
+            const backBtn = document.querySelector('#topSearchArea > div > div > button');
+            let allDone = true;
+            if (gnb) {
+                Array.from(gnb.parentNode.children).forEach(sibling => {
+                    if (sibling !== gnb) sibling.style.display = 'none';
+                });
+            } else {
+                allDone = false;
+            }
+            if (searchArea) {
+                searchArea.style.display = "flow";
+                Array.from(searchArea.parentNode.children).forEach(sibling => {
+                    if (sibling !== searchArea) sibling.remove();
+                });
+            } else {
+                allDone = false;
+            }
+            if (backBtn) {
+                backBtn.style.display = "none";
+            } else {
+                allDone = false;
+            }
+            document.body.style.background = 'white';
+            if (!allDone) setTimeout(waitForGnbAndSearchArea, 200);
+        })();
+    }
+    // 상위 페이지에서 타임스탬프 정보를 받음
+    handleWindowMessage(e){
+        if (e.data.response === "SET_REQUEST_VOD_TS"){
+            this.request_vod_ts = e.data.request_vod_ts;
+            this.request_real_ts = e.data.request_real_ts;
+            // this.log("REQUEST_VOD_TS 받음:", e.data.request_vod_ts, e.data.request_real_ts);
+        }
     }
 }

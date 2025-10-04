@@ -50,10 +50,9 @@ def create_test_extension():
         'src/module/chzzk_vod_finder.js',
         'src/module/chzzk_vod_linker.js',
         'src/module/rp_nickname_panel.js',
-        'src/module/soop_streamer_id_manager.js',
         'src/module/soop_sync_panel.js',
         'src/module/soop_timestamp_manager.js',
-        # 'src/module/soop_vod_finder.js',
+        'src/module/soop_api.js',
         'src/module/soop_vod_linker.js',
         'src/module/timestamp_manager.js',
         

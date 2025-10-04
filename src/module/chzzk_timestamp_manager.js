@@ -3,6 +3,7 @@ import { BaseTimestampManager } from './timestamp_manager.js';
 export class ChzzkTimestampManager extends BaseTimestampManager {
     constructor() {
         super();
+        this.observer = null;
         this.videoId = null;
         this.videoInfo = null;
     }
@@ -68,7 +69,7 @@ export class ChzzkTimestampManager extends BaseTimestampManager {
                 // 새로운 VOD 정보 가져오기
                 this.videoInfo = await this.fetchVideoInfo(this.videoId);
                 if (this.videoInfo) {
-                    this.log('VOD 정보 가져오기 성공:', this.videoInfo);
+                    this.log('VOD 정보 가져오기 성공');
                 }
             }
         });

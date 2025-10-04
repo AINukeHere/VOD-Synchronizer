@@ -13,14 +13,6 @@ export class SoopSyncPanel extends BaseSyncPanel {
         });
         
         this.soopSyncBtn = null;
-        
-        // 메시지 리스너 추가
-        window.addEventListener('message', (event) => {
-            if (event.data.response === "SOOP_VOD_LIST") {
-                logToExtension('[soop_sync_panel] SOOP VOD 리스트 받음:', event.data.resultVODLinks);
-                this.handleSoopVodList(event.data.resultVODLinks);
-            }
-        });
     }
 
     createButtonArea() {
@@ -56,40 +48,24 @@ export class SoopSyncPanel extends BaseSyncPanel {
         }
         this.iframe.style.display = 'block';
         // iframe에 타임스탬프 정보 전달
-        const targetTimestamp = currentDateTime.getTime();
         const url = new URL(`https://www.sooplive.co.kr/search`);
         url.searchParams.set('only_search', '1');
-        url.searchParams.set("p_request", "GET_VOD_LIST");
-        url.searchParams.set("request_vod_ts", `${targetTimestamp}`);
-        url.searchParams.set("request_from", "CHZZK");
         this.iframe.src = url.toString();
-        logToExtension('[soop_sync_panel] SOOP 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
+        this.log('SOOP 검색창 열기');
+        this.updateInterval = setInterval(() => {
+            const currentDateTime = tsManager.getCurDateTime();
+            if (!currentDateTime) {
+                this.log('타임스탬프 전달 실패');
+                return;
+            }
+            const targetTimestamp = currentDateTime.getTime();
+            // this.log('타임스탬프 전달:', targetTimestamp, Date.now());
+            this.iframe.contentWindow.postMessage({
+                response: "SET_REQUEST_VOD_TS",
+                request_vod_ts: targetTimestamp,
+                request_real_ts: Date.now()
+            }, "*");
+        }, 500);
     }
 
-    async handleSoopVodList(vodLinks) {
-        if (vodLinks.length == 0){
-            alert('동기화 가능한 VOD가 없습니다.');
-            return;
-        }
-        // VODSync 네임스페이스를 통해 tsManager 접근
-        const tsManager = window.VODSync?.tsManager;
-        
-        const curDateTime = tsManager.getCurDateTime();
-        if (curDateTime){
-            const request_vod_ts = curDateTime.getTime();
-            const request_real_ts = Date.now();
-            const isPlaying = tsManager.isPlaying();
-            for (let i = 0; i < vodLinks.length; i++) {
-                const link = vodLinks[i];
-                const url = new URL(link);
-                url.searchParams.delete('change_second');
-                url.searchParams.set('request_vod_ts', request_vod_ts);
-                if (isPlaying){
-                    url.searchParams.set('request_real_ts', request_real_ts);
-                }
-                window.open(url, "_blank");
-                logToExtension('[soop_sync_panel] SOOP VOD 열기:', url.toString());
-            }
-        }
-    }
 } 

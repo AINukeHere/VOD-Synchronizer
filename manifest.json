@@ -44,6 +44,7 @@
         {
             "resources": [
                 "data/rp_nicknames.json",
+                "src/module/soop_api.js",
                 "src/module/timestamp_manager.js",
                 "src/module/soop_timestamp_manager.js",
                 "src/module/chzzk_timestamp_manager.js",
