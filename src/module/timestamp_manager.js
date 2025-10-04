@@ -14,7 +14,7 @@ export class BaseTimestampManager {
         // VODSync 네임스페이스에 자동 등록
         window.VODSync = window.VODSync || {};
         if (window.VODSync.tsManager) {
-            console.warn('[VODSync] TimestampManager가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
+            this.warn('[VODSync] TimestampManager가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
         }
         window.VODSync.tsManager = this;
         
