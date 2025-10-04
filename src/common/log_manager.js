@@ -96,7 +96,7 @@ async function logToExtension(...args) {
             // Background script에 접근할 수 없는 경우 콘솔에 출력
             console.log(...logMessage);
         });
-        console.log(...logMessage);
+        // console.log(...logMessage);
     } catch (error) {
         console.error(...args);
     }
