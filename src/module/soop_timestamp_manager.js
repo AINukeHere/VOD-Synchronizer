@@ -243,6 +243,7 @@ export class SoopTimestampManager extends BaseTimestampManager {
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
 
+        // URL에 change_second 파라미터 추가
         window.history.replaceState({}, '', url.toString());
         const jumpInterval = setInterval(()=>{
             if (this.getCurPlaybackTime() === playbackTime){
@@ -258,23 +259,6 @@ export class SoopTimestampManager extends BaseTimestampManager {
             this.timeLink.click();
         }, 500);
         return true;
-        
-        if (this.isPlaying()){
-            if (this.timeLink === null) {
-                this.timeLink = document.createElement('a');
-                this.timeLink.classList.add('time_link');
-                this.timeLink.setAttribute('data-time', playbackTime.toString());
-                document.body.appendChild(this.timeLink);
-            }
-            this.timeLink.click();
-            // URL에서 change_second 파라미터 추가
-            window.history.replaceState({}, '', url.toString());
-            return true;
-        }
-        else{
-            window.location.replace(url.toString());
-            return true;
-        }
     }
 
     // 현재 재생 중인지 여부 반환

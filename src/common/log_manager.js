@@ -94,11 +94,11 @@ async function logToExtension(...args) {
             args: logMessage
         }).catch(() => {
             // Background script에 접근할 수 없는 경우 콘솔에 출력
-            console.log(...logMessage);
+            console.error(...logMessage);
         });
         // console.log(...logMessage);
     } catch (error) {
-        console.error(...args);
+        console.log(...args);
     }
 }
 
@@ -112,11 +112,11 @@ async function infoToExtension(...args) {
             level: 'info',
             args: logMessage
         }).catch(() => {
-            console.info(...logMessage);
+            console.error(...logMessage);
         });
         console.info(...logMessage);
     } catch (error) {
-        console.info(...args);
+        console.log(...args);
     }
 }
 
@@ -130,11 +130,11 @@ async function warnToExtension(...args) {
             level: 'warn',
             args: logMessage
         }).catch(() => {
-            console.warn(...logMessage);
+            console.error(...logMessage);
         });
         console.warn(...logMessage);
     } catch (error) {
-        console.warn(...args);
+        console.log(...args);
     }
 }
 
@@ -152,7 +152,7 @@ async function errorToExtension(...args) {
         });
         console.error(...logMessage);
     } catch (error) {
-        console.error(...args);
+        console.log(...args);
     }
 }
 
@@ -166,7 +166,7 @@ async function debugToExtension(...args) {
             level: 'debug',
             args: logMessage
         }).catch(() => {
-            console.debug(...logMessage);
+            console.error(...logMessage);
         });
         console.debug(...logMessage);
     } catch (error) {
