@@ -64,7 +64,7 @@ let logs = [];
 const maxLogs = 1000;
 
 // 로그 추가
-function addLog(level, args) {
+function addLog(level, args, tabId = null) {
     const timestamp = new Date().toLocaleTimeString();
     const message = args.map(arg => {
         if (typeof arg === 'object') {
@@ -81,7 +81,8 @@ function addLog(level, args) {
         timestamp,
         level,
         message,
-        fullArgs: args
+        fullArgs: args,
+        tabId: tabId || 'unknown'
     };
     
     logs.push(logEntry);
@@ -95,11 +96,27 @@ function addLog(level, args) {
 // 메시지 리스너
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'addLog') {
-        addLog(request.level, request.args);
+        // sender.tab.id를 사용하여 실제 탭 ID 가져오기
+        const tabId = sender.tab ? sender.tab.id : request.tabId || 'unknown';
+        addLog(request.level, request.args, tabId);
         sendResponse({ success: true });
+    } else if (request.action === 'getTabId') {
+        // 탭 ID와 제목 요청 처리
+        const tabId = sender.tab ? sender.tab.id : 'unknown';
+        const tabTitle = sender.tab ? sender.tab.title : 'unknown';
+        sendResponse({ tabId: tabId, tabTitle: tabTitle });
     } else if (request.action === 'getLogs') {
         const level = request.level || null;
-        const filteredLogs = level ? logs.filter(log => log.level === level) : logs;
+        const tabId = request.tabId || null;
+        let filteredLogs = logs;
+        
+        if (level) {
+            filteredLogs = filteredLogs.filter(log => log.level === level);
+        }
+        if (tabId) {
+            filteredLogs = filteredLogs.filter(log => log.tabId === tabId);
+        }
+        
         sendResponse({ logs: filteredLogs });
     } else if (request.action === 'clearLogs') {
         logs = [];
