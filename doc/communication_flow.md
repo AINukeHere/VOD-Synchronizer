@@ -6,27 +6,22 @@
 sequenceDiagram
     participant User as 사용자
     participant VODLinker as SoopVODLinker<br/>"https://www.vod.sooplive.co.kr"
-    participant StreamerManager as SoopStreamerIDManager<br/>"https://www.sooplive.co.kr"
-    participant VODFinder as SoopVODFinder<br/>"https://www.sooplive.co.kr"
+    participant SoopAPI
     participant TimestampManager as SoopTimestampManager<br/>"https://www.vod.sooplive.co.kr"
 
     User->>VODLinker: 스트리머 이름 입력
-    VODLinker->>VODLinker: FindVOD 버튼 생성
-    User->>VODLinker: FindVOD 버튼 클릭
+    VODLinker->>VODLinker: SyncVOD 버튼 생성
+    User->>VODLinker: SyncVOD 버튼 클릭
     VODLinker->>VODLinker: 스트리머 닉네임 추출
-    VODLinker->>StreamerManager: iframe 생성 (스트리머 ID 검색)
-    
-    StreamerManager->>StreamerManager: 스트리머 ID 검색
-    StreamerManager->>VODLinker: STREAMER_ID_FOUND 메시지
-    StreamerManager->>VODFinder: VOD 검색 iframe 생성
-    
-    VODFinder->>VODFinder: VOD 리스트 읽기
-    VODFinder->>VODFinder: 요청된 타임스탬프가 포함될 수 있는 VOD 후보들 선별
-    VODFinder->>VODLinker: SOOP_VOD_LIST 메시지 (선별된 VOD 링크들)
+    VODLinker->>SoopAPI: 스트리머 검색 API 요청
+    SoopAPI->>VODLinker: 스트리머 검색 결과 응답
+    VODLinker->>VODLinker: 응답에서 스트리머 ID 확인
+    VODLinker->>SoopAPI: 스트리머의 다시보기 검색 API 요청
+    SoopAPI->>VODLinker: 다시보기 검색 결과 응답
+    VODLinker->>VODLinker: 현재 계산된 타임스탬프가 포함되는 다시보기 선별
     
     VODLinker->>TimestampManager: 새 탭에서 VOD 열기
     TimestampManager->>TimestampManager: 타임스탬프 동기화 시도
-    Note over TimestampManager: 스트리밍 시간 미포함시 탭 자동 닫힘
 ```
 
 ## 2. CHZZK 다시보기 → CHZZK 스트리머 동기화 흐름
@@ -39,8 +34,8 @@ sequenceDiagram
     participant VodFinder as ChzzkVODFinder<br/>"https://chzzk.naver.com"
     participant TimestampManager as ChzzkTimestampManager<br/>"https://chzzk.naver.com"
 
-    VODLinker->>VODLinker: FindVOD 버튼 생성
-    User->>VODLinker: FindVOD 버튼 클릭
+    VODLinker->>VODLinker: SyncVOD 버튼 생성
+    User->>VODLinker: SyncVOD 버튼 클릭
     VODLinker->>VODLinker: 스트리머 닉네임 추출
     VODLinker->>ChzzkAPI: 스트리머 검색 API 호출
     ChzzkAPI-->>VODLinker: 스트리머 ID 반환
@@ -73,33 +68,28 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant User as 사용자
+    participant ChzzkTSM as ChzzkTimeStampManager<br/>"http://chzzk.naver.com"
     participant SoopPanel as SoopSyncPanel<br/>"https://chzzk.naver.com"
-    participant StreamerManager as SoopStreamerIDManager<br/>"https://www.sooplive.co.kr"
-    participant ChildStreamerManager as Child SoopStreamerIDManager<br/>"https://www.sooplive.co.kr"
-    participant VodFinder as SoopVodFinder<br/>"https://www.sooplive.co.kr"
-    participant TimestampManager as SoopTimestampManager<br/>"https://www.sooplive.co.kr"
+    participant VodLinker as SoopVodLinker<br/>"https://www.sooplive.co.kr"
+    participant SoopAPI
+    participant SoopTSM as SoopTimestampManager<br/>"https://www.sooplive.co.kr"
 
     User->>SoopPanel: SOOP 검색 버튼 클릭
-    SoopPanel->>SoopPanel: 현재 CHZZK VOD 타임스탬프 추출
-    SoopPanel->>StreamerManager: iframe 생성 (SOOP 스트리머 검색)
+    SoopPanel->>VodLinker: SOOP 페이지 로딩
+    ChzzkTSM-->>VodLinker: 지속적으로 CHZZK의 타임스탬프 전달    
+    User->>VodLinker: 스트리머 닉네임 입력
+    VodLinker->>VodLinker: SyncVOD 버튼 생성
+    User->>VodLinker: SyncVOD 버튼 클릭
+    VodLinker->>VodLinker: 스트리머 닉네임 추출
+    VodLinker->>SoopAPI: 스트리머 검색 API 요청
+    SoopAPI->>VodLinker: 스트리머 검색 결과 응답
+    VodLinker->>VodLinker: 응답에서 스트리머 ID 확인
+    VodLinker->>SoopAPI: 스트리머의 다시보기 검색 API 요청
+    SoopAPI->>VodLinker: 다시보기 검색 결과 응답
+    VodLinker->>VodLinker: 현재 계산된 타임스탬프가 포함되는 다시보기 선별
     
-    User->>StreamerManager: 스트리머 닉네임 입력
-    StreamerManager->>StreamerManager: FindVOD 버튼 생성
-    User->>StreamerManager: FindVOD 버튼 클릭
-    StreamerManager->>ChildStreamerManager: 스트리머 ID 검색 iframe 생성
-    
-    ChildStreamerManager->>ChildStreamerManager: 스트리머 ID 검색 수행
-    ChildStreamerManager->>StreamerManager: 스트리머 ID 전달
-    StreamerManager->>VodFinder: VOD 검색 iframe 생성
-    
-    VodFinder->>VodFinder: VOD 리스트 읽기
-    VodFinder->>VodFinder: 요청된 타임스탬프가 포함될 수 있는 VOD 후보들 선별
-    VodFinder->>StreamerManager: SOOP_VOD_LIST 메시지 (선별된 VOD 링크들)
-    StreamerManager->>SoopPanel: SOOP_VOD_LIST 메시지
-    
-    SoopPanel->>TimestampManager: 새 탭에서 SOOP VOD 열기
-    TimestampManager->>TimestampManager: 타임스탬프 동기화 시도
-    Note over TimestampManager: 스트리밍 시간에 포함되지 않으면 탭 자동 닫힘
+    VodLinker->>SoopTSM: 새 탭에서 VOD 열기
+    SoopTSM->>SoopTSM: 타임스탬프 동기화 시도
 ```
 
 ## 4. SOOP 다시보기 → CHZZK 스트리머 동기화 흐름
