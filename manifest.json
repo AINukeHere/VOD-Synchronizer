@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "VOD Synchronizer",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "SOOP, CHZZK 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화",
     "author": "AINukeHere",
     "homepage_url": "https://github.com/AINukeHere/VOD-Synchronizer",
@@ -44,6 +44,7 @@
         {
             "resources": [
                 "data/rp_nicknames.json",
+                "src/module/base_class.js",
                 "src/module/soop_api.js",
                 "src/module/timestamp_manager.js",
                 "src/module/soop_timestamp_manager.js",
