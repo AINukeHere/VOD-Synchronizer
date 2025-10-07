@@ -114,7 +114,7 @@ async function infoToExtension(...args) {
         }).catch(() => {
             console.error(...logMessage);
         });
-        console.info(...logMessage);
+        console.log(...logMessage);
     } catch (error) {
         console.log(...args);
     }
@@ -132,7 +132,7 @@ async function warnToExtension(...args) {
         }).catch(() => {
             console.error(...logMessage);
         });
-        console.warn(...logMessage);
+        console.log(...logMessage);
     } catch (error) {
         console.log(...args);
     }
