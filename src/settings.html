@@ -196,10 +196,38 @@
             gap: 10px;
             margin-bottom: 15px;
             align-items: center;
+            flex-wrap: wrap;
         }
-        .log-controls select {
-            width: auto;
-            min-width: 120px;
+        .log-level-filters {
+            display: flex;
+            gap: 15px;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+        .filter-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .filter-label input[type="checkbox"] {
+            margin-right: 6px;
+            transform: scale(1.1);
+        }
+        .filter-text {
+            font-size: 13px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+        .filter-text.debug { color: #6c757d; }
+        .filter-text.info { color: #007bff; }
+        .filter-text.log { color: #28a745; }
+        .filter-text.warn { color: #ffc107; }
+        .filter-text.error { color: #dc3545; }
+        .filter-label:hover .filter-text {
+            background-color: #f8f9fa;
         }
         .log-container {
             height: 400px;
@@ -328,13 +356,28 @@
                     <div class="log-controls">
                         <button id="clearLogs" class="btn btn-secondary">로그 지우기</button>
                         <button id="refreshLogs" class="btn btn-primary">새로고침</button>
-                        <select id="logLevel" class="form-control">
-                            <option value="">모든 레벨</option>
-                            <option value="debug">Debug</option>
-                            <option value="info">Info</option>
-                            <option value="warn">Warning</option>
-                            <option value="error">Error</option>
-                        </select>
+                        <div class="log-level-filters">
+                            <label class="filter-label">
+                                <input type="checkbox" id="filterDebug" checked>
+                                <span class="filter-text debug">Debug</span>
+                            </label>
+                            <label class="filter-label">
+                                <input type="checkbox" id="filterInfo" checked>
+                                <span class="filter-text info">Info</span>
+                            </label>
+                            <label class="filter-label">
+                                <input type="checkbox" id="filterLog" checked>
+                                <span class="filter-text log">Log</span>
+                            </label>
+                            <label class="filter-label">
+                                <input type="checkbox" id="filterWarn" checked>
+                                <span class="filter-text warn">Warning</span>
+                            </label>
+                            <label class="filter-label">
+                                <input type="checkbox" id="filterError" checked>
+                                <span class="filter-text error">Error</span>
+                            </label>
+                        </div>
                     </div>
                     <div id="logContainer" class="log-container"></div>
                 </div>

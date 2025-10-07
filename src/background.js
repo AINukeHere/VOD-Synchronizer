@@ -106,13 +106,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const tabTitle = sender.tab ? sender.tab.title : 'unknown';
         sendResponse({ tabId: tabId, tabTitle: tabTitle });
     } else if (request.action === 'getLogs') {
-        const level = request.level || null;
         const tabId = request.tabId || null;
         let filteredLogs = logs;
         
-        if (level) {
-            filteredLogs = filteredLogs.filter(log => log.level === level);
-        }
         if (tabId) {
             filteredLogs = filteredLogs.filter(log => log.tabId === tabId);
         }

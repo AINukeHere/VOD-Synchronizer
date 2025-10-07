@@ -214,24 +214,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const logContainer = document.getElementById('logContainer');
         const clearLogsBtn = document.getElementById('clearLogs');
         const refreshLogsBtn = document.getElementById('refreshLogs');
-        const logLevelSelect = document.getElementById('logLevel');
+        
+        // 체크박스 필터들
+        const filterDebug = document.getElementById('filterDebug');
+        const filterInfo = document.getElementById('filterInfo');
+        const filterLog = document.getElementById('filterLog');
+        const filterWarn = document.getElementById('filterWarn');
+        const filterError = document.getElementById('filterError');
         
         let lastLogCount = 0; // 마지막 로그 개수 추적
+        let allLogs = []; // 모든 로그 저장
         
         // 로그가 새로 추가되었는지 추적
         let hasNewLogs = false;
         
+        // 활성화된 필터 레벨들 가져오기
+        function getActiveFilters() {
+            const activeFilters = [];
+            if (filterDebug.checked) activeFilters.push('debug');
+            if (filterInfo.checked) activeFilters.push('info');
+            if (filterLog.checked) activeFilters.push('log');
+            if (filterWarn.checked) activeFilters.push('warn');
+            if (filterError.checked) activeFilters.push('error');
+            return activeFilters;
+        }
+        
         // 로그 새로고침
         async function refreshLogs() {
             try {
-                const selectedLevel = logLevelSelect.value;
                 const response = await chrome.runtime.sendMessage({
-                    action: 'getLogs',
-                    level: selectedLevel
+                    action: 'getLogs'
                 });
                 
-                const logs = response.logs || [];
-                const currentLogCount = logs.length;
+                allLogs = response.logs || [];
+                const currentLogCount = allLogs.length;
                 
                 // 로그가 추가되었는지 확인
                 hasNewLogs = currentLogCount > lastLogCount;
@@ -239,14 +255,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 기존 로그 개수 업데이트
                 lastLogCount = currentLogCount;
                 
+                // 필터 적용
+                const activeFilters = getActiveFilters();
+                const filteredLogs = allLogs.filter(log => activeFilters.includes(log.level));
+                
                 logContainer.innerHTML = '';
                 
-                if (logs.length === 0) {
-                    logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그가 없습니다.</div>';
+                if (filteredLogs.length === 0) {
+                    if (allLogs.length === 0) {
+                        logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그가 없습니다.</div>';
+                    } else {
+                        logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">선택된 레벨의 로그가 없습니다.</div>';
+                    }
                     return;
                 }
                 
-                logs.forEach(log => {
+                filteredLogs.forEach(log => {
                     const logElement = document.createElement('div');
                     logElement.style.padding = '8px 12px';
                     logElement.style.borderBottom = '1px solid #eee';
@@ -259,12 +283,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const levelColors = {
                         debug: '#6c757d',
                         info: '#007bff',
+                        log: '#28a745',
                         warn: '#ffc107',
                         error: '#dc3545'
                     };
                     
                     logElement.style.color = levelColors[log.level] || '#000';
-                    logElement.textContent = `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`;
+                    logElement.textContent = `[${log.level.toUpperCase()}] ${log.message}`;
                     
                     logContainer.appendChild(logElement);
                 });
@@ -294,8 +319,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 로그 새로고침
         refreshLogsBtn.addEventListener('click', refreshLogs);
         
-        // 로그 레벨 변경
-        logLevelSelect.addEventListener('change', refreshLogs);
+        // 체크박스 필터 변경 이벤트
+        filterDebug.addEventListener('change', refreshLogs);
+        filterInfo.addEventListener('change', refreshLogs);
+        filterLog.addEventListener('change', refreshLogs);
+        filterWarn.addEventListener('change', refreshLogs);
+        filterError.addEventListener('change', refreshLogs);
         
         // 초기 로그 로드
         refreshLogs();
