@@ -77,6 +77,12 @@ export class SoopVODLinker extends IVodSync{
             button.innerText = BTN_TEXT_IDLE;
             return;
         }
+        if (typeof reqVodDate === 'string'){
+            this.warn(reqVodDate);
+            button.innerText = BTN_TEXT_IDLE;
+            alert(reqVodDate);
+            return;
+        }
 
         const search_range_hours = 24*3;
         const start_date = new Date(reqVodDate.getTime() - search_range_hours * 60 * 60 * 1000);
