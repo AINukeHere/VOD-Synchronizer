@@ -242,7 +242,11 @@ export class SoopTimestampManager extends BaseTimestampManager {
     moveToPlaybackTime(playbackTime, doAlert = true) {
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
+        /// 페이지를 새로고침 하는 방식
+        // window.location.replace(url.toString());
+        // return true;
 
+        /// soop 댓글 타임라인 기능을 사용하는 방식
         // URL에 change_second 파라미터 추가
         window.history.replaceState({}, '', url.toString());
         const jumpInterval = setInterval(()=>{
@@ -257,7 +261,8 @@ export class SoopTimestampManager extends BaseTimestampManager {
             this.timeLink.className = 'time_link';
             this.timeLink.setAttribute('data-time', playbackTime.toString());
             this.timeLink.click();
-        }, 500);
+            this.log('timeLink 클릭됨');
+        }, 100);
         return true;
     }
 
