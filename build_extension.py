@@ -44,6 +44,7 @@ def create_test_extension():
         'src/common/settings_manager.js',
         
         # 모듈들
+        'src/module/base_class.js',
         'src/module/base_panel.js',
         'src/module/chzzk_sync_panel.js',
         'src/module/chzzk_timestamp_manager.js',

@@ -1,5 +1,7 @@
-export class SoopAPI{
+import { IVodSync } from './base_class.js';
+export class SoopAPI extends IVodSync{
     constructor(){
+        super();
         window.VODSync = window.VODSync || {};
         if (window.VODSync.soopAPI) {
             this.warn('[VODSync] SoopAPI가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
@@ -7,15 +9,7 @@ export class SoopAPI{
         this.log('loaded');
         window.VODSync.soopAPI = this;
     }
-    log(...data){
-        logToExtension('[soop_api.js]', ...data);
-    }
-    warn(...data){
-        warnToExtension('[soop_api.js]', ...data);
-    }
-    error(...data){
-        errorToExtension('[soop_api.js]', ...data);
-    }
+
     /**
      * @description Get Soop VOD Period
      * @param {number | string} videoId 

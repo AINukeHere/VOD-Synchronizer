@@ -1,8 +1,10 @@
-const BTN_TEXT_IDLE = "Sync VOD";
+import { IVodSync } from './base_class.js';
 
+const BTN_TEXT_IDLE = "Sync VOD";
 // SOOP 검색창에 동기화 버튼 추가. 버튼 누르면 동기화 시작
-export class SoopVODLinker{
+export class SoopVODLinker extends IVodSync{
     constructor(){
+        super();
         if (window !== top){
             const searchParams = new URLSearchParams(window.location.search);
             if (searchParams.get('only_search') === '1'){
@@ -28,9 +30,7 @@ export class SoopVODLinker{
         this.startSyncButtonManagement(); 
     }
 
-    log(...data){
-        logToExtension('[SoopVODLinker]', ...data);
-    }
+
     // 주기적으로 동기화 버튼 생성 및 업데이트
     startSyncButtonManagement(){
         setInterval(() => {            
@@ -94,6 +94,8 @@ export class SoopVODLinker{
             const end_date = new Date(splitres[1]);
             if (start_date <= reqVodDate && reqVodDate <= end_date){
                 const url = new URL(`https://vod.sooplive.co.kr/player/${vod.title_no}`);
+                const change_second = Math.round((reqVodDate.getTime() - start_date.getTime()) / 1000);
+                url.searchParams.set('change_second', change_second);
                 const request_vod_ts = reqVodDate.getTime();
                 url.searchParams.set('request_vod_ts', request_vod_ts);
                 this.processRequestRealTS(url);

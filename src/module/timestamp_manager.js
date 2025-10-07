@@ -1,5 +1,7 @@
-export class BaseTimestampManager {
+import { IVodSync } from './base_class.js';
+export class BaseTimestampManager extends IVodSync {
     constructor() {
+        super();
         this.videoTag = null;
         this.tooltip = null;
         this.isEditing = false;
@@ -19,16 +21,6 @@ export class BaseTimestampManager {
         window.VODSync.tsManager = this;
         
         this.startMonitoring();
-    }
-
-    log(...data){
-        logToExtension('[timestamp_manager.js]', ...data);
-    }
-    warn(...data){
-        warnToExtension('[timestamp_manager.js]', ...data);
-    }
-    error(...data){
-        errorToExtension('[timestamp_manager.js]', ...data);
     }
     // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
     // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.

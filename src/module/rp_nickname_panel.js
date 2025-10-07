@@ -1,6 +1,8 @@
+import { IVodSync } from './base_class.js';
 const TEXT_TITLE = 'RP 닉네임 사전';
-export class RPNicknamePanel {
+export class RPNicknamePanel extends IVodSync{
     constructor() {
+        super();
         this.panel = null;
         this.toggleBtn = null;
         this.isPanelOpen = false;
@@ -43,9 +45,9 @@ export class RPNicknamePanel {
                 option.innerText = server;
                 serverSelect.appendChild(option);
             });
-            logToExtension('[RPNicknamePanel] 서버별 RP 닉네임 데이터 로드 완료:', Object.keys(data));
+            this.log('서버별 RP 닉네임 데이터 로드 완료:', Object.keys(data));
         } catch (error) {
-            logToExtension('[RPNicknamePanel] RP 닉네임 데이터 로드 실패:', error);
+            this.log('RP 닉네임 데이터 로드 실패:', error);
             this.nicknamesByServer = {};
             this.currentServer = null;
         }

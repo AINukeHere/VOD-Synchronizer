@@ -1,6 +1,8 @@
+import { IVodSync } from './base_class.js';
 // ===================== BasePanel 부모 클래스 =====================
-export class BaseSyncPanel {
+export class BaseSyncPanel extends IVodSync {
     constructor(config) {
+        super();
         this.config = {
             id: config.id,
             title: config.title,
@@ -25,16 +27,13 @@ export class BaseSyncPanel {
         window.VODSync = window.VODSync || {};
         window.VODSync.panels = window.VODSync.panels || {};
         if (window.VODSync.panels[this.config.id]) {
-            console.warn(`[VODSync] Panel '${this.config.id}'가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.`);
+            this.warn(`[VODSync] Panel '${this.config.id}'가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.`);
         }
         window.VODSync.panels[this.config.id] = this;
         
         this.init();
     }
     
-    log(...data){
-        logToExtension('[BaseSyncPanel]', ...data);
-    }
     init() {
         this.createPanel();
         this.createToggleBtn();

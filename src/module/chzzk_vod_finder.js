@@ -1,12 +1,11 @@
-export class ChzzkVODFinder{
+import { IVodSync } from './base_class.js';
+export class ChzzkVODFinder extends IVodSync{
     constructor(request_vod_ts, pageNum){
+        super();
         this.request_vod_date = new Date(request_vod_ts);
         this.pageNum = pageNum;
         this.retryCount = 0;
         this.init();
-    }
-    log(...data){
-        logToExtension('[chzzkVODFinder]', ...data);
     }
     init(){
         this.log(`CHZZK VOD 검색시작: ${window.location}`);

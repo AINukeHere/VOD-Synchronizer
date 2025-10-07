@@ -1,23 +1,22 @@
+import { IVodSync } from './base_class.js';
 const BTN_TEXT_IDLE = "Find VOD";
 const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
 const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
 // 메인 페이지에서 검색하고 버튼을 누르면 스트리머id를 api로 찾고 그 스트리머 채널을 iframe으로 열게 함. 그 iframe에서 vod link를 받아서 새 탭에서 열음
-export class ChzzkVODLinker{
+export class ChzzkVODLinker extends IVodSync{
     constructor(){
+        super();
         this.iframeTag = null;
         this.curProcessBtn = null;
         
         // VODSync 네임스페이스에 자동 등록
         window.VODSync = window.VODSync || {};
         if (window.VODSync.chzzkVODLinker) {
-            console.warn('[VODSync] ChzzkVODLinker가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
+            this.warn('[VODSync] ChzzkVODLinker가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
         }
         window.VODSync.chzzkVODLinker = this;
         
         this.init();
-    }
-    log(...data){
-        logToExtension('[chzzkVODLinker]', ...data);
     }
     init(){
         this.iframeTag = document.createElement('iframe');
