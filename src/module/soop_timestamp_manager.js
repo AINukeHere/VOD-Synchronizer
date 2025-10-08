@@ -207,7 +207,9 @@ export class SoopTimestampManager extends BaseTimestampManager {
         
         // 시간오차가 임계값 이하이거나 다시보기 구성 파일이 1개인 경우
         if (!this.isEditedVod || reviewDataFiles.length === 1){
-            return Math.floor((globalTS - reviewStartDate.getTime()) / 1000) + deltaTimeSec;
+            const temp = reviewStartDate.getTime();
+            const temp2 = (globalTS - temp) / 1000;
+            return Math.floor(temp2) - deltaTimeSec;
         }
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.curVodInfo.type !== 'REVIEW'){
             this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);

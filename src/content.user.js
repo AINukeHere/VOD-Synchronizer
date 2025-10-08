@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.3.1
+// @version      0.3.2
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -612,7 +612,9 @@
                 
                 // 시간오차가 임계값 이하이거나 다시보기 구성 파일이 1개인 경우
                 if (!this.isEditedVod || reviewDataFiles.length === 1){
-                    return Math.floor((globalTS - reviewStartDate.getTime()) / 1000) + deltaTimeSec;
+                    const temp = reviewStartDate.getTime();
+                    const temp2 = (globalTS - temp) / 1000;
+                    return Math.floor(temp2) - deltaTimeSec;
                 }
                 if (this.isEditedVod && reviewDataFiles.length > 1 && this.curVodInfo.type !== 'REVIEW'){
                     this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
