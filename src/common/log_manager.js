@@ -383,7 +383,7 @@ async function checkForUpdates() {
             }
             
             // 현재 버전을 마지막 확인 버전으로 저장
-            // await setLastCheckedVersion(currentVersion);
+            await setLastCheckedVersion(currentVersion);
         } else {
             logToExtension(`업데이트 없음. 현재 버전: ${currentVersion}`);
         }
