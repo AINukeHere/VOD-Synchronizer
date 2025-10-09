@@ -424,6 +424,69 @@
                     if (!this.vodInfoLoaded || !this.tagLoaded)
                         this.reloadAll();
                 }, 100);
+        
+                this.simpleLoopSetting();
+            }
+        
+            simpleLoopSetting(){
+                const LABEL_TEXT = '반복 재생';
+                const EM_TEXT_IDLE = '(added by VODSync)';
+                this.loop_playing = false;
+                setInterval(()=>{
+        
+                    // 반복재생 설정이 켜져있고 비디오 태그를 찾은 경우
+                    if (this.tagLoaded && this.loop_playing){
+                        // 현재 재생 시간이 영상 전체 재생 시간과 같은 경우 처음으로 이동
+                        if (this.getCurPlaybackTime() === Math.floor(this.curVodInfo.total_file_duration / 1000)){
+                            this.moveToPlaybackTime(0);
+                            // 비디오 태그가 일시정지 상태인 경우 재생
+                            if (this.videoTag.paused){
+                                this.videoTag.play();
+                            }
+                        }
+                    }
+        
+                    //반복 재생 설정 메뉴 추가 로직
+                    const settingList = document.querySelector('.setting_list');
+                    if (!settingList) return; // 설정 창을 열지 않음.
+                    if (settingList.classList.contains('subLayer_on')) return; // 서브 레이어가 열려있으면 추가하지 않음.
+                    const ul = settingList.childNodes[0];
+                    const _exists = ul.querySelector('#VODSync');
+                    if (_exists) return; // 이미 추가되어 있음.
+                    
+                    const li = document.createElement('li');
+                    li.className = 'switchBtn_wrap loop_playing';
+                    li.id = 'VODSync';
+                    const label = document.createElement('label');
+                    label.for = 'loop_playing';
+                    label.innerText = LABEL_TEXT;
+                    const em = document.createElement('em');
+                    em.innerText = EM_TEXT_IDLE;
+                    em.style.color = '#c7cad1';
+                    // em.style.fontSize = '12px';
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.id = 'loop_playing';
+                    input.checked = this.loop_playing;
+                    input.addEventListener('change',()=> {
+                        const a = document.querySelector('#VODSync input');
+                        this.loop_playing = a.checked;
+                        if (this.loop_playing){
+                            const autoPlayInput = document.querySelector('#autoplayChk');
+                            if (autoPlayInput && autoPlayInput.checked){
+                                autoPlayInput.click();
+                            }
+                        }
+                        this.log('loop_playing: ', this.loop_playing);
+                    });
+                    const span = document.createElement('span');
+                    label.appendChild(em);
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    li.appendChild(label);
+                    ul.appendChild(li);
+                    
+                },100);
             }
         
             async loadVodInfo(){
