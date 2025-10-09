@@ -293,7 +293,7 @@ const MODAL_HTML_TEMPLATE = `
             height: calc(100% - 60px);
             border: none;
             border-radius: 0 0 10px 10px;
-            " src="update_notification_v1.2.3.html"></iframe>
+            "></iframe>
         </div>
     </div>
     <style>
