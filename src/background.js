@@ -27,8 +27,8 @@ function createSettingsWindow() {
     chrome.windows.create({
         url: chrome.runtime.getURL('src/settings.html'),
         type: 'popup',
-        width: 550,
-        height: 750,
+        width: 575,
+        height: 850,
         focused: true
     }, (window) => {
         // 생성된 창의 ID를 저장

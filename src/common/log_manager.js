@@ -172,4 +172,251 @@ async function debugToExtension(...args) {
     } catch (error) {
         console.debug(...args);
     }
-} 
+}
+
+// ===================== 업데이트 관리자 =====================
+// 버전 업데이트 감지 및 알림 기능
+
+// 업데이트 내역 데이터
+const UPDATE_HISTORY = {
+    "1.2.3": {
+        date: "2025-01-15",
+        changes: [
+            "간단한 반복 재생 설정 기능을 추가했습니다. VOD 플레이어의 설정을 누르면 반복 재생 메뉴가 추가됩니다.",
+            "이제 업데이트 시 1회에 한하여 업데이트 내역을 표시합니다."
+        ]
+    },
+    "1.2.2": {
+        date: "2025-01-09",
+        changes: [
+            "SOOP 타임스탬프 관리 개선",
+            "동기화 성능 최적화",
+            "UI/UX 개선"
+        ]
+    },
+    "1.2.1": {
+        date: "2025-01-05",
+        changes: [
+            "CHZZK 연동 기능 강화",
+            "설정 저장 방식 개선",
+            "오류 처리 로직 개선"
+        ]
+    }
+};
+
+// 현재 버전 가져오기
+function getCurrentVersion() {
+    return chrome.runtime.getManifest().version;
+}
+
+// 저장된 마지막 확인 버전 가져오기
+async function getLastCheckedVersion() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['lastCheckedVersion'], (result) => {
+            resolve(result.lastCheckedVersion || null);
+        });
+    });
+}
+
+// 마지막 확인 버전 저장
+async function setLastCheckedVersion(version) {
+    return new Promise((resolve) => {
+        chrome.storage.local.set({ lastCheckedVersion: version }, () => {
+            resolve();
+        });
+    });
+}
+
+// 버전 비교 함수 (semantic versioning)
+function compareVersions(version1, version2) {
+    const v1parts = version1.split('.').map(Number);
+    const v2parts = version2.split('.').map(Number);
+    
+    for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+        const v1part = v1parts[i] || 0;
+        const v2part = v2parts[i] || 0;
+        
+        if (v1part > v2part) return 1;
+        if (v1part < v2part) return -1;
+    }
+    return 0;
+}
+
+// 간단한 iframe 모달 템플릿
+const MODAL_HTML_TEMPLATE = `
+    <div id="vodSyncUpdateModal" style="
+        position: fixed;
+        z-index: 999999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        ">
+        <div style="
+            background-color: #fefefe;
+            margin: auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            height: 80%;
+            max-height: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: vodSyncModalSlideIn 0.3s ease-out;
+            position: relative;
+            ">
+            <div style="
+                background: linear-gradient(135deg, #007bff, #0056b3);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px 10px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                ">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Synchronizer 업데이트 알림</h2>
+                <span class="vod-sync-close" style="
+                color: white;
+                font-size: 28px;
+                font-weight: bold;
+                cursor: pointer;
+                line-height: 1;
+                ">&times;</span>
+            </div>
+            <iframe id="updateIframe" style="
+            width: 100%;
+            height: calc(100% - 60px);
+            border: none;
+            border-radius: 0 0 10px 10px;
+            " src="update_notification_v1.2.3.html"></iframe>
+        </div>
+    </div>
+    <style>
+        @keyframes vodSyncModalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .vod-sync-close:hover {
+            opacity: 0.7;
+        }
+    </style>
+`;
+
+// 동적 모달 생성 및 표시 (iframe 방식)
+function createAndShowUpdateModal(version) {
+    logToExtension(`업데이트 알림 표시됨: v${version}`);
+    // 기존 모달이 있으면 제거
+    const existingModal = document.getElementById('vodSyncUpdateModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 모달을 body에 추가
+    document.body.insertAdjacentHTML('beforeend', MODAL_HTML_TEMPLATE);
+    
+    // 모달 표시
+    const modal = document.getElementById('vodSyncUpdateModal');
+    const iframe = document.getElementById('updateIframe');
+    
+    if (modal && iframe) {
+        modal.style.display = 'flex';
+        
+        // URL 파라미터로 업데이트 정보 전달
+        const iframeUrl = `https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v${version}.html`;
+        
+        iframe.src = iframeUrl;
+        
+        // 모달 닫기 이벤트 설정
+        const closeBtn = modal.querySelector('.vod-sync-close');
+        
+        const closeModal = () => {
+            modal.remove();
+        };
+        
+        closeBtn.onclick = closeModal;
+        
+        // 모달 외부 클릭 시 닫기
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+        
+        // ESC 키로 닫기
+        const handleEscKey = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        };
+        document.addEventListener('keydown', handleEscKey);
+    }
+}
+
+// 업데이트 확인 및 알림
+async function checkForUpdates() {
+    try {
+        const currentVersion = getCurrentVersion();
+        const lastCheckedVersion = await getLastCheckedVersion();
+        
+        logToExtension(`업데이트 확인 중... 현재 버전: ${currentVersion}, 마지막 확인: ${lastCheckedVersion || '없음'}`);
+        
+        // 처음 설치하거나 버전이 다른 경우
+        if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
+            logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
+            
+            // 업데이트 알림 설정 확인
+            const settings = await getSettings();
+            if (settings.enableUpdateNotification) {
+                createAndShowUpdateModal(currentVersion);
+            } else {
+                logToExtension(`업데이트 알림이 비활성화되어 있습니다.`);
+            }
+            
+            // 현재 버전을 마지막 확인 버전으로 저장
+            // await setLastCheckedVersion(currentVersion);
+        } else {
+            logToExtension(`업데이트 없음. 현재 버전: ${currentVersion}`);
+        }
+    } catch (error) {
+        errorToExtension('업데이트 확인 중 오류 발생:', error);
+    }
+}
+
+// 설정 가져오기 함수
+async function getSettings() {
+    try {
+        const result = await chrome.storage.sync.get('vodSyncSettings');
+        return result.vodSyncSettings || {
+            enableTimestamp: true,
+            enableChzzkSoopPanel: true,
+            enableSoopChzzkPanel: true,
+            enableRpPanel: true,
+            enableUpdateNotification: true
+        };
+    } catch (error) {
+        logToExtension('설정 로드 실패:', error);
+        return {
+            enableTimestamp: true,
+            enableChzzkSoopPanel: true,
+            enableSoopChzzkPanel: true,
+            enableRpPanel: true,
+            enableUpdateNotification: true
+        };
+    }
+}
+
+// 로그 매니저 로드 시 자동으로 업데이트 확인
+// 약간의 지연을 두고 업데이트 확인 (페이지 로딩 완료 후)
+setTimeout(() => {
+    checkForUpdates();
+}, 2000);

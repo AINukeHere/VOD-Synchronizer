@@ -7,7 +7,7 @@
     <style>
         body {
             width: auto;
-            min-width: 514px;
+            min-width: 550px;
             height: auto;
             min-height: 661px;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -321,6 +321,15 @@
                             RP 서버에서 사용하는 닉네임과 실제 스트리머 매핑을 보여주는 패널을 표시합니다.
                         </small>
                     </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableUpdateNotification" checked>
+                            업데이트 알림 표시
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            확장 프로그램이 업데이트될 때 업데이트 내역을 표시합니다.
+                        </small>
+                    </div>
                 </div>
 
                 <div class="section">
@@ -335,10 +344,12 @@
                         <span id="dataManagementToggle" style="float: right; font-size: 14px;">▼</span>
                     </h2>
                     <div id="dataManagementContent" class="setting-item" style="display: none; flex-direction: column; gap: 8px;">
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button id="exportSettings" class="btn btn-secondary">내보내기</button>
                             <button id="importSettings" class="btn btn-secondary">가져오기</button>
                             <button id="resetSettings" class="btn btn-secondary">초기화</button>
+                            <button id="clearStorage" class="btn btn-secondary" style="background: #dc3545; color: white;">Storage 초기화</button>
+                            <button id="showStorageInfo" class="btn btn-secondary">Storage 정보 보기</button>
                         </div>
                     </div>
                 </div>

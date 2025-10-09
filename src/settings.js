@@ -5,7 +5,8 @@ class SettingsManager {
             enableTimestamp: true,
             enableChzzkSoopPanel: true,
             enableSoopChzzkPanel: true,
-            enableRpPanel: true
+            enableRpPanel: true,
+            enableUpdateNotification: true
         };
         this.init();
     }
@@ -43,6 +44,7 @@ class SettingsManager {
         document.getElementById('enableChzzkSoopPanel').checked = this.settings.enableChzzkSoopPanel;
         document.getElementById('enableSoopChzzkPanel').checked = this.settings.enableSoopChzzkPanel;
         document.getElementById('enableRpPanel').checked = this.settings.enableRpPanel;
+        document.getElementById('enableUpdateNotification').checked = this.settings.enableUpdateNotification;
     }
 
     displayVersion() {
@@ -69,6 +71,7 @@ class SettingsManager {
             enableChzzkSoopPanel: document.getElementById('enableChzzkSoopPanel').checked,
             enableSoopChzzkPanel: document.getElementById('enableSoopChzzkPanel').checked,
             enableRpPanel: document.getElementById('enableRpPanel').checked,
+            enableUpdateNotification: document.getElementById('enableUpdateNotification').checked,
         };
     }
 
@@ -113,6 +116,17 @@ class SettingsManager {
             const isHidden = dataManagementContent.style.display === 'none';
             dataManagementContent.style.display = isHidden ? 'block' : 'none';
             dataManagementToggle.textContent = isHidden ? '▲' : '▼';
+        });
+
+        // Storage 초기화 버튼
+        document.getElementById('clearStorage').addEventListener('click', () => {
+            this.clearAllStorage();
+        });
+
+        // Storage 정보 보기 버튼
+        document.getElementById('showStorageInfo').style.display = 'none'; // 디버깅용이므로 비활성화
+        document.getElementById('showStorageInfo').addEventListener('click', () => {
+            this.showStorageInfo();
         });
 
         // Enter 키로 저장
@@ -182,6 +196,77 @@ class SettingsManager {
         setTimeout(() => {
             statusElement.style.display = 'none';
         }, 3000);
+    }
+
+    // Storage 초기화 (디버깅용)
+    async clearAllStorage() {
+        if (!confirm('모든 저장된 데이터를 삭제하시겠습니까?\n\n삭제될 데이터:\n• 확장 프로그램 설정\n• 업데이트 확인 정보\n이 작업은 되돌릴 수 없습니다.')) {
+            return;
+        }
+
+        try {
+            // Chrome Storage API로 모든 데이터 삭제
+            await chrome.storage.sync.clear();
+            await chrome.storage.local.clear();
+            
+            // 설정을 기본값으로 리셋
+            this.settings = { ...this.defaultSettings };
+            this.displaySettings();
+            
+            this.showStatus('모든 저장된 데이터가 삭제되었습니다.', 'success');
+            
+            // 로그에도 기록
+            console.log('Storage 초기화 완료 - 모든 데이터 삭제됨');
+            
+        } catch (error) {
+            console.error('Storage 초기화 실패:', error);
+            this.showStatus('Storage 초기화에 실패했습니다.', 'error');
+        }
+    }
+
+    // Storage 정보 보기 (디버깅용)
+    async showStorageInfo() {
+        try {
+            const syncData = await chrome.storage.sync.get(null);
+            const localData = await chrome.storage.local.get(null);
+            
+            const syncKeys = Object.keys(syncData);
+            const localKeys = Object.keys(localData);
+            
+            let message = `📊 Storage 정보\n\n`;
+            message += `🔄 Sync Storage (${syncKeys.length}개 항목):\n`;
+            if (syncKeys.length > 0) {
+                syncKeys.forEach(key => {
+                    const value = syncData[key];
+                    const valueStr = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+                    message += `  • ${key}: ${valueStr.substring(0, 100)}${valueStr.length > 100 ? '...' : ''}\n`;
+                });
+            } else {
+                message += `  (비어있음)\n`;
+            }
+            
+            message += `\n💾 Local Storage (${localKeys.length}개 항목):\n`;
+            if (localKeys.length > 0) {
+                localKeys.forEach(key => {
+                    const value = localData[key];
+                    const valueStr = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+                    message += `  • ${key}: ${valueStr.substring(0, 100)}${valueStr.length > 100 ? '...' : ''}\n`;
+                });
+            } else {
+                message += `  (비어있음)\n`;
+            }
+            
+            // 콘솔에도 상세 정보 출력
+            console.log('=== Storage 정보 ===');
+            console.log('Sync Storage:', syncData);
+            console.log('Local Storage:', localData);
+            
+            alert(message);
+            
+        } catch (error) {
+            console.error('Storage 정보 조회 실패:', error);
+            this.showStatus('Storage 정보를 가져올 수 없습니다.', 'error');
+        }
     }
 }
 
