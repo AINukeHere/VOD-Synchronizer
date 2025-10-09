@@ -73,10 +73,17 @@
             opacity: 0.7;
         }
     </style>
+
+
+    <!-- 간단한 업데이트 알림 테스트용 -->
     <script>
         const version = '1.2.3';
         const iframe = document.getElementById('updateIframe');
         iframe.src = `https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v${version}.html`;
+        const closeBtn = document.querySelector('.vod-sync-close');
+        closeBtn.addEventListener('click', () => {
+            document.body.innerHTML = '';
+        });
     </script>
 </body>
 </html>
