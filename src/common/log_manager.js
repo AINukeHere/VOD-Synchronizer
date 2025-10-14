@@ -257,15 +257,17 @@ const MODAL_HTML_TEMPLATE = `
         justify-content: center;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         ">
-        <div style="
+        <div id="modalContent" style="
             background-color: #fefefe;
             margin: auto;
             padding: 0;
             border-radius: 10px;
-            width: 90%;
-            max-width: 600px;
-            height: 80%;
-            max-height: 600px;
+            width: auto;
+            min-width: 300px;
+            max-width: 90vw;
+            height: auto;
+            min-height: 200px;
+            max-height: 90vh;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             animation: vodSyncModalSlideIn 0.3s ease-out;
             position: relative;
@@ -289,10 +291,11 @@ const MODAL_HTML_TEMPLATE = `
                 ">&times;</span>
             </div>
             <iframe id="updateIframe" style="
-            width: 100%;
-            height: calc(100% - 60px);
+            width: 500px;
+            height: 300px;
             border: none;
             border-radius: 0 0 10px 10px;
+            transition: width 0.3s ease, height 0.3s ease;
             "></iframe>
         </div>
     </div>
@@ -362,6 +365,54 @@ function createAndShowUpdateModal(version) {
     }
 }
 
+
+// iframe 크기 자동 조절 함수 (postMessage로 받은 크기 정보 사용)
+function resizeIframe(iframe, contentWidth, contentHeight) {
+    try {
+        // 최소/최대 크기 제한
+        const minWidth = 300;
+        const maxWidth = 600;
+        const minHeight = 200;
+        const maxHeight = 500;
+        
+        const newWidth = Math.max(minWidth, Math.min(maxWidth, contentWidth));
+        const newHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
+        
+        iframe.style.width = newWidth + 'px';
+        iframe.style.height = newHeight + 'px';
+        
+        // 모달 컨테이너도 iframe 크기에 맞게 조절
+        const modalContent = document.getElementById('modalContent');
+        if (modalContent) {
+            modalContent.style.width = newWidth + 'px';
+            modalContent.style.height = (newHeight + 60) + 'px'; // 헤더 높이(60px) 추가
+        }
+    } catch (error) {
+        console.error('iframe 크기 조절 중 오류:', error);
+        // 오류 발생 시 기본 크기 유지
+        iframe.style.width = '500px';
+        iframe.style.height = '300px';
+        
+        const modalContent = document.getElementById('modalContent');
+        if (modalContent) {
+            modalContent.style.width = '500px';
+            modalContent.style.height = '360px'; // 헤더 높이(60px) 추가
+        }
+    }
+}
+
+// postMessage 이벤트 리스너 추가
+window.addEventListener('message', function(event) {
+    // 보안을 위해 origin 확인 (필요시)
+    // if (event.origin !== 'https://ainukehere.github.io') return;
+    
+    if (event.data && event.data.type === 'vodSync-iframe-resize') {
+        const iframe = document.getElementById('updateIframe');
+        if (iframe) {
+            resizeIframe(iframe, event.data.width, event.data.height);
+        }
+    }
+});
 // 업데이트 확인 및 알림
 async function checkForUpdates() {
     try {
