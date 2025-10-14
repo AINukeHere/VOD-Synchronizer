@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "VOD Synchronizer",
-    "version": "1.2.3",
+    "version": "1.2.4",
     "description": "SOOP, CHZZK 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화",
     "author": "AINukeHere",
     "homepage_url": "https://github.com/AINukeHere/VOD-Synchronizer",
@@ -23,7 +23,8 @@
                 "src/common/settings_manager.js",
                 "src/common/class_loader.js"
             ],
-            "all_frames": true
+            "all_frames": true,
+            "run_at": "document_start"
         },
         {
             "matches": ["https://www.sooplive.co.kr/*"],
