@@ -22,6 +22,7 @@ VOD-Synchronizer-Test
 # Development files
 data/.singleLine.md
 data_processing/
+src/.test/
 
 # Temporary files
 *.log
