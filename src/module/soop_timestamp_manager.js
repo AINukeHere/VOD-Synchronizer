@@ -347,17 +347,17 @@ export class SoopTimestampManager extends BaseTimestampManager {
     async moveToGlobalTS(globalTS, doAlert = true) {
         const playbackTime = await this.globalTSToPlaybackTime(globalTS);
         if (playbackTime === null) return false;
-        this.moveToPlaybackTime(playbackTime, doAlert);
-        return true;
+        const maxPlaybackTime = Math.floor(this.curVodInfo.total_file_duration / 1000);
+        if (playbackTime < 0 || playbackTime > maxPlaybackTime){
+            const errorMessage = `재생 시간 범위를 벗어납니다. (${playbackTime < 0 ? playbackTime : playbackTime - maxPlaybackTime}초 초과됨)`;
+            if (doAlert) 
+                alert(errorMessage);
+            this.warn(errorMessage);
+            return false;
+        }
+        return this.moveToPlaybackTime(playbackTime, doAlert);
     }
 
-    /**
-     * @override
-     * @description 영상 시간을 설정
-     * @param {number} playbackTime (seconds)
-     * @param {boolean} doAlert 
-     * @returns {boolean} 성공 여부
-     */
     moveToPlaybackTime(playbackTime, doAlert = true) {
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
