@@ -68,8 +68,8 @@ if (window == top) {
     }
     // 기능 업데이트 함수
     async function updateFeaturesState(classes) {
-        const enableChzzkPanel = false; // 미구현 TODO: 구현필요
-        // const enableChzzkPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSoopChzzkPanel');
+        // const enableChzzkPanel = false; // 미구현 TODO: 구현필요
+        const enableChzzkPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSoopChzzkPanel');
         const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
         const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
 

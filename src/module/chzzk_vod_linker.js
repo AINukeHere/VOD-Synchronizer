@@ -6,16 +6,31 @@ const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
 export class ChzzkVODLinker extends IVodSync{
     constructor(){
         super();
-        this.iframeTag = null;
-        this.curProcessBtn = null;
         
+
+        if (window !== top){
+            const searchParams = new URLSearchParams(window.location.search);
+            if (searchParams.get('only_search') === '1'){
+                this.setupSearchAreaOnlyMode();
+            }
+            window.addEventListener('message', this.handleWindowMessage.bind(this));
+            // this.getRequestVodDate = () => {return new Date(this.request_vod_ts);}
+            // this.processRequestRealTS = (url) => {
+            //     if (this.request_real_ts){
+            //         url.searchParams.set('request_real_ts', this.request_real_ts);
+            //     }
+            // }
+        }
+        else{
+        }
         // VODSync 네임스페이스에 자동 등록
         window.VODSync = window.VODSync || {};
         if (window.VODSync.chzzkVODLinker) {
             this.warn('[VODSync] ChzzkVODLinker가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
         }
         window.VODSync.chzzkVODLinker = this;
-        
+        this.iframeTag = null;
+        this.curProcessBtn = null;
         this.init();
     }
     init(){
@@ -139,5 +154,53 @@ export class ChzzkVODLinker extends IVodSync{
             url.searchParams.set('request_real_ts', Date.now());
         this.log(`vod 열기 ${url.toString()}`);
         window.open(url, "_blank");
+    }
+
+    
+    // 검색 결과 페이지에서 검색 결과 영역만 남기고 나머지는 숨기게 함. (CHZZK sync panel에서 iframe으로 열릴 때 사용)
+    setupSearchAreaOnlyMode() {
+        (function waitForElementsToHide() {
+            const sideMenu = document.querySelector('[class^="aside_container__"]');
+            const layoutBody = document.querySelector('#layout-body');
+            const navigationBarMenuLogo = document.querySelector('[class^="navigation_bar_menu_logo__"]');
+            const topicTab = document.querySelector('[class^="topic_tab_container__"]');
+            const toolbar = document.querySelector('[class^="toolbar_section__"]');
+            let allDone = true;
+            if (sideMenu) {
+                sideMenu.style.display = 'none';
+            } else {
+                allDone = false;
+            }
+            if (layoutBody) {
+                layoutBody.style.display = "none";
+            } else {
+                allDone = false;
+            }
+            if (navigationBarMenuLogo) {
+                navigationBarMenuLogo.style.display = "none";
+            } else {
+                allDone = false;
+            }
+            if (topicTab) {
+                topicTab.style.display = "none";
+            } else {
+                allDone = false;
+            }
+            if (toolbar) {
+                toolbar.style.display = "none";
+            } else {
+                allDone = false;
+            }
+            document.body.style.background = 'white';
+            if (!allDone) setTimeout(waitForElementsToHide, 200);
+        })();
+    }
+    // 상위 페이지에서 타임스탬프 정보를 받음
+    handleWindowMessage(e){
+        if (e.data.response === "SET_REQUEST_VOD_TS"){
+            this.request_vod_ts = e.data.request_vod_ts;
+            this.request_real_ts = e.data.request_real_ts;
+            // this.log("REQUEST_VOD_TS 받음:", e.data.request_vod_ts, e.data.request_real_ts);
+        }
     }
 }

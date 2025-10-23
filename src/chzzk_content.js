@@ -1,4 +1,4 @@
-
+// CHZZK 플랫폼에서 실행되는 경우
 if (window == top) {
     let tsManager = null;
     let chzzkVodLinker = null;
@@ -142,25 +142,18 @@ if (window == top) {
     }
     setInterval(checkVodPageAndTogglePanel, 500);
 }
-else{ // iframe 내부
+// 타 플랫폼에서 실행되는 경우(iframe)
+else{
+    function log(...data){
+        logToExtension('[chzzk_content.js:iframe]', ...data);
+    }
+    log('loaded');
 
-    // URL 파라미터 처리
-    const urlParams = new URLSearchParams(window.location.search);
-    const p_request = urlParams.get('p_request');
-    const request_vod_ts_str = urlParams.get('request_vod_ts');
-    if (p_request === "GET_VOD"){
-        const request_vod_ts = parseInt(request_vod_ts_str);
-        const pageNumStr = urlParams.get('page');
-        if (pageNumStr){
-            const pageNum = parseInt(pageNumStr);
-            window.VODSync.classLoader.loadClass('ChzzkVODFinder', 'src/module/chzzk_vod_finder.js').then(ChzzkVODFinderClass => {
-                new ChzzkVODFinderClass(request_vod_ts, pageNum);
-            }).catch(error => {
-                log('클래스 로드 실패:', error);
-            });
-        }
-    }
-    else if (p_request === "GET_CHZZK_VOD_FROM_SOOP") {
-        // SOOP에서 CHZZK 동기화 요청
-    }
+    // 필요한 클래스들 구성
+    const classConfig = {
+        'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
+    };
+    window.VODSync.classLoader.loadClasses(classConfig).then(classes => {
+        new classes.ChzzkVODLinker();
+    });
 }

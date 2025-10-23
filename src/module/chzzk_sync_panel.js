@@ -75,9 +75,7 @@ export class ChzzkSyncPanel extends BaseSyncPanel {
         // iframe에 타임스탬프 정보 전달
         const targetTimestamp = currentDateTime.getTime();
         const url = new URL(`https://chzzk.naver.com/search`);
-        url.searchParams.set('keyword', '');
-        url.searchParams.set('p_request', 'GET_CHZZK_VOD_FROM_SOOP');
-        url.searchParams.set('request_vod_ts', `${targetTimestamp}`);
+        url.searchParams.set('only_search', '1');
         this.iframe.src = url.toString();
         if (window.logManager) {
             window.logManager.log('[chzzk_sync_panel] CHZZK 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
