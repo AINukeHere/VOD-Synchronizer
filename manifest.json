@@ -57,7 +57,8 @@
                 "src/module/soop_streamer_id_manager.js",
                 "src/module/chzzk_vod_linker.js",
                 "src/module/chzzk_vod_finder.js",
-                "src/module/soop_vod_linker.js"
+                "src/module/soop_vod_linker.js",
+                "src/module/other_platform_sync_panel.js"
             ],
             "matches": ["https://chzzk.naver.com/*", "https://www.sooplive.co.kr/*", "https://vod.sooplive.co.kr/*"]
         }

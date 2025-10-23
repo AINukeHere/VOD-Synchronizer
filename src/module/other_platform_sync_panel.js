@@ -1,18 +1,46 @@
 import { IVodSync } from './base_class.js';
-// ===================== BasePanel 부모 클래스 =====================
-export class BaseSyncPanel extends IVodSync {
-    constructor(config) {
+
+// ===================== Other Platform 동기화 패널 클래스 =====================
+export class OtherPlatformSyncPanel extends IVodSync {
+    constructor(currentPlatform) {
         super();
+        
+        // 현재 플랫폼에 따라 설정 결정
+        this.currentPlatform = currentPlatform; // 'chzzk' 또는 'soop'
+        
+        // 지원하는 모든 플랫폼 정의
+        // 새로운 플랫폼 추가 시 여기에만 추가하면 됨 (예: 'youtube', 'twitch' 등)
+        this.supportedPlatforms = ['chzzk', 'soop'];
+        
+        // 플랫폼별 정보 딕셔너리
+        this.platformInfo = {
+            chzzk: {
+                name: 'CHZZK 검색',
+                color: '#00d564',
+                textColor: 'black',
+                searchUrl: 'https://chzzk.naver.com/search'
+            },
+            soop: {
+                name: 'SOOP 검색',
+                color: '#007bff',
+                textColor: 'white',
+                searchUrl: 'https://www.sooplive.co.kr/search'
+            }
+        };
+        
+        // 현재 플랫폼을 제외한 대상 플랫폼들 계산
+        this.targetPlatforms = this.supportedPlatforms.filter(platform => platform !== this.currentPlatform);
+        
         this.config = {
-            id: config.id,
-            title: config.title,
-            color: config.color,
-            width: config.width || '340px',
-            height: config.height || '520px',
-            top: config.top || '80px',
-            toggleBtnText: config.toggleBtnText,
-            toggleBtnWidth: config.toggleBtnWidth || '160px',
-            toggleBtnTop: config.toggleBtnTop || '340px'
+            id: 'other-platform-sync-panel',
+            title: '타 플랫폼과 동기화',
+            color: '#6c757d', // 회색
+            width: '340px',
+            height: '520px',
+            top: '80px',
+            toggleBtnText: '타 플랫폼과 동기화',
+            toggleBtnWidth: '180px',
+            toggleBtnTop: '290px'
         };
         
         this.panel = null;
@@ -22,6 +50,10 @@ export class BaseSyncPanel extends IVodSync {
         this.isPanelVisible = true;
         this.lastMouseMoveTime = Date.now();
         this.mouseCheckInterval = null;
+        this.updateInterval = null;
+        
+        // 플랫폼별 버튼들
+        this.platformButtons = {};
         
         // VODSync 네임스페이스에 자동 등록
         window.VODSync = window.VODSync || {};
@@ -38,6 +70,7 @@ export class BaseSyncPanel extends IVodSync {
         this.createPanel();
         this.createToggleBtn();
         this.setupMouseTracking();
+        this.setupMessageListeners();
         this.closePanel(); // 기본값: 접힘
     }
     
@@ -68,7 +101,7 @@ export class BaseSyncPanel extends IVodSync {
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'center';
         header.style.background = this.config.color;
-        header.style.color = this.config.color === '#00d564' ? 'black' : 'white';
+        header.style.color = 'white';
         header.style.fontWeight = 'bold';
         header.style.fontSize = '16px';
         header.style.padding = '10px 16px';
@@ -76,7 +109,7 @@ export class BaseSyncPanel extends IVodSync {
         header.innerText = this.config.title;
         this.panel.appendChild(header);
 
-        // 버튼 영역 (자식 클래스에서 오버라이드)
+        // 버튼 영역
         this.createButtonArea();
         this.panel.appendChild(this.buttonArea);
 
@@ -86,7 +119,6 @@ export class BaseSyncPanel extends IVodSync {
         this.iframe.style.flex = '1 1 0%';
         this.iframe.style.minHeight = '0';
         this.iframe.style.width = '100%';
-
         this.iframe.style.border = 'none';
         this.iframe.style.borderRadius = '0 0 10px 10px';
         this.iframe.style.backgroundColor = 'white';
@@ -97,7 +129,6 @@ export class BaseSyncPanel extends IVodSync {
         document.body.appendChild(this.panel);
     }
 
-    // 자식 클래스에서 오버라이드할 메서드
     createButtonArea() {
         this.buttonArea = document.createElement('div');
         this.buttonArea.style.display = 'flex';
@@ -106,7 +137,36 @@ export class BaseSyncPanel extends IVodSync {
         this.buttonArea.style.padding = '16px';
         this.buttonArea.style.background = 'none';
         this.buttonArea.style.flex = '0 0 auto';
-        this.buttonArea.style.height = '55px';
+        this.buttonArea.style.height = 'auto';
+        this.buttonArea.style.minHeight = '55px';
+
+        // 현재 플랫폼에 따라 다른 플랫폼 버튼들 생성
+        this.createPlatformButtons();
+    }
+
+    createPlatformButtons() {
+        // 현재 플랫폼을 제외한 모든 지원 플랫폼들의 버튼 생성
+        this.targetPlatforms.forEach(platform => {
+            const platformInfo = this.platformInfo[platform];
+            this.createPlatformButton(platform, platformInfo.name, platformInfo.color, platformInfo.textColor);
+        });
+    }
+
+    createPlatformButton(platform, text, color, textColor) {
+        const button = document.createElement('button');
+        button.innerText = text;
+        button.style.background = color;
+        button.style.color = textColor;
+        button.style.border = 'none';
+        button.style.borderRadius = '5px';
+        button.style.padding = '10px 0';
+        button.style.fontSize = '15px';
+        button.style.fontWeight = 'bold';
+        button.style.cursor = 'pointer';
+        button.addEventListener('click', () => this.startSearchWithIframe(platform));
+        
+        this.platformButtons[platform] = button;
+        this.buttonArea.appendChild(button);
     }
 
     createToggleBtn() {
@@ -123,7 +183,7 @@ export class BaseSyncPanel extends IVodSync {
         this.toggleBtn.style.textAlign = 'center';
         this.toggleBtn.style.lineHeight = '1.2';
         this.toggleBtn.style.background = this.config.color;
-        this.toggleBtn.style.color = this.config.color === '#00d564' ? 'black' : 'white';
+        this.toggleBtn.style.color = 'white';
         this.toggleBtn.style.border = 'none';
         this.toggleBtn.style.borderRadius = '8px 0 0 8px';
         this.toggleBtn.style.fontWeight = 'bold';
@@ -135,6 +195,105 @@ export class BaseSyncPanel extends IVodSync {
             this.togglePanel();
         });
         document.body.appendChild(this.toggleBtn);
+    }
+
+    setupMessageListeners() {
+        // 메시지 처리 딕셔너리
+        const messageHandlers = {
+            "CHZZK_VOD": (data) => {
+                this.log('[other_platform_sync_panel] CHZZK VOD 받음:', data.vod_link);
+                this.handleChzzkVodLink(data.vod_link);
+            },
+            "CHZZK_VOD_NOT_FOUND": (data) => {
+                this.log('[other_platform_sync_panel] CHZZK VOD를 찾지 못했다고 응답받음. 사유:', data.reason);
+                alert("동기화 가능한 VOD를 찾지 못했습니다.");
+            },
+            "CHZZK_VOD_FINDER_STATUS": (data) => {
+                const chzzkBtn = this.platformButtons['chzzk'];
+                if (chzzkBtn) {
+                    chzzkBtn.innerText = `${data.pageNum}페이지에서 VOD 검색 중[${data.retryCount}]`;
+                }
+            }
+        };
+
+        // 메시지 리스너 등록
+        window.addEventListener('message', (event) => {
+            const handler = messageHandlers[event.data.response];
+            if (handler) {
+                handler(event.data);
+            }
+        });
+    }
+
+    startSearchWithIframe(platform) {
+        // VODSync 네임스페이스를 통해 tsManager 접근
+        const tsManager = window.VODSync?.tsManager;
+        
+        if (!tsManager || !tsManager.isControllableState) {
+            alert("현재 VOD 정보를 가져올 수 없습니다. 타임스탬프 표시 기능이 켜져있는지 확인하세요.");
+            return;
+        }
+        const currentDateTime = tsManager.getCurDateTime();
+        if (!currentDateTime) {
+            alert("현재 VOD의 라이브 당시 시간을 가져올 수 없습니다.");
+            return;
+        }
+        
+        this.iframe.style.display = 'block';
+        
+        // 플랫폼별 검색 메서드 직접 호출
+        this.openPlatformSearchWindow(platform, currentDateTime);
+    }
+
+    openPlatformSearchWindow(platform, currentDateTime) {
+        const platformInfo = this.platformInfo[platform];
+        
+        const url = new URL(platformInfo.searchUrl);
+        url.searchParams.set('only_search', '1');
+        this.iframe.src = url.toString();
+        
+        // 플랫폼별 로그 및 추가 처리
+        const platformLogs = {
+            'soop': () => {
+                this.log('SOOP 검색창 열기');
+                this.setupSoopTimestampUpdate();
+            },
+            'chzzk': () => {
+                const targetTimestamp = currentDateTime.getTime();
+                this.log('CHZZK 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
+            }
+        };
+        
+        platformLogs[platform]?.();
+    }
+
+    setupSoopTimestampUpdate() {
+        this.updateInterval = setInterval(() => {
+            const currentDateTime = window.VODSync?.tsManager?.getCurDateTime();
+            if (!currentDateTime) {
+                this.log('타임스탬프 전달 실패');
+                return;
+            }
+            const targetTimestamp = currentDateTime.getTime();
+            this.iframe.contentWindow.postMessage({
+                response: "SET_REQUEST_VOD_TS",
+                request_vod_ts: targetTimestamp,
+                request_real_ts: Date.now()
+            }, "*");
+        }, 500);
+    }
+
+    async handleChzzkVodLink(vod_link) {
+        // VODSync 네임스페이스를 통해 tsManager 접근
+        const tsManager = window.VODSync?.tsManager;
+        
+        const curTS = tsManager.getCurDateTime().getTime();
+        const url = new URL(vod_link);
+        url.searchParams.set('request_vod_ts', curTS);
+        if (tsManager.isPlaying())
+            url.searchParams.set('request_real_ts', Date.now());
+        this.log(`[other_platform_sync_panel] CHZZK VOD 열기: ${url.toString()}`);
+        window.open(url, "_blank");
     }
 
     togglePanel() {
@@ -224,12 +383,19 @@ export class BaseSyncPanel extends IVodSync {
         this.toggleBtn.style.right = `-${this.config.toggleBtnWidth}`;
     }
 
-    // 자식 클래스에서 오버라이드할 메서드들
-    startSearchWithIframe() {
-        throw new Error('startSearchWithIframe must be implemented by subclass');
+    // 정리 메서드
+    destroy() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+        }
+        if (this.mouseCheckInterval) {
+            clearInterval(this.mouseCheckInterval);
+        }
+        if (this.panel && this.panel.parentNode) {
+            this.panel.parentNode.removeChild(this.panel);
+        }
+        if (this.toggleBtn && this.toggleBtn.parentNode) {
+            this.toggleBtn.parentNode.removeChild(this.toggleBtn);
+        }
     }
-
-    handleVodList(vodLinks) {
-        throw new Error('handleVodList must be implemented by subclass');
-    }
-} 
+}

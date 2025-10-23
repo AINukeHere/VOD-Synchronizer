@@ -3,7 +3,7 @@ if (window == top) {
     let tsManager = null;
     let chzzkVodLinker = null;
     let lastIsVodPage = null;
-    let soopPanel = null;
+    let syncPanel = null;
     let rpPanel = null;
 
     function log(...data){
@@ -51,7 +51,7 @@ if (window == top) {
         const classConfig = {
             'ChzzkTimestampManager': 'src/module/chzzk_timestamp_manager.js',
             'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
-            'SoopSyncPanel': 'src/module/soop_sync_panel.js',
+            'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
         };
         
@@ -61,7 +61,7 @@ if (window == top) {
         // 필요한 클래스들 생성
         tsManager = new classes.ChzzkTimestampManager();
         chzzkVodLinker = new classes.ChzzkVODLinker();
-        soopPanel = new classes.SoopSyncPanel();
+        syncPanel = new classes.OtherPlatformSyncPanel('chzzk');
         rpPanel = new classes.RPNicknamePanel();
     
         // URL 파라미터 처리
@@ -94,11 +94,11 @@ if (window == top) {
 
         // SOOP 패널 토글
         if (enableSoopPanel) {
-            log('SOOP 패널 활성화');
-            soopPanel.closePanel();
+            log('타 플랫폼 동기화 패널 활성화');
+            syncPanel.closePanel();
         } else {
-            log('SOOP 패널 비활성화');
-            soopPanel.hideCompletely();
+            log('타 플랫폼 동기화 패널 비활성화');
+            syncPanel.hideCompletely();
         }
 
         // RP 패널 토글
@@ -132,10 +132,10 @@ if (window == top) {
             lastIsVodPage = isVodPage;
             // 상태가 바뀔때 패널을 숨기거나 표시함.
             if (isVodPage) {
-                if (soopPanel) soopPanel.closePanel();
+                if (syncPanel) syncPanel.closePanel();
                 if (rpPanel) rpPanel.closePanel();
             } else {
-                if (soopPanel) soopPanel.hideCompletely();
+                if (syncPanel) syncPanel.hideCompletely();
                 if (rpPanel) rpPanel.hideCompletely();
             }
         }

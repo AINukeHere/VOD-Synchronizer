@@ -4,10 +4,13 @@ class ClassLoader {
         this.loadedClasses = new Map();
         // 클래스 의존성 정의 (파생 클래스 -> 부모 클래스)
         this.dependencies = {
-            'SoopTimestampManager': ['BaseTimestampManager'],
-            'ChzzkTimestampManager': ['BaseTimestampManager'],
-            'SoopSyncPanel': ['BaseSyncPanel'],
-            'ChzzkSyncPanel': ['BaseSyncPanel']
+            'SoopTimestampManager': ['IVodSync', 'BaseTimestampManager'],
+            'ChzzkTimestampManager': ['IVodSync', 'BaseTimestampManager'],
+            'OtherPlatformSyncPanel': ['IVodSync'],
+            'RPNicknamePanel': ['IVodSync'],
+            'SoopVODLinker': ['IVodSync'],
+            'ChzzkVODLinker': ['IVodSync'],
+            'SoopAPI': ['IVodSync']
         };
     }
 
@@ -28,6 +31,7 @@ class ClassLoader {
 
         try {
             // 동적 import를 사용하여 클래스 로드
+            console.log(chrome.runtime.getURL(filePath));
             const module = await import(chrome.runtime.getURL(filePath));
             const ClassConstructor = module[className] || module.default;
             
@@ -50,6 +54,7 @@ class ClassLoader {
         }
 
         const parentClassPaths = {
+            'IVodSync': 'src/module/base_class.js',
             'BaseTimestampManager': 'src/module/timestamp_manager.js',
             'BaseSyncPanel': 'src/module/base_panel.js'
         };

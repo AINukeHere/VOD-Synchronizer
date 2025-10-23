@@ -18,7 +18,7 @@ if (window == top) {
             'SoopAPI': 'src/module/soop_api.js',
             'SoopTimestampManager': 'src/module/soop_timestamp_manager.js',
             'SoopVODLinker': 'src/module/soop_vod_linker.js',
-            'ChzzkSyncPanel': 'src/module/chzzk_sync_panel.js', // 아직 미구현
+            'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js'
         };
         
@@ -29,7 +29,7 @@ if (window == top) {
         soopAPI = new classes.SoopAPI();
         tsManager = new classes.SoopTimestampManager();
         vodLinker = new classes.SoopVODLinker();
-        chzzkPanel = new classes.ChzzkSyncPanel();
+        chzzkPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
 
 
