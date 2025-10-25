@@ -1,8 +1,10 @@
-import { IVodSync } from './base_class.js';
+import { IVodSync } from './IVodSync.js';
 
-export class VODLinker extends IVodSync{
+export class VODLinkerBase extends IVodSync{
     constructor(isInIframe = false){
         super();
+        this.BTN_TEXT_IDLE = "Sync VOD";
+        this.SYNC_BUTTON_CLASSNAME = 'vodSync-sync-btn';
         if (isInIframe){
             const searchParams = new URLSearchParams(window.location.search);
             if (searchParams.get('only_search') === '1'){
@@ -34,7 +36,7 @@ export class VODLinker extends IVodSync{
             if (!targets) return;
 
             targets.forEach(element => {
-                if (element.querySelector(`.${SYNC_BUTTON_CLASSNAME}`)) return; // 이미 동기화 버튼이 있음
+                if (element.querySelector(`.${this.SYNC_BUTTON_CLASSNAME}`)) return; // 이미 동기화 버튼이 있음
                 const button = this.createSyncButton();
                 button.addEventListener('click', (e) => this.handleFindVODButtonClick(e, button));
                 element.appendChild(button);
@@ -50,14 +52,14 @@ export class VODLinker extends IVodSync{
         const streamerName = this.getStreamerName(button);
         if (!streamerName) {
             alert("검색어를 찾을 수 없습니다.");
-            button.innerText = BTN_TEXT_IDLE;
+            button.innerText = this.BTN_TEXT_IDLE;
             return;
         }
         button.innerText = `${streamerName}로 스트리머 ID 검색 중...`;
         const streamerId = await this.getStreamerId(streamerName);
         if (!streamerId) {
             alert(`${streamerName}의 스트리머 ID를 찾지 못했습니다.`);
-            button.innerText = BTN_TEXT_IDLE;
+            button.innerText = this.BTN_TEXT_IDLE;
             return;
         }
         this.log(`스트리머 ID: ${streamerId}`);
@@ -65,12 +67,12 @@ export class VODLinker extends IVodSync{
         const requestDate = this.getRequestVodDate();
         if (!requestDate){
             this.warn("타임스탬프 정보를 받지 못했습니다.");
-            button.innerText = BTN_TEXT_IDLE;
+            button.innerText = this.BTN_TEXT_IDLE;
             return;
         }
         if (typeof requestDate === 'string'){
             this.warn(requestDate);
-            button.innerText = BTN_TEXT_IDLE;
+            button.innerText = this.BTN_TEXT_IDLE;
             alert(requestDate);
             return;
         }
@@ -79,7 +81,7 @@ export class VODLinker extends IVodSync{
         const vodInfo = await this.findVodByDatetime(button, streamerId, streamerName, requestDate);
         if (!vodInfo){
             alert("동기화할 다시보기를 찾지 못했습니다.");
-            button.innerText = BTN_TEXT_IDLE;
+            button.innerText = this.BTN_TEXT_IDLE;
             return;
         }
         this.log(`다시보기 정보: ${vodInfo.vodLink}, ${vodInfo.startDate}, ${vodInfo.endDate}`);
@@ -90,7 +92,7 @@ export class VODLinker extends IVodSync{
         this.processRequestRealTS(url);
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
-        button.innerText = BTN_TEXT_IDLE;
+        button.innerText = this.BTN_TEXT_IDLE;
     }
     // 상위 페이지에서 타임스탬프 정보를 받음 (other sync panel에서 iframe으로 열릴 때 사용)
     handleWindowMessage(e){
@@ -144,7 +146,7 @@ export class VODLinker extends IVodSync{
     /**
      * @description 다시보기를 찾음
      * @param {HTMLButtonElement} button 동기화 버튼
-     * @param {string} streamerId 스트리머 ID 혹은 채널 ID
+     * @param {string} streamerId 스트리머 ID
      * @param {string} streamerName 스트리머 이름
      * @param {Date} requestDate 요청 시간
      * @returns {Object} {vodLink: string, startDate: Date, endDate: Date} or null

@@ -4,13 +4,16 @@ class ClassLoader {
         this.loadedClasses = new Map();
         // 클래스 의존성 정의 (파생 클래스 -> 부모 클래스)
         this.dependencies = {
-            'SoopTimestampManager': ['IVodSync', 'BaseTimestampManager'],
-            'ChzzkTimestampManager': ['IVodSync', 'BaseTimestampManager'],
+            'VODLinkerBase': ['IVodSync'],
+            'TimestampManagerBase': ['IVodSync'],
+            'SoopTimestampManager': ['TimestampManagerBase'],
+            'ChzzkTimestampManager': ['TimestampManagerBase'],
             'OtherPlatformSyncPanel': ['IVodSync'],
             'RPNicknamePanel': ['IVodSync'],
-            'SoopVODLinker': ['IVodSync'],
-            'ChzzkVODLinker': ['IVodSync'],
-            'SoopAPI': ['IVodSync']
+            'SoopVODLinker': ['VODLinkerBase'],
+            'ChzzkVODLinker': ['VODLinkerBase'],
+            'SoopAPI': ['IVodSync'],
+            'ChzzkAPI': ['IVodSync'],
         };
     }
 
@@ -54,9 +57,9 @@ class ClassLoader {
         }
 
         const parentClassPaths = {
-            'IVodSync': 'src/module/base_class.js',
-            'BaseTimestampManager': 'src/module/timestamp_manager.js',
-            'BaseSyncPanel': 'src/module/base_panel.js'
+            'IVodSync': 'src/module/IVodSync.js',
+            'VODLinkerBase': 'src/module/vod_linker_base.js',
+            'TimestampManagerBase': 'src/module/timestamp_manager_base.js',
         };
 
         const filePath = parentClassPaths[parentClassName];

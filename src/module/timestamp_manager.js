@@ -1,5 +1,5 @@
-import { IVodSync } from './base_class.js';
-export class BaseTimestampManager extends IVodSync {
+import { IVodSync } from './IVodSync.js';
+export class TimestampManagerBase extends IVodSync {
     constructor() {
         super();
         this.videoTag = null;

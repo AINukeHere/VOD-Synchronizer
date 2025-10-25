@@ -1,7 +1,7 @@
-import { BaseTimestampManager } from './timestamp_manager.js';
+import { TimestampManagerBase } from './timestamp_manager_base.js';
 
 const MAX_DURATION_DIFF = 30*1000;
-export class SoopTimestampManager extends BaseTimestampManager {
+export class SoopTimestampManager extends TimestampManagerBase {
     constructor() {
         super();
         this.observer = null;
