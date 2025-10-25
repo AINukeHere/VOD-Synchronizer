@@ -177,6 +177,7 @@ export class BaseTimestampManager extends IVodSync {
                 if (this.request_local_ts != null){
                     this.log("playback time으로 동기화 시도");
                     if (!this.moveToPlaybackTime(this.request_local_ts, false)){
+                        this.log('동기화 실패. 창을 닫습니다.');
                         window.close();
                     }
                     this.request_local_ts = null;

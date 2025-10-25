@@ -3,8 +3,7 @@ class SettingsManager {
     constructor() {
         this.defaultSettings = {
             enableTimestamp: true,
-            enableChzzkSoopPanel: true,
-            enableSoopChzzkPanel: true,
+            enableSyncPanel: true,
             enableRpPanel: true,
             enableUpdateNotification: true
         };
@@ -41,8 +40,7 @@ class SettingsManager {
     displaySettings() {
         // 체크박스 설정
         document.getElementById('enableTimestamp').checked = this.settings.enableTimestamp;
-        document.getElementById('enableChzzkSoopPanel').checked = this.settings.enableChzzkSoopPanel;
-        document.getElementById('enableSoopChzzkPanel').checked = this.settings.enableSoopChzzkPanel;
+        document.getElementById('enableSyncPanel').checked = this.settings.enableSyncPanel;
         document.getElementById('enableRpPanel').checked = this.settings.enableRpPanel;
         document.getElementById('enableUpdateNotification').checked = this.settings.enableUpdateNotification;
     }
@@ -68,8 +66,7 @@ class SettingsManager {
     collectSettings() {
         this.settings = {
             enableTimestamp: document.getElementById('enableTimestamp').checked,
-            enableChzzkSoopPanel: document.getElementById('enableChzzkSoopPanel').checked,
-            enableSoopChzzkPanel: document.getElementById('enableSoopChzzkPanel').checked,
+            enableSyncPanel: document.getElementById('enableSyncPanel').checked,
             enableRpPanel: document.getElementById('enableRpPanel').checked,
             enableUpdateNotification: document.getElementById('enableUpdateNotification').checked,
         };
@@ -227,6 +224,7 @@ class SettingsManager {
     // Storage 정보 보기 (디버깅용)
     async showStorageInfo() {
         try {
+            const MAX_DISPLAY_LEN = 200;
             const syncData = await chrome.storage.sync.get(null);
             const localData = await chrome.storage.local.get(null);
             
@@ -239,7 +237,7 @@ class SettingsManager {
                 syncKeys.forEach(key => {
                     const value = syncData[key];
                     const valueStr = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-                    message += `  • ${key}: ${valueStr.substring(0, 100)}${valueStr.length > 100 ? '...' : ''}\n`;
+                    message += `  • ${key}: ${valueStr.substring(0, MAX_DISPLAY_LEN)}${valueStr.length > MAX_DISPLAY_LEN ? '...' : ''}\n`;
                 });
             } else {
                 message += `  (비어있음)\n`;
@@ -250,7 +248,7 @@ class SettingsManager {
                 localKeys.forEach(key => {
                     const value = localData[key];
                     const valueStr = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-                    message += `  • ${key}: ${valueStr.substring(0, 100)}${valueStr.length > 100 ? '...' : ''}\n`;
+                    message += `  • ${key}: ${valueStr.substring(0, MAX_DISPLAY_LEN)}${valueStr.length > MAX_DISPLAY_LEN ? '...' : ''}\n`;
                 });
             } else {
                 message += `  (비어있음)\n`;

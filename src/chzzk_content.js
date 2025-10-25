@@ -49,6 +49,7 @@ if (window == top) {
     async function initializeFeatures() {
         // CHZZK 플랫폼에서 필요한 클래스들 구성
         const classConfig = {
+            'ChzzkAPI': 'src/module/chzzk_api.js',
             'ChzzkTimestampManager': 'src/module/chzzk_timestamp_manager.js',
             'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
             'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
@@ -59,6 +60,7 @@ if (window == top) {
         const classes = await window.VODSync.classLoader.loadClasses(classConfig);
         
         // 필요한 클래스들 생성
+        new classes.ChzzkAPI();
         tsManager = new classes.ChzzkTimestampManager();
         chzzkVodLinker = new classes.ChzzkVODLinker();
         syncPanel = new classes.OtherPlatformSyncPanel('chzzk');
@@ -82,18 +84,18 @@ if (window == top) {
     
     // 기능 업데이트 함수
     async function updateFeaturesState() {
-        const enableSoopPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableChzzkSoopPanel');
+        const enableSyncPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSyncPanel');
         const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
         const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
 
         log('기능 업데이트:', {
-                enableSoopPanel,
+                enableSyncPanel,
                 enableRpPanel,
                 enableTimestamp
             });
 
-        // SOOP 패널 토글
-        if (enableSoopPanel) {
+        // 타 플랫폼 동기화 패널 토글
+        if (enableSyncPanel) {
             log('타 플랫폼 동기화 패널 활성화');
             syncPanel.closePanel();
         } else {

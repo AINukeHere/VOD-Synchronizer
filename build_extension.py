@@ -45,15 +45,15 @@ def create_test_extension():
         
         # 모듈들
         'src/module/base_class.js',
-        'src/module/chzzk_timestamp_manager.js',
-        'src/module/chzzk_vod_finder.js',
-        'src/module/chzzk_vod_linker.js',
-        'src/module/rp_nickname_panel.js',
-        'src/module/other_platform_sync_panel.js',
-        'src/module/soop_timestamp_manager.js',
         'src/module/soop_api.js',
-        'src/module/soop_vod_linker.js',
+        'src/module/chzzk_api.js',
         'src/module/timestamp_manager.js',
+        'src/module/soop_timestamp_manager.js',
+        'src/module/chzzk_timestamp_manager.js',
+        'src/module/soop_vod_linker.js',
+        'src/module/chzzk_vod_linker.js',
+        'src/module/other_platform_sync_panel.js',
+        'src/module/rp_nickname_panel.js',
         
         # 데이터 파일
         'data/rp_nicknames.json',

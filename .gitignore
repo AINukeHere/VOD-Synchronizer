@@ -29,3 +29,6 @@ src/.test/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# private file
+src/module/youtube_api.js

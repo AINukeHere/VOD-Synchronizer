@@ -12,27 +12,13 @@ export class ChzzkTimestampManager extends BaseTimestampManager {
         logToExtension('[chzzk_timestamp_manager.js]', ...data);
     }
 
-    async fetchVideoInfo(videoId) {
-        try {
-            const response = await fetch(`https://api.chzzk.naver.com/service/v2/videos/${videoId}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            this.log('Error fetching video info:', error);
-            return null;
-        }
-    }
-
     calculateTimestamp(videoInfo, currentTime) {
-        if (!videoInfo || !videoInfo.content || !videoInfo.content.liveOpenDate) {
+        if (!videoInfo || !videoInfo.realStartTime) {
             this.tooltip.innerText = "VOD 정보를 가져올 수 없습니다.";
             return null;
         }
 
-        const startTime = new Date(videoInfo.content.liveOpenDate);
+        const startTime = videoInfo.realStartTime;
 
         if (isNaN(startTime.getTime())) {
             this.log('유효하지 않은 방송 시작 시간입니다.');
@@ -67,10 +53,13 @@ export class ChzzkTimestampManager extends BaseTimestampManager {
                 this.videoId = newVideoId;
                 
                 // 새로운 VOD 정보 가져오기
-                this.videoInfo = await this.fetchVideoInfo(this.videoId);
-                if (this.videoInfo) {
-                    this.log('VOD 정보 가져오기 성공');
+                this.videoInfo = await window.VODSync.chzzkAPI.getVodDetailWithCache(this.videoId);
+                if (!this.videoInfo) {
+                    this.log('VOD 정보 가져오기 실패');
+                    return;
                 }
+                this.videoInfo.realStartTime = window.VODSync.chzzkAPI.calculateVodStartTime(this.videoInfo);
+                this.log('VOD 정보 가져오기 성공');
             }
         });
 
@@ -82,10 +71,8 @@ export class ChzzkTimestampManager extends BaseTimestampManager {
             return null;
         }
         
-        const startTime = new Date(this.videoInfo.content.liveOpenDate);
-        const duration = this.videoInfo.content.duration || 0;
-        const endTime = new Date(startTime.getTime() + duration * 1000);
-        
+        const startTime = this.videoInfo.realStartTime;
+        const endTime = this.videoInfo.endDate;
         return [startTime, endTime];
     }
 
@@ -95,8 +82,7 @@ export class ChzzkTimestampManager extends BaseTimestampManager {
         }
         
         const currentTime = this.videoTag.currentTime;
-        const timestamp = this.calculateTimestamp(this.videoInfo, currentTime);
-        return timestamp;
+        return new Date(this.videoInfo.realStartTime.getTime() + currentTime * 1000);
     }
 
     // chzzk용 moveToPlaybackTime 메서드 구현
