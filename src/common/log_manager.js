@@ -446,23 +446,18 @@ async function checkForUpdates() {
 // 설정 가져오기 함수
 async function getSettings() {
     try {
-        const result = await chrome.storage.sync.get('vodSyncSettings');
-        return result.vodSyncSettings || {
-            enableTimestamp: true,
-            enableChzzkSoopPanel: true,
-            enableSoopChzzkPanel: true,
-            enableRpPanel: true,
-            enableUpdateNotification: true
-        };
+        const response = await chrome.runtime.sendMessage({ action: 'getAllSettings' });
+        if (response.success) {
+            return response.settings;
+        } else {
+            // 기본값도 SettingsManager에서 가져오기
+            const defaultResponse = await chrome.runtime.sendMessage({ action: 'getDefaultSettings' });
+            return defaultResponse.defaultSettings;
+        }
     } catch (error) {
         logToExtension('설정 로드 실패:', error);
-        return {
-            enableTimestamp: true,
-            enableChzzkSoopPanel: true,
-            enableSoopChzzkPanel: true,
-            enableRpPanel: true,
-            enableUpdateNotification: true
-        };
+        // 최후의 수단으로 하드코딩된 기본값
+        return {};
     }
 }
 

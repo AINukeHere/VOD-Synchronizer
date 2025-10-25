@@ -1,15 +1,27 @@
 // SOOP 플랫폼에서 실행되는 경우
 if (window == top) {
-    let soopAPI = null;
     let tsManager = null;
-    let vodLinker = null;
     let chzzkPanel = null;
     let rpPanel = null;
+    let cachedSettings = {};
     
     function log(...data){
         logToExtension('[soop_content.js:top]', ...data);
     }
     log('loaded');
+
+
+    // 설정 관련 함수들
+    async function getAllSettings() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getAllSettings' });
+            if (response.success) {
+                cachedSettings = response.settings;
+            }
+        } catch (error) {
+            console.error('설정 조회 실패:', error);
+        }
+    }
 
     // 설정에 따라 기능 초기화
     async function initializeFeatures() {
@@ -26,9 +38,8 @@ if (window == top) {
         const classes = await window.VODSync.classLoader.loadClasses(classConfig);
 
         // 필요한 클래스들 생성
-        soopAPI = new classes.SoopAPI();
+        new classes.SoopAPI();
         tsManager = new classes.SoopTimestampManager();
-        vodLinker = new classes.SoopVODLinker(true);
         chzzkPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
 
@@ -55,36 +66,40 @@ if (window == top) {
         }
         
         // 설정 로딩이 완료될 때까지 기다림
-        await window.VODSync.SettingsManager.waitForLoad();
+        await getAllSettings();
         
-        await updateFeaturesState(classes);
+        updateFeaturesState();
         
         // 설정 변경 감지
-        window.VODSync.SettingsManager.onSettingsChanged(async (newSettings) => {
-            log('설정 변경 감지, 기능 업데이트 중...');
-            await updateFeaturesState(classes);
+        const tabInfo = await chrome.runtime.sendMessage({ action: 'getTabId' });
+        await chrome.runtime.sendMessage({ action: 'addChangeCallback', tabId: tabInfo.tabId});
+        chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+            if (message.action === 'notifyChangeCallbacks') {
+                log('설정 변경 감지, 기능 업데이트 중...');
+                // 캐싱된 설정 갱신
+                cachedSettings = message.settings;
+                updateFeaturesState();
+            }
         });
-
     }
     // 기능 업데이트 함수
-    async function updateFeaturesState(classes) {
-        // const enableChzzkPanel = false; // 미구현 TODO: 구현필요
-        const enableChzzkPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSoopChzzkPanel');
-        const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
-        const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
+    function updateFeaturesState() {
+        const enableSyncPanel = cachedSettings.enableSyncPanel || false;
+        const enableRpPanel = cachedSettings.enableRpPanel || false;
+        const enableTimestamp = cachedSettings.enableTimestamp || false;
 
         log('기능 업데이트:', {
-            enableChzzkPanel,
+            enableSyncPanel,
             enableRpPanel,
             enableTimestamp
         });
 
-        // CHZZK 패널 토글
-        if (enableChzzkPanel) {
-            log('CHZZK 패널 활성화');
+        // 동기화 패널 토글
+        if (enableSyncPanel) {
+            log('동기화 패널 활성화');
             chzzkPanel.closePanel();
         } else {
-            log('CHZZK 패널 비활성화');
+            log('동기화 패널 비활성화');
             chzzkPanel.hideCompletely();
         }
 

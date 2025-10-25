@@ -1,3 +1,7 @@
+import { SettingsManager } from './settings_manager.js';
+// 전역 설정 관리자 인스턴스
+const settingsManager = new SettingsManager();
+
 // 설정창 window ID 저장용 변수
 let settingsWindowId = null;
 
@@ -117,5 +121,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'clearLogs') {
         logs = [];
         sendResponse({ success: true });
+    } else if (request.action === 'getAllSettings') {
+        // 모든 설정 조회
+        settingsManager.getAllSettings().then((settings) => {
+            console.log('getAllSettings response:', settings);
+            sendResponse({ success: true, settings: settings });
+        });
+    } else if (request.action === 'getSetting') {
+        // 특정 설정 조회
+        settingsManager.getSetting(request.key).then((value) => {
+            sendResponse({ success: true, value: value });
+        });
+    } else if (request.action === 'isFeatureEnabled') {
+        // 기능 활성화 여부 조회
+        const enabled = settingsManager.isFeatureEnabled(request.feature)
+        sendResponse({ success: true, enabled: enabled });
+    } else if (request.action === 'saveSettings') {
+        // 설정 저장
+        settingsManager.saveSettings(request.settings).then((success) => {
+            sendResponse({ success: success });
+        });
+    } else if (request.action === 'resetSettings') {
+        // 설정 초기화
+        settingsManager.resetSettings().then((success) => {
+            sendResponse({ success: success });
+        });
+    } else if (request.action === 'getDefaultSettings') {
+        // 기본 설정 조회
+        sendResponse({ success: true, defaultSettings: settingsManager.defaultSettings });
+    } else if (request.action === 'addChangeCallback') {
+        // 설정 변경 콜백 등록
+        settingsManager.addChangeCallback(request.tabId);
+        sendResponse({ success: true });
     }
+    else if (request.action === 'removeChangeCallback') {
+        // 설정 변경 콜백 해제
+        settingsManager.removeChangeCallback(request.tabId);
+        sendResponse({ success: true });
+    }
+    return true;
 }); 

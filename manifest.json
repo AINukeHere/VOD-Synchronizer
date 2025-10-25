@@ -9,7 +9,8 @@
         "storage"
     ],
     "background": {
-        "service_worker": "src/background.js"
+        "service_worker": "src/background/background.js",
+        "type": "module"
     },
     "content_scripts": [
         {
@@ -20,7 +21,6 @@
             ],
             "js": [
                 "src/common/log_manager.js",
-                "src/common/settings_manager.js",
                 "src/common/class_loader.js"
             ],
             "all_frames": true,
@@ -45,6 +45,7 @@
         {
             "resources": [
                 "data/rp_nicknames.json",
+                "src/background/settings_manager.js",
                 "src/module/interface4log.js",
                 "src/module/base_vod_linker.js",
                 "src/module/base_timestamp_manager.js",

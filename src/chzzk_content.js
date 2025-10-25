@@ -1,13 +1,27 @@
 // CHZZK 플랫폼에서 실행되는 경우
 if (window == top) {
     let tsManager = null;
-    let chzzkVodLinker = null;
-    let lastIsVodPage = null;
     let syncPanel = null;
     let rpPanel = null;
+    let cachedSettings = {};
+
+    let lastIsVodPage = null;
 
     function log(...data){
         logToExtension('[chzzk_content.js:outframe]', ...data);
+    }
+
+
+    // 설정 관련 함수들
+    async function getAllSettings() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getAllSettings' });
+            if (response.success) {
+                cachedSettings = response.settings;
+            }
+        } catch (error) {
+            console.error('설정 조회 실패:', error);
+        }
     }
 
     // URL 파라미터 처리
@@ -70,23 +84,29 @@ if (window == top) {
         handleUrlParameters();
 
         // 설정 로딩이 완료될 때까지 기다림
-        await window.VODSync.SettingsManager.waitForLoad();
+        await getAllSettings();
         
-        await updateFeaturesState();
+        updateFeaturesState();
         
         // 설정 변경 감지
-        window.VODSync.SettingsManager.onSettingsChanged(async (newSettings) => {
-            log('설정 변경 감지, 기능 업데이트 중...');
-            await updateFeaturesState();
+        const tabInfo = await chrome.runtime.sendMessage({ action: 'getTabId' });
+        await chrome.runtime.sendMessage({ action: 'addChangeCallback', tabId: tabInfo.tabId});
+        chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+            if (message.action === 'notifyChangeCallbacks') {
+                log('설정 변경 감지, 기능 업데이트 중...');
+                // 캐싱된 설정 갱신
+                cachedSettings = message.settings;
+                updateFeaturesState();
+            }
         });
     }
 
     
     // 기능 업데이트 함수
-    async function updateFeaturesState() {
-        const enableSyncPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableSyncPanel');
-        const enableRpPanel = await window.VODSync.SettingsManager.isFeatureEnabled('enableRpPanel');
-        const enableTimestamp = await window.VODSync.SettingsManager.isFeatureEnabled('enableTimestamp');
+    function updateFeaturesState() {
+        const enableSyncPanel = cachedSettings.enableSyncPanel || false;
+        const enableRpPanel = cachedSettings.enableRpPanel || false;
+        const enableTimestamp = cachedSettings.enableTimestamp || false;
 
         log('기능 업데이트:', {
                 enableSyncPanel,
@@ -122,13 +142,8 @@ if (window == top) {
         }
     }
 
-    // 기능 초기화 실행
-    initializeFeatures().catch(error => {
-        log('기능 초기화 중 오류 발생:', error);
-    });
-
     // VOD 플레이어 페이지 여부를 지속적으로 갱신
-    function checkVodPageAndTogglePanel() {
+    setInterval(() => {
         const isVodPage = window.location.pathname.includes('/video/');
         if (isVodPage !== lastIsVodPage) {
             lastIsVodPage = isVodPage;
@@ -141,8 +156,12 @@ if (window == top) {
                 if (rpPanel) rpPanel.hideCompletely();
             }
         }
-    }
-    setInterval(checkVodPageAndTogglePanel, 500);
+    }, 500);
+    // 기능 초기화 실행
+    initializeFeatures().catch(error => {
+        log('기능 초기화 중 오류 발생:', error);
+    });
+
 }
 // 타 플랫폼에서 실행되는 경우(iframe)
 else{

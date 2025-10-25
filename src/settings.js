@@ -1,40 +1,46 @@
 // 설정 창 JavaScript
-class SettingsManager {
+class settingPageManager {
     constructor() {
-        this.defaultSettings = {
-            enableTimestamp: true,
-            enableSyncPanel: true,
-            enableRpPanel: true,
-            enableUpdateNotification: true
-        };
+        this.log('constructor');
+        this.defaultSettings = {};
+        this.settings = {};
         this.init();
     }
+    log(...data){
+        console.log(`[${this.constructor.name}] `, ...data);
+    }
 
-    async init() {
-        await this.loadSettings();
+    init() {
+        this.loadSettings();
         this.setupEventListeners();
-        this.displaySettings();
         this.displayVersion();
     }
 
-    async loadSettings() {
-        try {
-            const result = await chrome.storage.sync.get('vodSyncSettings');
-            this.settings = { ...this.defaultSettings, ...result.vodSyncSettings };
-        } catch (error) {
-            console.error('설정 로드 실패:', error);
-            this.settings = this.defaultSettings;
-        }
+    loadSettings() {
+        this.log('loadSettings');
+        chrome.runtime.sendMessage({ action: 'getDefaultSettings'}, (response) => {
+            this.defaultSettings = response.defaultSettings;
+        });
+        chrome.runtime.sendMessage({ action: 'getAllSettings'}, (response) => {
+            this.settings = { ...this.defaultSettings, ...response.settings };
+            this.displaySettings();
+        });
     }
 
-    async saveSettings() {
-        try {
-            await chrome.storage.sync.set({ vodSyncSettings: this.settings });
-            this.showStatus('설정이 저장되었습니다.', 'success');
-        } catch (error) {
-            console.error('설정 저장 실패:', error);
-            this.showStatus('설정 저장에 실패했습니다.', 'error');
-        }
+    saveSettings() {
+        chrome.runtime.sendMessage({ action: 'saveSettings', settings: this.settings}, (response) => {
+            if (response.success) {
+                this.showStatus('설정이 저장되었습니다.', 'success');
+            } else {
+                this.showStatus('설정 저장에 실패했습니다.', 'error');
+            }
+        });
+    }
+
+    resetSettings() {
+        this.settings = { ...this.defaultSettings };
+        this.displaySettings();
+        this.showStatus('설정이 초기화되었습니다.', 'success');
     }
 
     displaySettings() {
@@ -74,9 +80,9 @@ class SettingsManager {
 
     setupEventListeners() {
         // 저장 버튼
-        document.getElementById('saveSettings').addEventListener('click', async () => {
+        document.getElementById('saveSettings').addEventListener('click', () => {
             this.collectSettings();
-            await this.saveSettings();
+            this.saveSettings();
         });
 
         // 닫기 버튼
@@ -177,13 +183,6 @@ class SettingsManager {
         input.click();
     }
 
-    async resetSettings() {
-        this.settings = { ...this.defaultSettings };
-        this.displaySettings();
-        await this.saveSettings();
-        this.showStatus('설정이 초기화되었습니다.', 'success');
-    }
-
     showStatus(message, type) {
         const statusElement = document.getElementById('status');
         statusElement.textContent = message;
@@ -205,16 +204,8 @@ class SettingsManager {
             // Chrome Storage API로 모든 데이터 삭제
             await chrome.storage.sync.clear();
             await chrome.storage.local.clear();
-            
-            // 설정을 기본값으로 리셋
-            this.settings = { ...this.defaultSettings };
-            this.displaySettings();
-            
             this.showStatus('모든 저장된 데이터가 삭제되었습니다.', 'success');
-            
-            // 로그에도 기록
-            console.log('Storage 초기화 완료 - 모든 데이터 삭제됨');
-            
+            this.log('Storage 초기화 완료 - 모든 데이터 삭제됨');
         } catch (error) {
             console.error('Storage 초기화 실패:', error);
             this.showStatus('Storage 초기화에 실패했습니다.', 'error');
@@ -255,9 +246,9 @@ class SettingsManager {
             }
             
             // 콘솔에도 상세 정보 출력
-            console.log('=== Storage 정보 ===');
-            console.log('Sync Storage:', syncData);
-            console.log('Local Storage:', localData);
+            this.log('=== Storage 정보 ===');
+            this.log('Sync Storage:', syncData);
+            this.log('Local Storage:', localData);
             
             alert(message);
             
@@ -270,7 +261,7 @@ class SettingsManager {
 
 // 설정 창이 로드되면 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    const settingsManager = new SettingsManager();
+    new settingPageManager();
     
     // 탭 기능 설정
     function setupTabs() {
@@ -324,75 +315,70 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 로그 새로고침
         async function refreshLogs() {
-            try {
-                const response = await chrome.runtime.sendMessage({
-                    action: 'getLogs'
-                });
-                
-                allLogs = response.logs || [];
-                const currentLogCount = allLogs.length;
-                
-                // 로그가 추가되었는지 확인
-                hasNewLogs = currentLogCount > lastLogCount;
-                
-                // 기존 로그 개수 업데이트
-                lastLogCount = currentLogCount;
-                
-                // 필터 적용
-                const activeFilters = getActiveFilters();
-                const filteredLogs = allLogs.filter(log => activeFilters.includes(log.level));
-                
-                logContainer.innerHTML = '';
-                
-                if (filteredLogs.length === 0) {
-                    if (allLogs.length === 0) {
-                        logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그가 없습니다.</div>';
-                    } else {
-                        logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">선택된 레벨의 로그가 없습니다.</div>';
+            chrome.runtime.sendMessage({action: 'getLogs'}, (response) => {
+                try {
+                    allLogs = response.logs || [];
+                    const currentLogCount = allLogs.length;
+                    
+                    // 로그가 추가되었는지 확인
+                    hasNewLogs = currentLogCount > lastLogCount;
+                    
+                    // 기존 로그 개수 업데이트
+                    lastLogCount = currentLogCount;
+
+                    // 필터 적용
+                    const activeFilters = getActiveFilters();
+                    const filteredLogs = allLogs.filter(log => activeFilters.includes(log.level));
+                    
+                    logContainer.innerHTML = '';
+                    
+                    if (filteredLogs.length === 0) {
+                        if (allLogs.length === 0) {
+                            logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그가 없습니다.</div>';
+                        } else {
+                            logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">선택된 레벨의 로그가 없습니다.</div>';
+                        }
+                        return;
                     }
-                    return;
+                    
+                    filteredLogs.forEach(log => {
+                        const logElement = document.createElement('div');
+                        logElement.style.padding = '8px 12px';
+                        logElement.style.borderBottom = '1px solid #eee';
+                        logElement.style.fontFamily = 'monospace';
+                        logElement.style.fontSize = '12px';
+                        logElement.style.whiteSpace = 'pre-wrap';
+                        logElement.style.wordBreak = 'break-all';
+                        
+                        // 로그 레벨에 따른 색상
+                        const levelColors = {
+                            debug: '#6c757d',
+                            info: '#007bff',
+                            log: '#28a745',
+                            warn: '#ffc107',
+                            error: '#dc3545'
+                        };
+                        
+                        logElement.style.color = levelColors[log.level] || '#000';
+                        logElement.textContent = `[${log.level.toUpperCase()}] ${log.message}`;
+                        
+                        logContainer.appendChild(logElement);
+                    });
+                    
+                    // 새 로그가 추가되었으면 항상 맨 아래로 스크롤
+                    if (hasNewLogs) {
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+                } catch (error) {
+                    logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그를 가져올 수 없습니다.</div>';
                 }
-                
-                filteredLogs.forEach(log => {
-                    const logElement = document.createElement('div');
-                    logElement.style.padding = '8px 12px';
-                    logElement.style.borderBottom = '1px solid #eee';
-                    logElement.style.fontFamily = 'monospace';
-                    logElement.style.fontSize = '12px';
-                    logElement.style.whiteSpace = 'pre-wrap';
-                    logElement.style.wordBreak = 'break-all';
-                    
-                    // 로그 레벨에 따른 색상
-                    const levelColors = {
-                        debug: '#6c757d',
-                        info: '#007bff',
-                        log: '#28a745',
-                        warn: '#ffc107',
-                        error: '#dc3545'
-                    };
-                    
-                    logElement.style.color = levelColors[log.level] || '#000';
-                    logElement.textContent = `[${log.level.toUpperCase()}] ${log.message}`;
-                    
-                    logContainer.appendChild(logElement);
-                });
-                
-                // 새 로그가 추가되었으면 항상 맨 아래로 스크롤
-                if (hasNewLogs) {
-                    logContainer.scrollTop = logContainer.scrollHeight;
-                }
-                
-            } catch (error) {
-                logContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">로그를 가져올 수 없습니다.</div>';
-            }
+            });
         }
         
         // 로그 지우기
         clearLogsBtn.addEventListener('click', async () => {
             try {
-                await chrome.runtime.sendMessage({
-                    action: 'clearLogs'
-                });
+                await chrome.runtime.sendMessage({ action: 'clearLogs'});
                 refreshLogs();
             } catch (error) {
                 console.error('로그 지우기 실패:', error);

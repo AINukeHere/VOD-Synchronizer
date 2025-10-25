@@ -32,7 +32,8 @@ def create_test_extension():
         'icons/icon_128.png',
         
         # 소스 코드
-        'src/background.js',
+        'src/background/settings_manager.js',
+        'src/background/background.js',
         'src/chzzk_content.js',
         'src/soop_content.js',
         'src/settings.html',
@@ -41,7 +42,6 @@ def create_test_extension():
         # 공통 모듈
         'src/common/class_loader.js',
         'src/common/log_manager.js',
-        'src/common/settings_manager.js',
         
         # 모듈들
         'src/module/interface4log.js',

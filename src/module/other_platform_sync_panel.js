@@ -140,12 +140,11 @@ export class OtherPlatformSyncPanel extends IVodSync {
         this.buttonArea.style.height = 'auto';
         this.buttonArea.style.minHeight = '55px';
 
-        // 현재 플랫폼에 따라 다른 플랫폼 버튼들 생성
+        // 현재 플랫폼을 제외한 모든 지원 플랫폼들의 검색 버튼 생성
         this.createPlatformButtons();
     }
 
     createPlatformButtons() {
-        // 현재 플랫폼을 제외한 모든 지원 플랫폼들의 버튼 생성
         this.targetPlatforms.forEach(platform => {
             const platformInfo = this.platformInfo[platform];
             this.createPlatformButton(platform, platformInfo.name, platformInfo.color, platformInfo.textColor);
