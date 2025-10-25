@@ -45,19 +45,17 @@
         {
             "resources": [
                 "data/rp_nicknames.json",
-                "src/module/base_class.js",
+                "src/module/interface4log.js",
+                "src/module/base_vod_linker.js",
+                "src/module/base_timestamp_manager.js",
                 "src/module/soop_api.js",
                 "src/module/chzzk_api.js",
-                "src/module/timestamp_manager.js",
                 "src/module/soop_timestamp_manager.js",
                 "src/module/chzzk_timestamp_manager.js",
-                "src/module/base_panel.js",
-                "src/module/soop_sync_panel.js",
-                "src/module/chzzk_sync_panel.js",
-                "src/module/rp_nickname_panel.js",
                 "src/module/chzzk_vod_linker.js",
                 "src/module/soop_vod_linker.js",
-                "src/module/other_platform_sync_panel.js"
+                "src/module/other_platform_sync_panel.js",
+                "src/module/rp_nickname_panel.js"
             ],
             "matches": ["https://chzzk.naver.com/*", "https://www.sooplive.co.kr/*", "https://vod.sooplive.co.kr/*"]
         }

@@ -1,4 +1,4 @@
-import { VODLinkerBase } from './vod_linker_base.js';
+import { VODLinkerBase } from './base_vod_linker.js';
 
 export class SoopVODLinker extends VODLinkerBase{
     /**
@@ -6,6 +6,7 @@ export class SoopVODLinker extends VODLinkerBase{
      * @override
      */
     setupSearchAreaOnlyMode() {
+        super.setupSearchAreaOnlyMode();
         (function waitForGnbAndSearchArea() {
             const gnb = document.querySelector('#soop-gnb');
             const searchArea = document.querySelector('.sc-hvigdm.khASjK.topSearchArea');

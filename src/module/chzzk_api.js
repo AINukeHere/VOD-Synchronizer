@@ -1,4 +1,4 @@
-import { IVodSync } from './base_class.js';
+import { IVodSync } from './interface4log.js';
 
 export class ChzzkAPI extends IVodSync {
     constructor() {

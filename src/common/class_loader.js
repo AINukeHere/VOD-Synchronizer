@@ -34,7 +34,6 @@ class ClassLoader {
 
         try {
             // 동적 import를 사용하여 클래스 로드
-            console.log(chrome.runtime.getURL(filePath));
             const module = await import(chrome.runtime.getURL(filePath));
             const ClassConstructor = module[className] || module.default;
             
@@ -57,9 +56,9 @@ class ClassLoader {
         }
 
         const parentClassPaths = {
-            'IVodSync': 'src/module/IVodSync.js',
-            'VODLinkerBase': 'src/module/vod_linker_base.js',
-            'TimestampManagerBase': 'src/module/timestamp_manager_base.js',
+            'IVodSync': 'src/module/interface4log.js',
+            'VODLinkerBase': 'src/module/base_vod_linker.js',
+            'TimestampManagerBase': 'src/module/base_timestamp_manager.js',
         };
 
         const filePath = parentClassPaths[parentClassName];

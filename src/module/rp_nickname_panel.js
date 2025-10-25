@@ -1,4 +1,4 @@
-import { IVodSync } from './base_class.js';
+import { IVodSync } from './interface4log.js';
 const TEXT_TITLE = 'RP 닉네임 사전';
 export class RPNicknamePanel extends IVodSync{
     constructor() {

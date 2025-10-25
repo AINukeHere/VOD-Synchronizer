@@ -1,4 +1,4 @@
-import { IVodSync } from './IVodSync.js';
+import { IVodSync } from './interface4log.js';
 export class TimestampManagerBase extends IVodSync {
     constructor() {
         super();

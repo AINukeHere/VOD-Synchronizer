@@ -1,4 +1,4 @@
-import { VODLinkerBase } from './vod_linker_base.js';
+import { VODLinkerBase } from './base_vod_linker.js';
 
 export class ChzzkVODLinker extends VODLinkerBase{
     /**
@@ -6,6 +6,7 @@ export class ChzzkVODLinker extends VODLinkerBase{
      * @override
      */
     setupSearchAreaOnlyMode() {
+        super.setupSearchAreaOnlyMode();
         (function waitForElementsToHide() {
             const searchContainer = document.querySelector('[class^="search_container__"]');
             const sideMenu = document.querySelector('[class^="aside_container__"]');

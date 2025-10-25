@@ -44,10 +44,11 @@ def create_test_extension():
         'src/common/settings_manager.js',
         
         # 모듈들
-        'src/module/base_class.js',
+        'src/module/interface4log.js',
+        'src/module/base_vod_linker.js',
+        'src/module/base_timestamp_manager.js',
         'src/module/soop_api.js',
         'src/module/chzzk_api.js',
-        'src/module/timestamp_manager.js',
         'src/module/soop_timestamp_manager.js',
         'src/module/chzzk_timestamp_manager.js',
         'src/module/soop_vod_linker.js',

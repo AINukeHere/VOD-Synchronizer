@@ -1,4 +1,4 @@
-import { IVodSync } from './IVodSync.js';
+import { IVodSync } from './interface4log.js';
 
 export class VODLinkerBase extends IVodSync{
     constructor(isInIframe = false){
@@ -106,8 +106,9 @@ export class VODLinkerBase extends IVodSync{
      * @description 검색 결과 페이지에서 검색 영역만 남기게 함. (other sync panel에서 iframe으로 열릴 때 사용)
      */
     setupSearchAreaOnlyMode() {
-        // 파생 클래스들이 오버라이드하여 구현해야함
-        throw new Error("Not implemented");
+        document.documentElement.style.overflow = "hidden";
+        // 파생 클래스들이 오버라이드하여 구현하되 super.setupSearchAreaOnlyMode()를 호출해야함
+        
     }
     /**
      * @description 동기화 버튼을 생성할 요소를 반환

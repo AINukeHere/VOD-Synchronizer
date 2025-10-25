@@ -1,4 +1,4 @@
-import { IVodSync } from './base_class.js';
+import { IVodSync } from './interface4log.js';
 
 // ===================== Other Platform 동기화 패널 클래스 =====================
 export class OtherPlatformSyncPanel extends IVodSync {

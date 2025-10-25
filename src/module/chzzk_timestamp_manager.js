@@ -1,4 +1,4 @@
-import { TimestampManagerBase } from './timestamp_manager_base.js';
+import { TimestampManagerBase } from './base_timestamp_manager.js';
 
 export class ChzzkTimestampManager extends TimestampManagerBase {
     constructor() {
