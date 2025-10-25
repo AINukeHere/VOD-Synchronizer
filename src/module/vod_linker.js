@@ -1,8 +1,6 @@
 import { IVodSync } from './base_class.js';
 
-const BTN_TEXT_IDLE = "Sync VOD";
-const SYNC_BUTTON_CLASSNAME = 'vodSync-sync-btn';
-export class SoopVODLinker extends IVodSync{
+export class VODLinker extends IVodSync{
     constructor(isInIframe = false){
         super();
         if (isInIframe){
@@ -102,89 +100,57 @@ export class SoopVODLinker extends IVodSync{
             // this.log("REQUEST_VOD_TS 받음:", e.data.request_vod_ts, e.data.request_real_ts);
         }
     }
-    // 검색 결과 페이지에서 검색 결과 영역만 남기고 나머지는 숨기게 함. (other sync panel에서 iframe으로 열릴 때 사용)
+    /**
+     * @description 검색 결과 페이지에서 검색 영역만 남기게 함. (other sync panel에서 iframe으로 열릴 때 사용)
+     */
     setupSearchAreaOnlyMode() {
-        (function waitForGnbAndSearchArea() {
-            const gnb = document.querySelector('#soop-gnb');
-            const searchArea = document.querySelector('.sc-hvigdm.khASjK.topSearchArea');
-            const backBtn = document.querySelector('#topSearchArea > div > div > button');
-            let allDone = true;
-            if (gnb) {
-                Array.from(gnb.parentNode.children).forEach(sibling => {
-                    if (sibling !== gnb) sibling.style.display = 'none';
-                });
-            } else {
-                allDone = false;
-            }
-            if (searchArea) {
-                searchArea.style.display = "flow";
-                Array.from(searchArea.parentNode.children).forEach(sibling => {
-                    if (sibling !== searchArea) sibling.remove();
-                });
-            } else {
-                allDone = false;
-            }
-            if (backBtn) {
-                backBtn.style.display = "none";
-            } else {
-                allDone = false;
-            }
-            document.body.style.background = 'white';
-            if (!allDone) setTimeout(waitForGnbAndSearchArea, 200);
-        })();
-    }
-    getTargetsForCreateSyncButton(){
-        const targets = document.querySelectorAll('#areaSuggest > ul > li > a');
-        return targets;
-    }
-    createSyncButton(){
-        const button = document.createElement("button");
-        button.className = SYNC_BUTTON_CLASSNAME;
-        button.innerText = BTN_TEXT_IDLE;
-        button.style.background = "gray";
-        button.style.fontSize = "12px";
-        button.style.color = "white";
-        button.style.marginLeft = "20px";
-        button.style.padding = "5px";
-        button.style.verticalAlign = 'middle';
-        return button;
-    }
-    getStreamerName(button){
-        const nicknameSpan = button.parentElement.querySelector('span');
-        if (!nicknameSpan) return null;
-        return nicknameSpan.innerText;
-    }
-    async getStreamerId(searchWord){
-        const streamerId = await window.VODSync.soopAPI.GetStreamerID(searchWord);
-        return streamerId;
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        throw new Error("Not implemented");
     }
     /**
-     * @description Find VOD by datetime
-     * @param {string} streamerId 
-     * @param {Date} requestDate 
+     * @description 동기화 버튼을 생성할 요소를 반환
+     * @returns {NodeList} 동기화 버튼을 생성할 요소들
+     */
+    getTargetsForCreateSyncButton(){
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        throw new Error("Not implemented");
+    }
+    /**
+     * @description 동기화 버튼을 생성
+     * @returns {HTMLButtonElement} 동기화 버튼
+     */
+    createSyncButton(){
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        throw new Error("Not implemented");
+    }
+    /**
+     * @description 스트리머 이름을 반환
+     * @param {HTMLButtonElement} button 동기화 버튼
+     * @returns {string} 스트리머 이름
+     */
+    getStreamerName(button){
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        throw new Error("Not implemented");
+    }
+    /**
+     * @description 스트리머 ID를 반환
+     * @param {string} searchWord 검색어
+     * @returns {string} 스트리머 ID
+     */
+    async getStreamerId(searchWord){
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        throw new Error("Not implemented");
+    }
+    /**
+     * @description 다시보기를 찾음
+     * @param {HTMLButtonElement} button 동기화 버튼
+     * @param {string} streamerId 스트리머 ID 혹은 채널 ID
+     * @param {string} streamerName 스트리머 이름
+     * @param {Date} requestDate 요청 시간
      * @returns {Object} {vodLink: string, startDate: Date, endDate: Date} or null
      */
-    async findVodByDatetime(button, channelId, channelName, requestDate) {
-        const search_range_hours = 24*3;// +- 3일 동안 검색
-        const search_start_date = new Date(requestDate.getTime() - search_range_hours * 60 * 60 * 1000);
-        const search_end_date = new Date(requestDate.getTime() + search_range_hours * 60 * 60 * 1000);
-        const vodList = await window.VODSync.soopAPI.GetSoopVOD_List(streamerId, search_start_date, search_end_date);
-        for(const vod of vodList.data){
-            const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(vod.title_no);
-            if (vodInfo === null){
-                continue;
-            }
-            const period = vodInfo.data.write_tm;
-            const splitres = period.split(' ~ ');
-            const startDate = new Date(splitres[0]);
-            const endDate = new Date(splitres[1]);
-            if (startDate <= requestDate && requestDate <= endDate){
-                return{
-                    vodLink: `https://vod.sooplive.co.kr/player/${vod.title_no}`,
-                    startDate: startDate,
-                    endDate: endDate
-                };
-            }
-        }
+    async findVodByDatetime(button, streamerId, streamerName, requestDate) {
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        throw new Error("Not implemented");
     }
 }

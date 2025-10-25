@@ -1,14 +1,11 @@
 import { IVodSync } from './base_class.js';
-const BTN_TEXT_IDLE = "Sync VOD";
-const BTN_TEXT_FINDING_STREAMER_ID = "스트리머 ID를 찾는 중...";
-const BTN_TEXT_FINDING_VOD = "다시보기를 찾는 중...";
-// 메인 페이지에서 검색하고 버튼을 누르면 스트리머id를 api로 찾고 그 스트리머 채널을 iframe으로 열게 함. 그 iframe에서 vod link를 받아서 새 탭에서 열음
-export class ChzzkVODLinker extends IVodSync{
-    constructor(){
-        super();
-        
 
-        if (window !== top){
+const BTN_TEXT_IDLE = "Sync VOD";
+const SYNC_BUTTON_CLASSNAME = 'vodSync-sync-btn';
+export class ChzzkVODLinker extends IVodSync{
+    constructor(isInIframe = false){
+        super();
+        if (isInIframe){
             const searchParams = new URLSearchParams(window.location.search);
             if (searchParams.get('only_search') === '1'){
                 this.setupSearchAreaOnlyMode();
@@ -30,84 +27,58 @@ export class ChzzkVODLinker extends IVodSync{
                 }
             }
         }
-        // // VODSync 네임스페이스에 자동 등록
-        // window.VODSync = window.VODSync || {};
-        // if (window.VODSync.chzzkVODLinker) {
-        //     this.warn('[VODSync] ChzzkVODLinker가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
-        // }
-        // window.VODSync.chzzkVODLinker = this;
-        this.init();
+        this.startSyncButtonManagement();
     }
-    init(){
-        this.ChzzkSyncButtonManagement();
-    }
-    // 치지직 검색 결과에 동기화 버튼 추가
-    ChzzkSyncButtonManagement() {
+    // 주기적으로 동기화 버튼 생성 및 업데이트
+    startSyncButtonManagement() {
         setInterval(() => {
-            if (!window.location.pathname.includes('/video/')) return; // 다시보기 페이지가 아니면 버튼 생성 X
+            const targets = this.getTargetsForCreateSyncButton();
+            if (!targets) return;
 
-            const searchHeader = document.querySelector('div[class^="search_header_"]');
-            if (searchHeader) return; // 검색 결과 없음 → 버튼 생성 X
-
-            const searchResults = document.querySelectorAll('div[class^="search_container__"] > div > ul > li > a');
-            if (!searchResults) return;
-
-            searchResults.forEach(element => {
-                if (element.querySelector('.chzzk-sync-btn')) return; // 이미 버튼 있음
-
-                const button = document.createElement('button');
-                button.className = 'chzzk-sync-btn';
-                button.innerText = BTN_TEXT_IDLE;
-                button.style.background = '#00d564';
-                button.style.color = 'black';
-                button.style.fontSize = '12px';
-                button.style.marginLeft = '12px';
-                button.style.padding = '4px 8px';
-                button.style.border = 'none';
-                button.style.borderRadius = '4px';
-                button.style.cursor = 'pointer';
-
+            targets.forEach(element => {
+                if (element.querySelector(`.${SYNC_BUTTON_CLASSNAME}`)) return; // 이미 동기화 버튼이 있음
+                const button = this.createSyncButton();
                 button.addEventListener('click', (e) => this.handleFindVODButtonClick(e, button));
                 element.appendChild(button);
             });
-        }, 200);
+        }, 500);
     }
-    
     // 동기화 버튼 onclick 핸들러
     async handleFindVODButtonClick(e, button){
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault();       // a 태그의 기본 이동 동작 막기
+        e.stopPropagation();      // 이벤트 버블링 차단
         
-        const searchWordSpan = button.parentElement.querySelector('[class^="search_keyword__"]');
-        if (!searchWordSpan)return;
-
         // 스트리머 ID 검색
-        const searchWord = searchWordSpan.innerText;
-        button.innerText = `${searchWord}로 스트리머 ID 검색 중...`;
-        this.log(`검색어: ${searchWord}`);
-        const channelInfo = await this.GetChannelID_Name(searchWord);
-        if (!channelInfo){
-            alert(`${searchWord}의 스트리머 ID를 찾지 못했습니다.`);
+        const streamerName = this.getStreamerName(button);
+        if (!streamerName) {
+            alert("검색어를 찾을 수 없습니다.");
             button.innerText = BTN_TEXT_IDLE;
             return;
         }
-        this.log(`스트리머 ID: ${channelInfo.channelId}, 스트리머 이름: ${channelInfo.channelName}`);
+        button.innerText = `${streamerName}로 스트리머 ID 검색 중...`;
+        const streamerId = await this.getStreamerId(streamerName);
+        if (!streamerId) {
+            alert(`${streamerName}의 스트리머 ID를 찾지 못했습니다.`);
+            button.innerText = BTN_TEXT_IDLE;
+            return;
+        }
+        this.log(`스트리머 ID: ${streamerId}`);
 
-        const reqVodDate = this.getRequestVodDate();
-        if (!reqVodDate){
+        const requestDate = this.getRequestVodDate();
+        if (!requestDate){
             this.warn("타임스탬프 정보를 받지 못했습니다.");
             button.innerText = BTN_TEXT_IDLE;
             return;
         }
-        if (typeof reqVodDate === 'string'){
-            this.warn(reqVodDate);
+        if (typeof requestDate === 'string'){
+            this.warn(requestDate);
             button.innerText = BTN_TEXT_IDLE;
-            alert(reqVodDate);
+            alert(requestDate);
             return;
         }
 
-        button.innerText = `${channelInfo.channelName}의 다시보기를 찾는 중...`;
-        const vodInfo = await this.FindVodByDatetime(button, channelInfo.channelId, channelInfo.channelName, reqVodDate);
+        button.innerText = `${streamerName}의 VOD 검색 중...`;
+        const vodInfo = await this.findVodByDatetime(button, streamerId, streamerName, requestDate);
         if (!vodInfo){
             alert("동기화할 다시보기를 찾지 못했습니다.");
             button.innerText = BTN_TEXT_IDLE;
@@ -115,38 +86,39 @@ export class ChzzkVODLinker extends IVodSync{
         }
         this.log(`다시보기 정보: ${vodInfo.vodLink}, ${vodInfo.startDate}, ${vodInfo.endDate}`);
         const url = new URL(vodInfo.vodLink);
-        const change_second = Math.round((reqVodDate.getTime() - vodInfo.startDate.getTime()) / 1000);
+        const change_second = Math.round((requestDate.getTime() - vodInfo.startDate.getTime()) / 1000);
         url.searchParams.set('change_second', change_second);
-        const request_vod_ts = reqVodDate.getTime();
-        url.searchParams.set('request_vod_ts', request_vod_ts);
+        url.searchParams.set('request_vod_ts', requestDate.getTime());
         this.processRequestRealTS(url);
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
         button.innerText = BTN_TEXT_IDLE;
-        return;
     }
-    // 치지직 다시보기 링크를 받아서 새 탭에서 열음
-    handleChzzkVodLink(vod_link){
-        const tsManager = window.VODSync?.tsManager;
-        const curTS = tsManager.getCurDateTime().getTime();
-        const url = new URL(vod_link);
-        url.searchParams.set('request_vod_ts', curTS);
-        if (tsManager.isPlaying())
-            url.searchParams.set('request_real_ts', Date.now());
-        this.log(`vod 열기 ${url.toString()}`);
-        window.open(url, "_blank");
+    // 상위 페이지에서 타임스탬프 정보를 받음 (other sync panel에서 iframe으로 열릴 때 사용)
+    handleWindowMessage(e){
+        if (e.data.response === "SET_REQUEST_VOD_TS"){
+            this.request_vod_ts = e.data.request_vod_ts;
+            this.request_real_ts = e.data.request_real_ts;
+            // this.log("REQUEST_VOD_TS 받음:", e.data.request_vod_ts, e.data.request_real_ts);
+        }
     }
-
-    
-    // 검색 결과 페이지에서 검색 결과 영역만 남기고 나머지는 숨기게 함. (CHZZK sync panel에서 iframe으로 열릴 때 사용)
+    // 검색 결과 페이지에서 검색 결과 영역만 남기고 나머지는 숨기게 함. (other sync panel에서 iframe으로 열릴 때 사용)
     setupSearchAreaOnlyMode() {
         (function waitForElementsToHide() {
+            const searchContainer = document.querySelector('[class^="search_container__"]');
             const sideMenu = document.querySelector('[class^="aside_container__"]');
             const layoutBody = document.querySelector('#layout-body');
             const navigationBarMenuLogo = document.querySelector('[class^="navigation_bar_menu_logo__"]');
             const topicTab = document.querySelector('[class^="topic_tab_container__"]');
             const toolbar = document.querySelector('[class^="toolbar_section__"]');
             let allDone = true;
+            if (searchContainer){
+                searchContainer.style.maxWidth = '500px';
+                searchContainer.style.minWidth = '500px';
+            }
+            else{
+                allDone = false;
+            }
             if (sideMenu) {
                 sideMenu.style.display = 'none';
             } else {
@@ -176,51 +148,49 @@ export class ChzzkVODLinker extends IVodSync{
             if (!allDone) setTimeout(waitForElementsToHide, 200);
         })();
     }
-    // 상위 페이지에서 타임스탬프 정보를 받음
-    handleWindowMessage(e){
-        if (e.data.response === "SET_REQUEST_VOD_TS"){
-            this.request_vod_ts = e.data.request_vod_ts;
-            this.request_real_ts = e.data.request_real_ts;
-            // this.log("REQUEST_VOD_TS 받음:", e.data.request_vod_ts, e.data.request_real_ts);
-        }
+    getTargetsForCreateSyncButton(){
+        // if (!window.location.pathname.includes('/video/')) return; // 다시보기 페이지가 아니면 버튼 생성 X
+
+        const searchHeader = document.querySelector('div[class^="search_header_"]');
+        if (searchHeader) return; // 검색 결과 없음 → 버튼 생성 X
+
+        const targets = document.querySelectorAll('div[class^="search_container__"] > div > ul > li > a');
+        return targets;
     }
-
-
-    
-    /**
-     * @description Get CHZZK Streamer ID by nickname
-     * @param {string} nickname 
-     * @returns {Object} {channelId: channelId, channelName: channelName} or null
-     */
-    async GetChannelID_Name(nickname) {
-        try {
-            const apiResponse = await window.VODSync.chzzkAPI.SearchChannels(nickname, 1);
-            if (!apiResponse) return null;
-            const channels = apiResponse.content.data;
-            if (channels.length > 0) {
-                const firstChannel = channels[0].channel;
-                return {
-                    channelId: firstChannel.channelId, 
-                    channelName: firstChannel.channelName
-                };
-            }
-            return null;
-        } catch (error) {
-            this.log('GetChannelID_Name error:', error);
-            return null;
-        }
+    createSyncButton(){
+        const button = document.createElement('button');
+        button.className = SYNC_BUTTON_CLASSNAME;
+        button.innerText = BTN_TEXT_IDLE;
+        button.style.background = '#00d564';
+        button.style.color = 'black';
+        button.style.fontSize = '12px';
+        button.style.marginLeft = '12px';
+        button.style.padding = '4px 8px';
+        button.style.border = 'none';
+        button.style.borderRadius = '4px';
+        button.style.cursor = 'pointer';
+        return button;
     }
-
+    getStreamerName(button){
+        const searchWordSpan = button.parentElement.querySelector('[class^="search_keyword__"]');
+        if (!searchWordSpan) return null;
+        return searchWordSpan.innerText;
+    }
+    async getStreamerId(searchWord){
+        const apiResponse = await window.VODSync.chzzkAPI.SearchChannels(searchWord, 1);
+        const channels = apiResponse?.content?.data;
+        const firstChannel = channels?.[0]?.channel;
+        return firstChannel?.channelId;
+    }
     /**
      * @description Get CHZZK VOD by datetime
      * @param {Element} button 
      * @param {string|number} channelId 
      * @param {string} channelName 
-     * @param {Date} requestDateTime 
+     * @param {Date} requestDate 
      * @returns {Object} {vodLink: string, startDate: Date, endDate: Date} or null
      */
-    async FindVodByDatetime(button, channelId, channelName,requestDateTime) {
-        this.log(`FindVodByDatetime 시작: 채널ID=${channelId}, 요청시간=${requestDateTime.toISOString()}`);
+    async findVodByDatetime(button, channelId, channelName, requestDate) {
         
         // 첫 번째 페이지부터 차례대로 조회
         for (let page = 0; true; page++) {
@@ -240,20 +210,20 @@ export class ChzzkVODLinker extends IVodSync{
             // 현재 페이지에서 VOD 찾기
             // 현재페이지의 첫 vod보다 48시간 이상 미래이거나 마지막 vod보다 48시간 이상 과거인 경우 동기화할 다시보기가 없다고 판단
             const lastVodPublishDate = new Date(vodList[vodList.length-1].publishDateAt);
-            const timeDiffWithLast = lastVodPublishDate.getTime() - requestDateTime.getTime();
+            const timeDiffWithLast = lastVodPublishDate.getTime() - requestDate.getTime();
             const maxDiff = 48 * 60 * 60 * 1000;
             if (timeDiffWithLast > maxDiff) {
                 this.log(`현재 페이지의 마지막 vod가 요청 시점보다 48시간 이상 최근이므로 현재 페이지에는 요청 시점이 없다고 판단`);
                 continue;
             }
             const firstVodPublishDate = new Date(vodList[0].publishDateAt);
-            const timeDiffWithFirst = requestDateTime.getTime() - firstVodPublishDate.getTime();
+            const timeDiffWithFirst = requestDate.getTime() - firstVodPublishDate.getTime();
             if (timeDiffWithFirst > maxDiff) {
                 this.log(`현재 페이지의 첫 vod가 요청 시점보다 48시간 이상 최근이므로 더이상 다음 페이지(과거)에서 찾을 필요가 없다고 판단`);
                 return null;
             }
 
-            const result = await this.findVodInPage(vodList, requestDateTime);
+            const result = await this.findVodInPage(vodList, requestDate);
             if (result) {
                 return result;
             }
@@ -265,7 +235,6 @@ export class ChzzkVODLinker extends IVodSync{
         }
         return null;
     }
-
     /**
      * @description 특정 페이지에서 VOD 찾기
      * @param {Array} vodList 
@@ -313,5 +282,4 @@ export class ChzzkVODLinker extends IVodSync{
         
         return null;
     }
-
 }

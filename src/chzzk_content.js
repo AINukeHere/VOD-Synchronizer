@@ -153,9 +153,11 @@ else{
 
     // 필요한 클래스들 구성
     const classConfig = {
+        'ChzzkAPI': 'src/module/chzzk_api.js',
         'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
     };
     window.VODSync.classLoader.loadClasses(classConfig).then(classes => {
-        new classes.ChzzkVODLinker();
+        new classes.ChzzkAPI();
+        new classes.ChzzkVODLinker(true);
     });
 }

@@ -230,44 +230,28 @@ export class OtherPlatformSyncPanel extends IVodSync {
         const tsManager = window.VODSync?.tsManager;
         
         if (!tsManager || !tsManager.isControllableState) {
-            alert("현재 VOD 정보를 가져올 수 없습니다. 타임스탬프 표시 기능이 켜져있는지 확인하세요.");
-            return;
-        }
-        const currentDateTime = tsManager.getCurDateTime();
-        if (!currentDateTime) {
-            alert("현재 VOD의 라이브 당시 시간을 가져올 수 없습니다.");
+            alert("현재 VOD 정보를 가져올 수 없습니다.");
             return;
         }
         
         this.iframe.style.display = 'block';
         
         // 플랫폼별 검색 메서드 직접 호출
-        this.openPlatformSearchWindow(platform, currentDateTime);
+        this.openPlatformSearchWindow(platform);
     }
 
-    openPlatformSearchWindow(platform, currentDateTime) {
+    openPlatformSearchWindow(platform) {
         const platformInfo = this.platformInfo[platform];
         
         const url = new URL(platformInfo.searchUrl);
         url.searchParams.set('only_search', '1');
         this.iframe.src = url.toString();
         
-        // 플랫폼별 로그 및 추가 처리
-        const platformLogs = {
-            'soop': () => {
-                this.log('SOOP 검색창 열기');
-                this.setupSoopTimestampUpdate();
-            },
-            'chzzk': () => {
-                const targetTimestamp = currentDateTime.getTime();
-                this.log('CHZZK 검색창 열기, 타임스탬프:', new Date(targetTimestamp).toLocaleString());
-            }
-        };
-        
-        platformLogs[platform]?.();
+        this.setupTimestampUpdate();
+
     }
 
-    setupSoopTimestampUpdate() {
+    setupTimestampUpdate() {
         this.updateInterval = setInterval(() => {
             const currentDateTime = window.VODSync?.tsManager?.getCurDateTime();
             if (!currentDateTime) {

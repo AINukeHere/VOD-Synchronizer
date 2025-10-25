@@ -28,7 +28,7 @@ if (window == top) {
         // 필요한 클래스들 생성
         soopAPI = new classes.SoopAPI();
         tsManager = new classes.SoopTimestampManager();
-        vodLinker = new classes.SoopVODLinker();
+        vodLinker = new classes.SoopVODLinker(true);
         chzzkPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
 
@@ -127,6 +127,6 @@ else {
     };
     window.VODSync.classLoader.loadClasses(classConfig).then(classes => {
         new classes.SoopAPI();
-        new classes.SoopVODLinker();
+        new classes.SoopVODLinker(true);
     });
 }
