@@ -76,7 +76,7 @@ if (window == top) {
         // 필요한 클래스들 생성
         new classes.ChzzkAPI();
         tsManager = new classes.ChzzkTimestampManager();
-        chzzkVodLinker = new classes.ChzzkVODLinker();
+        new classes.ChzzkVODLinker(false);
         syncPanel = new classes.OtherPlatformSyncPanel('chzzk');
         rpPanel = new classes.RPNicknamePanel();
     
@@ -151,9 +151,11 @@ if (window == top) {
             if (isVodPage) {
                 if (syncPanel) syncPanel.closePanel();
                 if (rpPanel) rpPanel.closePanel();
+                if (tsManager) tsManager.enable();
             } else {
                 if (syncPanel) syncPanel.hideCompletely();
                 if (rpPanel) rpPanel.hideCompletely();
+                if (tsManager) tsManager.disable();
             }
         }
     }, 500);

@@ -55,7 +55,7 @@ export class VODLinkerBase extends IVodSync{
             button.innerText = this.BTN_TEXT_IDLE;
             return;
         }
-        button.innerText = `${streamerName}로 스트리머 ID 검색 중...`;
+        button.innerText = `${streamerName}로 ID 검색 중`;
         const streamerId = await this.getStreamerId(streamerName);
         if (!streamerId) {
             alert(`${streamerName}의 스트리머 ID를 찾지 못했습니다.`);

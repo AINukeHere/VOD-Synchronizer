@@ -1,7 +1,7 @@
 // SOOP 플랫폼에서 실행되는 경우
-if (window == top) {
+if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
     let tsManager = null;
-    let chzzkPanel = null;
+    let syncPanel = null;
     let rpPanel = null;
     let cachedSettings = {};
     
@@ -40,7 +40,8 @@ if (window == top) {
         // 필요한 클래스들 생성
         new classes.SoopAPI();
         tsManager = new classes.SoopTimestampManager();
-        chzzkPanel = new classes.OtherPlatformSyncPanel('soop');
+        new classes.SoopVODLinker(false);
+        syncPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
 
 
@@ -97,10 +98,10 @@ if (window == top) {
         // 동기화 패널 토글
         if (enableSyncPanel) {
             log('동기화 패널 활성화');
-            chzzkPanel.closePanel();
+            syncPanel.closePanel();
         } else {
             log('동기화 패널 비활성화');
-            chzzkPanel.hideCompletely();
+            syncPanel.hideCompletely();
         }
 
         // RP 패널 토글

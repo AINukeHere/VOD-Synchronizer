@@ -38,7 +38,12 @@ export class SoopVODLinker extends VODLinkerBase{
     }
     getTargetsForCreateSyncButton(){
         const targets = document.querySelectorAll('#areaSuggest > ul > li > a');
-        return targets;
+        const filteredTargets = [];
+        for(const target of targets){
+            if (target.querySelector('em')) continue;
+            filteredTargets.push(target);
+        }
+        return filteredTargets;
     }
     createSyncButton(){
         const button = document.createElement("button");
@@ -78,7 +83,7 @@ export class SoopVODLinker extends VODLinkerBase{
         const totalVodCount = vodList.data.length;
         for(let i = 0; i < totalVodCount; ++i){
             const vod = vodList.data[i];
-            button.innerText = `${streamerName}의 다시보기를 찾는 중... (${i+1}/${totalVodCount})`;
+            button.innerText = `${streamerName}의 VOD 검색 중 (${i+1}/${totalVodCount})`;
             const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(vod.title_no);
             if (vodInfo === null){
                 continue;
