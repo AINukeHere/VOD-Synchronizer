@@ -20,8 +20,8 @@ VOD-Synchronizer_*.zip
 VOD-Synchronizer-Test
 
 # Development files
-data/.singleLine.md
-data_processing/
+res/data/.singleLine.md
+res/data/data_processing/
 src/.test/
 
 # Temporary files
