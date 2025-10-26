@@ -42,10 +42,12 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - 스트리밍에 문제가 있어 다시보기 영상 자체가 중간에 편집된 경우 동기화가 어긋날 수 있습니다.
 
 ## 업데이트 내역
+### 0.4.1
+- 전역 동기화 버튼 이미지가 누락되는 문제를 수정했습니다.
 ### 0.4.0
 - 전역 동기화 버튼이 추가되었습니다. 해당 VOD를 기준으로 나머지 열려있는 VOD들을 동기화합니다.
 
-![전역 동기화 버튼](./screenshots/broadcastSync.png)
+![전역 동기화 버튼](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/broadcastSync.png)
 
 - SOOP의 타임스탬프를 방송시간 외의 시간으로 설정할 수 있던 문제를 수정했습니다.
 
@@ -59,7 +61,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - SOOP의 파생된 VOD(클립, 캐치)에서 타임스탬프를 수정하여 특정시간대로 이동하는 기능이 제대로 동작하지 않던 문제를 수정했습니다.
 - 간단한 반복 재생 설정 기능을 추가했습니다. VOD 플레이어의 설정을 누르면 반복 재생 메뉴가 추가됩니다.
 
-![반복 재생 기능](./screenshots/loop_playing.png)
+![반복 재생 기능](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/loop_playing.png)
 
 ### 0.3.1
 - 동기화된 SOOP 다시보기가 열리고 재생되는 시간이 조?금 단축되었을 수도 있습니다.

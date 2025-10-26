@@ -142,7 +142,7 @@ export class TimestampManagerBase extends IVodSync {
                 iconImage.src = chrome.runtime.getURL("res/img/broadcastSync.png");
             }
             else{
-                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/broadcastSync.png";
+                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/img/broadcastSync.png";
             }
             iconImage.style.width = "100%";
             iconImage.style.height = "100%";

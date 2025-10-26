@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.4.0
+// @version      0.4.1
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -264,7 +264,7 @@
                         iconImage.src = chrome.runtime.getURL("res/img/broadcastSync.png");
                     }
                     else{
-                        iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/broadcastSync.png";
+                        iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/img/broadcastSync.png";
                     }
                     iconImage.style.width = "100%";
                     iconImage.style.height = "100%";
