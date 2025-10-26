@@ -31,10 +31,15 @@ export class OtherPlatformSyncPanel extends IVodSync {
         // 현재 플랫폼을 제외한 대상 플랫폼들 계산
         this.targetPlatforms = this.supportedPlatforms.filter(platform => platform !== this.currentPlatform);
         
+        // 현재 플랫폼 색상 가져오기
+        const currentPlatformColor = this.platformInfo[this.currentPlatform].color;
+        const currentPlatformTextColor = this.platformInfo[this.currentPlatform].textColor;
+        
         this.config = {
             id: 'other-platform-sync-panel',
             title: '타 플랫폼과 동기화',
-            color: '#6c757d', // 회색
+            color: currentPlatformColor, // 현재 플랫폼 색상
+            textColor: currentPlatformTextColor, // 현재 플랫폼 텍스트 색상
             width: '340px',
             height: '520px',
             top: '80px',
@@ -70,7 +75,6 @@ export class OtherPlatformSyncPanel extends IVodSync {
         this.createPanel();
         this.createToggleBtn();
         this.setupMouseTracking();
-        this.setupMessageListeners();
         this.closePanel(); // 기본값: 접힘
     }
     
@@ -101,7 +105,7 @@ export class OtherPlatformSyncPanel extends IVodSync {
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'center';
         header.style.background = this.config.color;
-        header.style.color = 'white';
+        header.style.color = this.config.textColor;
         header.style.fontWeight = 'bold';
         header.style.fontSize = '16px';
         header.style.padding = '10px 16px';
@@ -182,7 +186,7 @@ export class OtherPlatformSyncPanel extends IVodSync {
         this.toggleBtn.style.textAlign = 'center';
         this.toggleBtn.style.lineHeight = '1.2';
         this.toggleBtn.style.background = this.config.color;
-        this.toggleBtn.style.color = 'white';
+        this.toggleBtn.style.color = this.config.textColor;
         this.toggleBtn.style.border = 'none';
         this.toggleBtn.style.borderRadius = '8px 0 0 8px';
         this.toggleBtn.style.fontWeight = 'bold';
@@ -196,34 +200,6 @@ export class OtherPlatformSyncPanel extends IVodSync {
         document.body.appendChild(this.toggleBtn);
     }
 
-    setupMessageListeners() {
-        // 메시지 처리 딕셔너리
-        const messageHandlers = {
-            "CHZZK_VOD": (data) => {
-                this.log('[other_platform_sync_panel] CHZZK VOD 받음:', data.vod_link);
-                this.handleChzzkVodLink(data.vod_link);
-            },
-            "CHZZK_VOD_NOT_FOUND": (data) => {
-                this.log('[other_platform_sync_panel] CHZZK VOD를 찾지 못했다고 응답받음. 사유:', data.reason);
-                alert("동기화 가능한 VOD를 찾지 못했습니다.");
-            },
-            "CHZZK_VOD_FINDER_STATUS": (data) => {
-                const chzzkBtn = this.platformButtons['chzzk'];
-                if (chzzkBtn) {
-                    chzzkBtn.innerText = `${data.pageNum}페이지에서 VOD 검색 중[${data.retryCount}]`;
-                }
-            }
-        };
-
-        // 메시지 리스너 등록
-        window.addEventListener('message', (event) => {
-            const handler = messageHandlers[event.data.response];
-            if (handler) {
-                handler(event.data);
-            }
-        });
-    }
-
     startSearchWithIframe(platform) {
         // VODSync 네임스페이스를 통해 tsManager 접근
         const tsManager = window.VODSync?.tsManager;
@@ -235,7 +211,6 @@ export class OtherPlatformSyncPanel extends IVodSync {
         
         this.iframe.style.display = 'block';
         
-        // 플랫폼별 검색 메서드 직접 호출
         this.openPlatformSearchWindow(platform);
     }
 

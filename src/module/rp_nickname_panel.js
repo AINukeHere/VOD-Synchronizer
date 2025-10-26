@@ -31,7 +31,7 @@ export class RPNicknamePanel extends IVodSync{
 
     async loadNicknames() {
         try {
-            const response = await fetch(chrome.runtime.getURL('data/rp_nicknames.json'));
+            const response = await fetch(chrome.runtime.getURL('res/data/rp_nicknames.json'));
             const data = await response.json();
             this.nicknamesByServer = data;
             // 첫 서버를 기본 선택

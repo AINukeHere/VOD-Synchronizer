@@ -97,6 +97,9 @@ function addLog(level, args, tabId = null) {
     }
 }
 
+chrome.tabs.onRemoved.addListener(function(tabid, removed) {
+    settingsManager.removeChangeCallback(tabid);
+})
 // 메시지 리스너
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'addLog') {
@@ -151,12 +154,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true, defaultSettings: settingsManager.defaultSettings });
     } else if (request.action === 'addChangeCallback') {
         // 설정 변경 콜백 등록
-        settingsManager.addChangeCallback(request.tabId);
+        settingsManager.addChangeCallback(sender.tab?.id);
         sendResponse({ success: true });
     }
     else if (request.action === 'removeChangeCallback') {
         // 설정 변경 콜백 해제
-        settingsManager.removeChangeCallback(request.tabId);
+        settingsManager.removeChangeCallback(sender.tab?.id);
+        sendResponse({ success: true });
+    }
+    else if (request.action === 'broadCastSync') {
+        // 모든 vod를 이 시간대로 동기화
+        const activatedTabs = settingsManager.activatedTabs;
+        for (const tabId of activatedTabs) {
+            if (tabId === sender.tab?.id) continue; // 자기 자신은 제외
+            chrome.tabs.sendMessage(tabId, {
+                action: 'broadCastSync',
+                request_vod_ts: request.request_vod_ts
+            });
+        }
         sendResponse({ success: true });
     }
     return true;

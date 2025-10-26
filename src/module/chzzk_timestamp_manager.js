@@ -67,7 +67,7 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
     }
 
     getStreamPeriod(){
-        if (!this.videoInfo || !this.videoInfo.content) {
+        if (!this.videoInfo) {
             return null;
         }
         

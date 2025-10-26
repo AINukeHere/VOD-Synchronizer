@@ -12,19 +12,20 @@ export class VODLinkerBase extends IVodSync{
             }
             window.addEventListener('message', this.handleWindowMessage.bind(this));
             this.getRequestVodDate = () => {return new Date(this.request_vod_ts);}
-            this.processRequestRealTS = (url) => {
+            this.getRequestRealTS = () => {
                 if (this.request_real_ts){
-                    url.searchParams.set('request_real_ts', this.request_real_ts);
+                    return this.request_real_ts;
                 }
+                return null;
             }
         }
         else{
             this.getRequestVodDate = () => {return window.VODSync?.tsManager?.getCurDateTime();}
-            this.processRequestRealTS = (url) => {
+            this.getRequestRealTS = () => {
                 if (window.VODSync?.tsManager?.isPlaying()){ // 재생 중인경우 페이지 로딩 시간을 보간하기위해 탭 연 시점을 전달
-                    const request_real_ts = Date.now();
-                    url.searchParams.set('request_real_ts', request_real_ts);
+                    return Date.now();
                 }
+                return null;
             }
         }
         this.startSyncButtonManagement();
@@ -62,9 +63,11 @@ export class VODLinkerBase extends IVodSync{
             button.innerText = this.BTN_TEXT_IDLE;
             return;
         }
-        this.log(`스트리머 ID: ${streamerId}`);
+        this.debug(`스트리머 ID: ${streamerId}`);
 
         const requestDate = this.getRequestVodDate();
+        const request_real_ts = this.getRequestRealTS();
+        
         if (!requestDate){
             this.warn("타임스탬프 정보를 받지 못했습니다.");
             button.innerText = this.BTN_TEXT_IDLE;
@@ -89,7 +92,9 @@ export class VODLinkerBase extends IVodSync{
         const change_second = Math.round((requestDate.getTime() - vodInfo.startDate.getTime()) / 1000);
         url.searchParams.set('change_second', change_second);
         url.searchParams.set('request_vod_ts', requestDate.getTime());
-        this.processRequestRealTS(url);
+        if (request_real_ts){
+            url.searchParams.set('request_real_ts', request_real_ts);
+        }
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
         button.innerText = this.BTN_TEXT_IDLE;

@@ -9,11 +9,11 @@ export class SoopTimestampManager extends TimestampManagerBase {
         this.curVodInfo = null;
         this.timeLink = null;
         this.isEditedVod = false; // 다시보기의 일부분이 편집된 상태인가
-        this.log('loaded');
+        this.debug('loaded');
 
         this.vodInfoLoaded = false; // 현재 vod의 정보를 로드했는가
         this.tagLoaded = false; // 현재 VOD 플레이어의 요소를 로드했는가 (video, playTimeTag)
-        this.updating = false; // 현재 업데이트 중인가
+        this.updating = false; // 현재 VOD 정보와 태그를 업데이트 중인가
         const checkerInterval = setInterval(async () => {
             if (this.updating) return;
             if (!this.vodInfoLoaded || !this.tagLoaded)
@@ -72,7 +72,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                         autoPlayInput.click();
                     }
                 }
-                this.log('loop_playing: ', this.loop_playing);
+                this.debug('loop_playing: ', this.loop_playing);
             });
             const span = document.createElement('span');
             label.appendChild(em);
@@ -167,7 +167,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
         const calcedTotalDuration = this.curVodInfo.endDate.getTime() - this.curVodInfo.startDate.getTime();
         const durationDiff = Math.abs(calcedTotalDuration - this.curVodInfo.total_file_duration);
-        this.log('오차: ', durationDiff);
+        this.debug('오차: ', durationDiff);
         if (durationDiff < MAX_DURATION_DIFF){
             this.isEditedVod = false;
         }
@@ -193,15 +193,13 @@ export class SoopTimestampManager extends TimestampManagerBase {
             this.tagLoaded = false;
             this.log('VOD 변경 감지됨! 요소 업데이트 중...');
             this.loadVodInfo().then(() => {
-                this.log('vodInfo 갱신됨', this.curVodInfo);
-
+                // this.log('vodInfo 갱신됨', this.curVodInfo);
                 this.playTimeTag = document.querySelector('span.time-current');
-                this.log('playTimeTag 갱신됨', this.playTimeTag);
-
+                // this.log('playTimeTag 갱신됨', this.playTimeTag);
                 this.videoTag = document.querySelector('#video');
                 if (this.videoTag === null)
                     this.videoTag = document.querySelector('#video_p');
-                this.log('videoTag 갱신됨', this.videoTag);
+                // this.log('videoTag 갱신됨', this.videoTag);
                 this.updating = false;
                 if (this.playTimeTag !== null && this.videoTag !== null)
                     this.tagLoaded = true;
@@ -331,7 +329,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
             totalPlaybackSec = (parseInt(splitres[0]) * 60 + parseInt(splitres[1]));
         }
         else{
-            errorToExtension(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
             return null;
         }
         return totalPlaybackSec;
@@ -380,7 +378,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
             this.timeLink.className = 'time_link';
             this.timeLink.setAttribute('data-time', playbackTime.toString());
             this.timeLink.click();
-            this.log('timeLink 클릭됨');
+            this.debug('timeLink 클릭됨');
         }, 100);
         return true;
     }

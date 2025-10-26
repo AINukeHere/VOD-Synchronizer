@@ -1,4 +1,5 @@
 import { IVodSync } from './interface4log.js';
+const isChromeExtension = true;
 export class TimestampManagerBase extends IVodSync {
     constructor() {
         super();
@@ -37,6 +38,27 @@ export class TimestampManagerBase extends IVodSync {
         this.observeDOMChanges();
         this.createTooltip();
         this.setupMouseTracking();
+        this.listenBroadcastSyncEvent();
+    }
+
+    listenBroadcastSyncEvent() {
+        if (isChromeExtension){
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                if (message.action === 'broadCastSync') {
+                    this.moveToGlobalTS(message.request_vod_ts, false);
+                    sendResponse({ success: true });
+                }
+                return true;
+            });
+        }
+        else{
+            this.channel = new BroadcastChannel('vod-synchronizer');
+            this.channel.onmessage = (event) => {
+                if (event.data.action === 'broadCastSync') {
+                    this.moveToGlobalTS(event.data.request_vod_ts, false);
+                }
+            }
+        }
     }
 
     setupMouseTracking() {
@@ -71,22 +93,66 @@ export class TimestampManagerBase extends IVodSync {
             this.tooltip.style.opacity = '1';
             this.isTooltipVisible = true;
         }
+        if (this.syncButton) {
+            this.syncButton.style.transition = 'opacity 0.3s ease-in-out';
+            this.syncButton.style.opacity = '1';
+        }
     }
 
     hideTooltip() {
-        if (this.tooltip) {
+        if (this.tooltip && !this.isEditing) {
             this.tooltip.style.transition = 'opacity 0.5s ease-in-out';
             this.tooltip.style.opacity = '0.1';
             this.isTooltipVisible = false;
+        }
+        if (this.syncButton) {
+            this.syncButton.style.transition = 'opacity 0.5s ease-in-out';
+            this.syncButton.style.opacity = '0.1';
         }
     }
 
     createTooltip() {
         if (!this.tooltip) {
+            // 툴팁을 담는 컨테이너 생성
+            this.tooltipContainer = document.createElement("div");
+            this.tooltipContainer.style.position = "fixed";
+            this.tooltipContainer.style.bottom = "20px";
+            this.tooltipContainer.style.right = "20px";
+            this.tooltipContainer.style.display = "flex";
+            this.tooltipContainer.style.alignItems = "center";
+            this.tooltipContainer.style.gap = "5px";
+            this.tooltipContainer.style.zIndex = "1000";
+            
+            // Sync 버튼 생성
+            this.syncButton = document.createElement("button");
+            this.syncButton.title = "열려있는 다른 vod를 이 시간대로 동기화";
+            this.syncButton.style.background = "none";
+            this.syncButton.style.border = "none";
+            this.syncButton.style.cursor = "pointer";
+            this.syncButton.style.width = "32px";
+            this.syncButton.style.height = "32px";
+            this.syncButton.style.padding = "0";
+            this.syncButton.style.opacity = "1";
+            this.syncButton.style.borderRadius = "8px";
+            this.syncButton.style.overflow = "hidden";
+            
+            // 아이콘 이미지 추가
+            const iconImage = document.createElement("img");
+            if (isChromeExtension){
+                iconImage.src = chrome.runtime.getURL("res/img/broadcastSync.png");
+            }
+            else{
+                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/broadcastSync.png";
+            }
+            iconImage.style.width = "100%";
+            iconImage.style.height = "100%";
+            iconImage.style.objectFit = "fill";
+            iconImage.style.borderRadius = "8px";
+            this.syncButton.appendChild(iconImage);            
+            this.syncButton.addEventListener('click', this.handleBroadcastSyncButtonClick.bind(this));
+            
+            // 툴팁 div 생성
             this.tooltip = document.createElement("div");
-            this.tooltip.style.position = "fixed";
-            this.tooltip.style.bottom = "20px";
-            this.tooltip.style.right = "20px";
             this.tooltip.style.background = "black";
             this.tooltip.style.color = "white";
             this.tooltip.style.padding = "8px 12px";
@@ -94,10 +160,13 @@ export class TimestampManagerBase extends IVodSync {
             this.tooltip.style.fontSize = "14px";
             this.tooltip.style.whiteSpace = "nowrap";
             this.tooltip.style.display = "block";
-            this.tooltip.style.zIndex = "1000";
             this.tooltip.style.opacity = "1";
             this.tooltip.contentEditable = "false";
-            document.body.appendChild(this.tooltip);
+            
+            // 컨테이너에 버튼과 툴팁 추가
+            this.tooltipContainer.appendChild(this.syncButton);
+            this.tooltipContainer.appendChild(this.tooltip);
+            document.body.appendChild(this.tooltipContainer);
 
             this.tooltip.addEventListener("dblclick", () => {
                 this.tooltip.contentEditable = "true";
@@ -136,6 +205,26 @@ export class TimestampManagerBase extends IVodSync {
             });
         }
         this.updateTooltip();
+    }
+
+    handleBroadcastSyncButtonClick(e) {
+        const request_vod_ts = this.getCurDateTime();
+        if (!request_vod_ts) {
+            this.warn("현재 재생 중인 VOD의 라이브 당시 시간을 가져올 수 없습니다. 전역 동기화 실패.");
+            return;
+        }
+        e.stopPropagation();
+
+        if (isChromeExtension){
+            try{
+                chrome.runtime.sendMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
+            } catch (error) {
+                console.warn('[VOD Synchronizer] 전역 동기화 요청 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
+            }
+        }
+        else{
+            this.channel.postMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
+        }
     }
 
     updateTooltip() {

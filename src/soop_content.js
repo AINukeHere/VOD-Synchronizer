@@ -72,15 +72,16 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
         updateFeaturesState();
         
         // 설정 변경 감지
-        const tabInfo = await chrome.runtime.sendMessage({ action: 'getTabId' });
-        await chrome.runtime.sendMessage({ action: 'addChangeCallback', tabId: tabInfo.tabId});
-        chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        await chrome.runtime.sendMessage({ action: 'addChangeCallback'});
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === 'notifyChangeCallbacks') {
                 log('설정 변경 감지, 기능 업데이트 중...');
                 // 캐싱된 설정 갱신
                 cachedSettings = message.settings;
                 updateFeaturesState();
             }
+            sendResponse({ success: true });
+            return true;
         });
     }
     // 기능 업데이트 함수

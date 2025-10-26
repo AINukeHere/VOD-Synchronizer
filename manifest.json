@@ -44,7 +44,8 @@
     "web_accessible_resources": [
         {
             "resources": [
-                "data/rp_nicknames.json",
+                "res/data/rp_nicknames.json",
+                "res/img/broadcastSync.png",
                 "src/background/settings_manager.js",
                 "src/module/interface4log.js",
                 "src/module/base_vod_linker.js",

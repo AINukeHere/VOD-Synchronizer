@@ -3,35 +3,12 @@
 // 모든 context에서 동일한 로그 저장소 사용
 
 // 탭 정보를 가져오는 함수 (ID와 제목)
-function getTabInfo() {
-    return new Promise((resolve) => {
-        // background script에서 실행 중인 경우
-        if (typeof chrome !== 'undefined' && chrome.tabs) {
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                const tab = tabs[0];
-                resolve({
-                    id: tab?.id || 'unknown',
-                    title: tab?.title || 'unknown'
-                });
-            });
-        } else {
-            // content script에서는 background script에 요청
-            chrome.runtime.sendMessage({ action: 'getTabId' }, (response) => {
-                if (chrome.runtime.lastError) {
-                    // background script에 접근할 수 없는 경우
-                    resolve({
-                        id: 'unknown',
-                        title: document.title || 'unknown'
-                    });
-                } else {
-                    resolve({
-                        id: response.tabId || 'unknown',
-                        title: response.tabTitle || document.title || 'unknown'
-                    });
-                }
-            });
-        }
-    });
+async function getTabInfo() {
+    const response = await chrome.runtime.sendMessage({ action: 'getTabId' });
+    return {
+        id: response.tabId || 'unknown',
+        title: response.tabTitle || document.title || 'unknown'
+    };
 }
 
 // 탭 제목에서 식별자 생성
@@ -114,7 +91,7 @@ async function infoToExtension(...args) {
         }).catch(() => {
             console.error(...logMessage);
         });
-        console.log(...logMessage);
+        // console.info(...logMessage);
     } catch (error) {
         console.log(...args);
     }
@@ -132,7 +109,7 @@ async function warnToExtension(...args) {
         }).catch(() => {
             console.error(...logMessage);
         });
-        console.log(...logMessage);
+        // console.warn(...logMessage);
     } catch (error) {
         console.log(...args);
     }
@@ -150,7 +127,7 @@ async function errorToExtension(...args) {
         }).catch(() => {
             console.error(...logMessage);
         });
-        console.error(...logMessage);
+        // console.error(...logMessage);
     } catch (error) {
         console.log(...args);
     }
@@ -168,7 +145,7 @@ async function debugToExtension(...args) {
         }).catch(() => {
             console.error(...logMessage);
         });
-        console.debug(...logMessage);
+        // console.debug(...logMessage);
     } catch (error) {
         console.debug(...args);
     }
@@ -177,32 +154,6 @@ async function debugToExtension(...args) {
 // ===================== 업데이트 관리자 =====================
 // 버전 업데이트 감지 및 알림 기능
 
-// 업데이트 내역 데이터
-const UPDATE_HISTORY = {
-    "1.2.3": {
-        date: "2025-01-15",
-        changes: [
-            "간단한 반복 재생 설정 기능을 추가했습니다. VOD 플레이어의 설정을 누르면 반복 재생 메뉴가 추가됩니다.",
-            "이제 업데이트 시 1회에 한하여 업데이트 내역을 표시합니다."
-        ]
-    },
-    "1.2.2": {
-        date: "2025-01-09",
-        changes: [
-            "SOOP 타임스탬프 관리 개선",
-            "동기화 성능 최적화",
-            "UI/UX 개선"
-        ]
-    },
-    "1.2.1": {
-        date: "2025-01-05",
-        changes: [
-            "CHZZK 연동 기능 강화",
-            "설정 저장 방식 개선",
-            "오류 처리 로직 개선"
-        ]
-    }
-};
 
 // 현재 버전 가져오기
 function getCurrentVersion() {
@@ -403,9 +354,6 @@ function resizeIframe(iframe, contentWidth, contentHeight) {
 
 // postMessage 이벤트 리스너 추가
 window.addEventListener('message', function(event) {
-    // 보안을 위해 origin 확인 (필요시)
-    // if (event.origin !== 'https://ainukehere.github.io') return;
-    
     if (event.data && event.data.type === 'vodSync-iframe-resize') {
         const iframe = document.getElementById('updateIframe');
         if (iframe) {
@@ -456,7 +404,6 @@ async function getSettings() {
         }
     } catch (error) {
         logToExtension('설정 로드 실패:', error);
-        // 최후의 수단으로 하드코딩된 기본값
         return {};
     }
 }
@@ -466,3 +413,11 @@ async function getSettings() {
 setTimeout(() => {
     checkForUpdates();
 }, 2000);
+
+setInterval(()=>{
+    try{
+        chrome.runtime.sendMessage({ action: 'addChangeCallback' });
+    } catch (error) {
+        console.warn('[VOD Synchronizer] 설정 변경 콜백 등록 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
+    }
+}, 25000);

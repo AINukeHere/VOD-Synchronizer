@@ -22,7 +22,6 @@ def create_test_extension():
     include_files = [
         # 필수 파일들
         'manifest.json',
-        'privacy_policy.html',
         'LICENSE',
         
         # 아이콘들
@@ -56,8 +55,9 @@ def create_test_extension():
         'src/module/other_platform_sync_panel.js',
         'src/module/rp_nickname_panel.js',
         
-        # 데이터 파일
-        'data/rp_nicknames.json',
+        # 리소스 파일
+        'res/data/rp_nicknames.json',
+        'res/img/broadcastSync.png',
     ]
     
     # manifest.json에서 버전 정보 읽기

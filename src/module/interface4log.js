@@ -11,4 +11,7 @@ export class IVodSync {
     error(...data){
         errorToExtension(`[${this.vodSyncClassName}]`, ...data);
     }
+    debug(...data){
+        debugToExtension(`[${this.vodSyncClassName}]`, ...data);
+    }
 }

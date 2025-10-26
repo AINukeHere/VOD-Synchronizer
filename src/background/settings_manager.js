@@ -144,7 +144,7 @@ export class SettingsManager {
      */
     addChangeCallback(tabId) {
         this.activatedTabs.add(tabId);
-        this.log('설정 변경 콜백 등록됨');
+        this.log('설정 변경 콜백 등록됨', this.activatedTabs);
     }
 
     // 설정 변경 콜백 해제
@@ -153,8 +153,10 @@ export class SettingsManager {
      * @param {Function} callback 콜백 함수
      */
     removeChangeCallback(tabId) {
-        this.activatedTabs.delete(tabId);
-        this.log('설정 변경 콜백 해제됨');
+        if (this.activatedTabs.has(tabId)) {
+            this.activatedTabs.delete(tabId);
+            this.log('설정 변경 콜백 해제됨', this.activatedTabs);
+        }
     }
 
     // 등록된 모든 콜백에 설정 변경 알림
@@ -169,13 +171,5 @@ export class SettingsManager {
                 settings: {...this.settings}
             });
         });
-        // chrome.runtime.sendMessage({action:'notifyChangeCallbacks', settings: this.settings});
-        // this.changeCallbacks.forEach(callback => {
-        //     try {
-        //         callback(this.settings);
-        //     } catch (error) {
-        //         this.log('콜백 실행 중 오류:', error);
-        //     }
-        // });
     }
 }
