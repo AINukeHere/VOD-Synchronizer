@@ -134,7 +134,8 @@ export class ChzzkVODLinker extends VODLinkerBase{
             this.log(`페이지 ${page}: ${vodList.length}개 VOD 발견`);
             
             // 현재 페이지에서 VOD 찾기
-            // 현재페이지의 첫 vod보다 48시간 이상 미래이거나 마지막 vod보다 48시간 이상 과거인 경우 동기화할 다시보기가 없다고 판단
+            // 현재 페이지의 마지막 vod가 요청 시점보다 48시간 이상 과거인 경우 다음 페이지 검색
+            // 현재 페이지의 첫 vod가 요청 시점보다 48시간 이상 미래인 경우 동기화할 다시보기가 없다고 판단
             const lastVodPublishDate = new Date(vodList[vodList.length-1].publishDateAt);
             const timeDiffWithLast = lastVodPublishDate.getTime() - requestDate.getTime();
             const maxDiff = 48 * 60 * 60 * 1000;
