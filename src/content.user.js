@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.4.1
+// @version      0.4.2
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -159,6 +159,9 @@
             startMonitoring() {
                 this.observeDOMChanges();
                 this.createTooltip();
+                setInterval(() => {
+                    this.updateTooltip();
+                }, 200);
                 this.setupMouseTracking();
                 this.listenBroadcastSyncEvent();
             }
@@ -326,7 +329,6 @@
                         }
                     });
                 }
-                this.updateTooltip();
             }
         
             handleBroadcastSyncButtonClick(e) {
@@ -350,51 +352,49 @@
             }
         
             updateTooltip() {
-                setInterval(() => {
-                    if (!this.tooltip || this.isEditing) return;
-                    
-                    const dateTime = this.getCurDateTime();
-                    
-                    if (dateTime) {
-                        this.isControllableState = true;
-                        this.tooltip.innerText = dateTime.toLocaleString("ko-KR");
-                    }
-                    if (this.isPlaying() === true)
-                    { 
-                        // 전역 시간 동기화 요청 체크
-                        if (this.request_vod_ts != null){
-                            const streamPeriod = this.getStreamPeriod();
-                            if (streamPeriod){
-                                if (this.request_real_ts == null){
-                                    this.log("시차 적용하지않고 동기화 시도");
-                                    if (!this.moveToGlobalTS(this.request_vod_ts, false)){
-                                        window.close();
-                                    }
+                if (!this.tooltip || this.isEditing) return;
+                
+                const dateTime = this.getCurDateTime();
+                
+                if (dateTime) {
+                    this.isControllableState = true;
+                    this.tooltip.innerText = dateTime.toLocaleString("ko-KR");
+                }
+                if (this.isPlaying() === true)
+                { 
+                    // 전역 시간 동기화 요청 체크
+                    if (this.request_vod_ts != null){
+                        const streamPeriod = this.getStreamPeriod();
+                        if (streamPeriod){
+                            if (this.request_real_ts == null){
+                                this.log("시차 적용하지않고 동기화 시도");
+                                if (!this.moveToGlobalTS(this.request_vod_ts, false)){
+                                    window.close();
                                 }
-                                else{
-                                    const currentSystemTime = Date.now();
-                                    const timeDifference = currentSystemTime - this.request_real_ts;
-                                    this.log("시차 적용하여 동기화 시도. 시차: " + timeDifference);
-                                    const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
-                                    if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
-                                        window.close();
-                                    }
+                            }
+                            else{
+                                const currentSystemTime = Date.now();
+                                const timeDifference = currentSystemTime - this.request_real_ts;
+                                this.log("시차 적용하여 동기화 시도. 시차: " + timeDifference);
+                                const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
+                                if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
+                                    window.close();
                                 }
-                                this.request_vod_ts = null;
-                                this.request_real_ts = null;
                             }
-                        }
-                        // 로컬 시간 동기화 요청 체크
-                        if (this.request_local_ts != null){
-                            this.log("playback time으로 동기화 시도");
-                            if (!this.moveToPlaybackTime(this.request_local_ts, false)){
-                                this.log('동기화 실패. 창을 닫습니다.');
-                                window.close();
-                            }
-                            this.request_local_ts = null;
+                            this.request_vod_ts = null;
+                            this.request_real_ts = null;
                         }
                     }
-                }, 200);
+                    // 로컬 시간 동기화 요청 체크
+                    if (this.request_local_ts != null){
+                        this.log("playback time으로 동기화 시도");
+                        if (!this.moveToPlaybackTime(this.request_local_ts, false)){
+                            this.log('동기화 실패. 창을 닫습니다.');
+                            window.close();
+                        }
+                        this.request_local_ts = null;
+                    }
+                }
             }
         
             // 플랫폼별로 구현해야 하는 추상 메서드들
@@ -418,16 +418,16 @@
             // 활성화/비활성화 메서드
             enable() {
                 this.isHideCompletly = false;
-                if (this.tooltip) {
-                    this.tooltip.style.display = 'block';
+                if (this.tooltipContainer) {
+                    this.tooltipContainer.style.display = 'flex';
                 }
                 this.log('툴팁 나타남');
             }
         
             disable() {
                 this.isHideCompletly = true;
-                if (this.tooltip) {
-                    this.tooltip.style.display = 'none';
+                if (this.tooltipContainer) {
+                    this.tooltipContainer.style.display = 'none';
                 }
                 this.log('툴팁 숨김');
             }
@@ -927,6 +927,10 @@
             // 주기적으로 동기화 버튼 생성 및 업데이트
             startSyncButtonManagement() {
                 setInterval(() => {
+                    const requestDate = this.getRequestVodDate();
+                    // 타임스탬프 매니저가 vod 정보를 불러오지 못한 경우 동기화 버튼 생성 안함
+                    if (!this.isValidDate(requestDate)) return;
+        
                     const targets = this.getTargetsForCreateSyncButton();
                     if (!targets) return;
         
@@ -962,7 +966,7 @@
                 const requestDate = this.getRequestVodDate();
                 const request_real_ts = this.getRequestRealTS();
                 
-                if (!requestDate){
+                if (!this.isValidDate(requestDate)){
                     this.warn("타임스탬프 정보를 받지 못했습니다.");
                     button.innerText = this.BTN_TEXT_IDLE;
                     return;
@@ -992,6 +996,10 @@
                 window.open(url, "_blank");
                 this.log(`VOD 링크: ${url.toString()}`);
                 button.innerText = this.BTN_TEXT_IDLE;
+                this.closeSearchArea();
+            }
+            isValidDate(date){
+                return date instanceof Date && !isNaN(date.getTime());
             }
             // 상위 페이지에서 타임스탬프 정보를 받음 (other sync panel에서 iframe으로 열릴 때 사용)
             handleWindowMessage(e){
@@ -1052,6 +1060,13 @@
              * @returns {Object} {vodLink: string, startDate: Date, endDate: Date} or null
              */
             async findVodByDatetime(button, streamerId, streamerName, requestDate) {
+                // 파생 클래스들이 오버라이드하여 구현해야함
+                throw new Error("Not implemented");
+            }
+            /**
+             * @description 검색 영역을 닫음
+             */
+            closeSearchArea(){
                 // 파생 클래스들이 오버라이드하여 구현해야함
                 throw new Error("Not implemented");
             }
@@ -1117,6 +1132,12 @@
                 const nicknameSpan = button.parentElement.querySelector('span');
                 if (!nicknameSpan) return null;
                 return nicknameSpan.innerText;
+            }
+            closeSearchArea(){
+                const closeBtn = document.querySelector('.del_text');
+                if (closeBtn){
+                    closeBtn.click();
+                }
             }
             async getStreamerId(searchWord){
                 const streamerId = await window.VODSync.soopAPI.GetStreamerID(searchWord);

@@ -37,6 +37,9 @@ export class TimestampManagerBase extends IVodSync {
     startMonitoring() {
         this.observeDOMChanges();
         this.createTooltip();
+        setInterval(() => {
+            this.updateTooltip();
+        }, 200);
         this.setupMouseTracking();
         this.listenBroadcastSyncEvent();
     }
@@ -204,7 +207,6 @@ export class TimestampManagerBase extends IVodSync {
                 }
             });
         }
-        this.updateTooltip();
     }
 
     handleBroadcastSyncButtonClick(e) {
@@ -228,51 +230,49 @@ export class TimestampManagerBase extends IVodSync {
     }
 
     updateTooltip() {
-        setInterval(() => {
-            if (!this.tooltip || this.isEditing) return;
-            
-            const dateTime = this.getCurDateTime();
-            
-            if (dateTime) {
-                this.isControllableState = true;
-                this.tooltip.innerText = dateTime.toLocaleString("ko-KR");
-            }
-            if (this.isPlaying() === true)
-            { 
-                // 전역 시간 동기화 요청 체크
-                if (this.request_vod_ts != null){
-                    const streamPeriod = this.getStreamPeriod();
-                    if (streamPeriod){
-                        if (this.request_real_ts == null){
-                            this.log("시차 적용하지않고 동기화 시도");
-                            if (!this.moveToGlobalTS(this.request_vod_ts, false)){
-                                window.close();
-                            }
+        if (!this.tooltip || this.isEditing) return;
+        
+        const dateTime = this.getCurDateTime();
+        
+        if (dateTime) {
+            this.isControllableState = true;
+            this.tooltip.innerText = dateTime.toLocaleString("ko-KR");
+        }
+        if (this.isPlaying() === true)
+        { 
+            // 전역 시간 동기화 요청 체크
+            if (this.request_vod_ts != null){
+                const streamPeriod = this.getStreamPeriod();
+                if (streamPeriod){
+                    if (this.request_real_ts == null){
+                        this.log("시차 적용하지않고 동기화 시도");
+                        if (!this.moveToGlobalTS(this.request_vod_ts, false)){
+                            window.close();
                         }
-                        else{
-                            const currentSystemTime = Date.now();
-                            const timeDifference = currentSystemTime - this.request_real_ts;
-                            this.log("시차 적용하여 동기화 시도. 시차: " + timeDifference);
-                            const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
-                            if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
-                                window.close();
-                            }
+                    }
+                    else{
+                        const currentSystemTime = Date.now();
+                        const timeDifference = currentSystemTime - this.request_real_ts;
+                        this.log("시차 적용하여 동기화 시도. 시차: " + timeDifference);
+                        const adjustedGlobalTS = this.request_vod_ts + timeDifference; 
+                        if (!this.moveToGlobalTS(adjustedGlobalTS, false)){
+                            window.close();
                         }
-                        this.request_vod_ts = null;
-                        this.request_real_ts = null;
                     }
-                }
-                // 로컬 시간 동기화 요청 체크
-                if (this.request_local_ts != null){
-                    this.log("playback time으로 동기화 시도");
-                    if (!this.moveToPlaybackTime(this.request_local_ts, false)){
-                        this.log('동기화 실패. 창을 닫습니다.');
-                        window.close();
-                    }
-                    this.request_local_ts = null;
+                    this.request_vod_ts = null;
+                    this.request_real_ts = null;
                 }
             }
-        }, 200);
+            // 로컬 시간 동기화 요청 체크
+            if (this.request_local_ts != null){
+                this.log("playback time으로 동기화 시도");
+                if (!this.moveToPlaybackTime(this.request_local_ts, false)){
+                    this.log('동기화 실패. 창을 닫습니다.');
+                    window.close();
+                }
+                this.request_local_ts = null;
+            }
+        }
     }
 
     // 플랫폼별로 구현해야 하는 추상 메서드들
@@ -296,16 +296,16 @@ export class TimestampManagerBase extends IVodSync {
     // 활성화/비활성화 메서드
     enable() {
         this.isHideCompletly = false;
-        if (this.tooltip) {
-            this.tooltip.style.display = 'block';
+        if (this.tooltipContainer) {
+            this.tooltipContainer.style.display = 'flex';
         }
         this.log('툴팁 나타남');
     }
 
     disable() {
         this.isHideCompletly = true;
-        if (this.tooltip) {
-            this.tooltip.style.display = 'none';
+        if (this.tooltipContainer) {
+            this.tooltipContainer.style.display = 'none';
         }
         this.log('툴팁 숨김');
     }

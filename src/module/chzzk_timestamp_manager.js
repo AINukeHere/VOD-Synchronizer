@@ -37,33 +37,51 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         const targetNode = document.body;
         const config = { childList: true, subtree: true };
 
-        this.observer = new MutationObserver(async () => {
-            // chzzk 플레이어의 비디오 태그 찾기
-            const newVideoTag = document.querySelector('video.webplayer-internal-video');
-            
-            // URL에서 videoId 추출
-            const urlMatch = window.location.pathname.match(/\/video\/([^\/\?]+)/);
-            const newVideoId = urlMatch ? urlMatch[1] : null;
-
-            if (!newVideoTag || !newVideoId) return;
-            
-            if (newVideoTag !== this.videoTag || newVideoId !== this.videoId) {
-                this.log('VOD 변경 감지됨! 요소 업데이트 중...');
-                this.videoTag = newVideoTag;
-                this.videoId = newVideoId;
-                
-                // 새로운 VOD 정보 가져오기
-                this.videoInfo = await window.VODSync.chzzkAPI.getVodDetailWithCache(this.videoId);
-                if (!this.videoInfo) {
-                    this.log('VOD 정보 가져오기 실패');
-                    return;
-                }
-                this.videoInfo.realStartTime = window.VODSync.chzzkAPI.calculateVodStartTime(this.videoInfo);
-                this.log('VOD 정보 가져오기 성공');
-            }
+        this.observer = new MutationObserver(() => {
+            this.reloadAll();
         });
 
         this.observer.observe(targetNode, config);
+    }
+
+    updateTooltip(){
+        super.updateTooltip();
+        // vod 보다가 치지직 로고를 누르면 pip모드로 변경되고 pip를 닫는 경우 이 조건으로 체크됨
+        if (this.videoTag && this.videoTag.src == ''){
+            this.videoTag = null;
+            this.videoId = null;
+            this.videoInfo = null;
+            this.reloadAll();
+        }
+    }
+    async reloadAll(){
+        if (this.updating) return;
+        this.updating = true;
+        // chzzk 플레이어의 비디오 태그 찾기
+        const newVideoTag = document.querySelector('video.webplayer-internal-video');
+        
+        // URL에서 videoId 추출
+        const urlMatch = window.location.pathname.match(/\/video\/([^\/\?]+)/);
+        const newVideoId = urlMatch ? urlMatch[1] : null;
+
+        if (!newVideoTag || !newVideoId) {this.updating = false; return;}
+        
+        if (newVideoTag !== this.videoTag || newVideoId !== this.videoId) {
+            this.log('VOD 변경 감지됨! 요소 업데이트 중...');
+            this.videoTag = newVideoTag;
+            this.videoId = newVideoId;
+            
+            // 새로운 VOD 정보 가져오기
+            this.videoInfo = await window.VODSync.chzzkAPI.getVodDetailWithCache(this.videoId);
+            if (!this.videoInfo) {
+                this.log('VOD 정보 가져오기 실패');
+                this.updating = false;
+                return;
+            }
+            this.videoInfo.realStartTime = window.VODSync.chzzkAPI.calculateVodStartTime(this.videoInfo);
+            this.log('VOD 정보 가져오기 성공');
+        }
+        this.updating = false;
     }
 
     getStreamPeriod(){

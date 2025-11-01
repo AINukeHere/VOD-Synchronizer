@@ -62,6 +62,12 @@ export class SoopVODLinker extends VODLinkerBase{
         if (!nicknameSpan) return null;
         return nicknameSpan.innerText;
     }
+    closeSearchArea(){
+        const closeBtn = document.querySelector('.del_text');
+        if (closeBtn){
+            closeBtn.click();
+        }
+    }
     async getStreamerId(searchWord){
         const streamerId = await window.VODSync.soopAPI.GetStreamerID(searchWord);
         return streamerId;

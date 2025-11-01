@@ -209,4 +209,10 @@ export class ChzzkVODLinker extends VODLinkerBase{
         
         return null;
     }
+    closeSearchArea(){
+        const closeButton = document.querySelector('[class^="search_close_button__"]');
+        if (closeButton){
+            closeButton.click();
+        }
+    }
 }
