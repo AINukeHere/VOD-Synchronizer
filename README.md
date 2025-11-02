@@ -37,7 +37,7 @@
 5. 우측 상단의 "개발자 모드"를 활성화합니다.
 6. "압축해제된 확장 프로그램을 로드합니다" 버튼을 클릭하고, 압축을 푼 폴더를 선택합니다.
 
-### 방법 3: TemperMonkey를 사용하는 경우 (SOOP 동기화만 지원)
+### 방법 3: TamperMonkey를 사용하는 경우 (SOOP 동기화만 지원)
 1. [https://greasyfork.org/ko/scripts/541829-vod-synchronizer](https://greasyfork.org/ko/scripts/541829-vod-synchronizer)에서 스크립트를 설치하세요.
 
 

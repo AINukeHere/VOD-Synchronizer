@@ -17,9 +17,9 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-synchronizer/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Synchronizer를 설치하세요.
 2. "Chrome에 추가" 버튼을 클릭하여 설치를 완료하세요.
 
-### 방법 2: TemperMonkey를 사용하는 경우
-1. Tempermonkey 설치
-2. 확장 프로그램 관리에서 Tempermonkey 세부정보 --> 사용자 스크립트 허용을 활성화하세요.
+### 방법 2: TamperMonkey를 사용하는 경우
+1. Tampermonkey 설치
+2. 확장 프로그램 관리에서 Tampermonkey 세부정보 --> 사용자 스크립트 허용을 활성화하세요.
 3. [https://greasyfork.org/ko/scripts/541829-vod-synchronizer](https://greasyfork.org/ko/scripts/541829-vod-synchronizer)에서 스크립트를 설치하세요.
 
 
