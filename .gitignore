@@ -21,7 +21,7 @@ VOD-Synchronizer-Test
 
 # Development files
 res/data/.singleLine.md
-res/data/data_processing/
+data_processing/
 src/.test/
 
 # Temporary files
