@@ -4,13 +4,13 @@ export class TimestampManagerBase extends IVodSync {
     constructor() {
         super();
         this.videoTag = null;
-        this.tooltip = null;
+        this.timeStampDiv = null;
         this.isEditing = false;
         this.request_vod_ts = null;
         this.request_real_ts = null;
         this.isControllableState = false;
         this.lastMouseMoveTime = Date.now();
-        this.isTooltipVisible = true;
+        this.isVisible = true;
         this.mouseCheckInterval = null;
         this.isHideCompletly = false; // 툴팁 숨기기 상태
         
@@ -84,17 +84,17 @@ export class TimestampManagerBase extends IVodSync {
             const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
             
             // 2초 이상 마우스가 움직이지 않았고, 편집 중이 아니면 툴팁 숨기기
-            if (timeSinceLastMove >= 2000 && !this.isEditing && this.isTooltipVisible) {
+            if (timeSinceLastMove >= 2000 && !this.isEditing && this.isVisible) {
                 this.hideTooltip();
             }
         }, 200);
     }
 
     showTooltip() {
-        if (this.tooltip) {
-            this.tooltip.style.transition = 'opacity 0.3s ease-in-out';
-            this.tooltip.style.opacity = '1';
-            this.isTooltipVisible = true;
+        if (this.timeStampDiv) {
+            this.timeStampDiv.style.transition = 'opacity 0.3s ease-in-out';
+            this.timeStampDiv.style.opacity = '1';
+            this.isVisible = true;
         }
         if (this.syncButton) {
             this.syncButton.style.transition = 'opacity 0.3s ease-in-out';
@@ -103,10 +103,10 @@ export class TimestampManagerBase extends IVodSync {
     }
 
     hideTooltip() {
-        if (this.tooltip && !this.isEditing) {
-            this.tooltip.style.transition = 'opacity 0.5s ease-in-out';
-            this.tooltip.style.opacity = '0.1';
-            this.isTooltipVisible = false;
+        if (this.timeStampDiv && !this.isEditing) {
+            this.timeStampDiv.style.transition = 'opacity 0.5s ease-in-out';
+            this.timeStampDiv.style.opacity = '0.1';
+            this.isVisible = false;
         }
         if (this.syncButton) {
             this.syncButton.style.transition = 'opacity 0.5s ease-in-out';
@@ -115,7 +115,7 @@ export class TimestampManagerBase extends IVodSync {
     }
 
     createTooltip() {
-        if (!this.tooltip) {
+        if (!this.timeStampDiv) {
             // 툴팁을 담는 컨테이너 생성
             this.tooltipContainer = document.createElement("div");
             this.tooltipContainer.style.position = "fixed";
@@ -155,40 +155,41 @@ export class TimestampManagerBase extends IVodSync {
             this.syncButton.addEventListener('click', this.handleBroadcastSyncButtonClick.bind(this));
             
             // 툴팁 div 생성
-            this.tooltip = document.createElement("div");
-            this.tooltip.style.background = "black";
-            this.tooltip.style.color = "white";
-            this.tooltip.style.padding = "8px 12px";
-            this.tooltip.style.borderRadius = "5px";
-            this.tooltip.style.fontSize = "14px";
-            this.tooltip.style.whiteSpace = "nowrap";
-            this.tooltip.style.display = "block";
-            this.tooltip.style.opacity = "1";
-            this.tooltip.contentEditable = "false";
+            this.timeStampDiv = document.createElement("div");
+            this.timeStampDiv.style.background = "black";
+            this.timeStampDiv.style.color = "white";
+            this.timeStampDiv.style.padding = "8px 12px";
+            this.timeStampDiv.style.borderRadius = "5px";
+            this.timeStampDiv.style.fontSize = "14px";
+            this.timeStampDiv.style.whiteSpace = "nowrap";
+            this.timeStampDiv.style.display = "block";
+            this.timeStampDiv.style.opacity = "1";
+            this.timeStampDiv.contentEditable = "false";
+            this.timeStampDiv.title = "더블클릭하여 수정";
             
             // 컨테이너에 버튼과 툴팁 추가
             this.tooltipContainer.appendChild(this.syncButton);
-            this.tooltipContainer.appendChild(this.tooltip);
+            this.tooltipContainer.appendChild(this.timeStampDiv);
             document.body.appendChild(this.tooltipContainer);
 
-            this.tooltip.addEventListener("dblclick", () => {
-                this.tooltip.contentEditable = "true";
-                this.tooltip.focus();
+            this.timeStampDiv.addEventListener("dblclick", () => {
+                this.timeStampDiv.contentEditable = "true";
+                this.timeStampDiv.focus();
                 this.isEditing = true;
-                this.tooltip.style.outline = "2px solid red"; 
-                this.tooltip.style.boxShadow = "0 0 10px red";
+                this.timeStampDiv.style.outline = "2px solid red"; 
+                this.timeStampDiv.style.boxShadow = "0 0 10px red";
                 // 편집 중일 때는 투명화 방지
                 this.showTooltip();
             });
 
-            this.tooltip.addEventListener("blur", () => {
-                this.tooltip.contentEditable = "false";
+            this.timeStampDiv.addEventListener("blur", () => {
+                this.timeStampDiv.contentEditable = "false";
                 this.isEditing = false;
-                this.tooltip.style.outline = "none";
-                this.tooltip.style.boxShadow = "none";
+                this.timeStampDiv.style.outline = "none";
+                this.timeStampDiv.style.boxShadow = "none";
             });
 
-            this.tooltip.addEventListener("keydown", (event) => {                    
+            this.timeStampDiv.addEventListener("keydown", (event) => {                    
                 // 숫자 키 (0-9) - 영상 점프 기능만 차단하고 텍스트 입력은 허용
                 if (/^[0-9]$/.test(event.key)) {
                     // 영상 플레이어의 키보드 이벤트만 차단
@@ -199,9 +200,9 @@ export class TimestampManagerBase extends IVodSync {
                 // Enter 키 처리
                 if (event.key === "Enter") {
                     event.preventDefault();
-                    this.processTimestampInput(this.tooltip.innerText.trim());
-                    this.tooltip.contentEditable = "false";
-                    this.tooltip.blur();
+                    this.processTimestampInput(this.timeStampDiv.innerText.trim());
+                    this.timeStampDiv.contentEditable = "false";
+                    this.timeStampDiv.blur();
                     this.isEditing = false;
                     return;
                 }
@@ -230,13 +231,13 @@ export class TimestampManagerBase extends IVodSync {
     }
 
     updateTooltip() {
-        if (!this.tooltip || this.isEditing) return;
+        if (!this.timeStampDiv || this.isEditing) return;
         
         const dateTime = this.getCurDateTime();
         
         if (dateTime) {
             this.isControllableState = true;
-            this.tooltip.innerText = dateTime.toLocaleString("ko-KR");
+            this.timeStampDiv.innerText = dateTime.toLocaleString("ko-KR");
         }
         if (this.isPlaying() === true)
         { 
