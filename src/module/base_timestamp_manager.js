@@ -165,7 +165,7 @@ export class TimestampManagerBase extends IVodSync {
             this.timeStampDiv.style.display = "block";
             this.timeStampDiv.style.opacity = "1";
             this.timeStampDiv.contentEditable = "false";
-            this.timeStampDiv.title = "더블클릭하여 수정";
+            this.timeStampDiv.title = "더블클릭하여 수정, 수정 후 Enter 키 누르면 적용";
             
             // 컨테이너에 버튼과 툴팁 추가
             this.tooltipContainer.appendChild(this.syncButton);
@@ -189,12 +189,22 @@ export class TimestampManagerBase extends IVodSync {
                 this.timeStampDiv.style.boxShadow = "none";
             });
 
-            this.timeStampDiv.addEventListener("keydown", (event) => {                    
-                // 숫자 키 (0-9) - 영상 점프 기능만 차단하고 텍스트 입력은 허용
-                if (/^[0-9]$/.test(event.key)) {
-                    // 영상 플레이어의 키보드 이벤트만 차단
-                    event.stopPropagation();
-                    return;
+            this.timeStampDiv.addEventListener("keydown", (event) => {
+                // 편집 모드일 때만 이벤트 차단
+                if (this.isEditing) {
+                    // 숫자 키 (0-9) - 영상 점프 기능만 차단하고 텍스트 입력은 허용
+                    if (/^[0-9]$/.test(event.key)) {
+                        // 영상 플레이어의 키보드 이벤트만 차단
+                        event.stopPropagation();
+                        return;
+                    }
+
+                    // 방향키 - 영상 앞으로/뒤로 이동 기능 차단
+                    if (event.key === "ArrowUp" || event.key === "ArrowDown" || 
+                        event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                        event.stopPropagation();
+                        return;
+                    }
                 }
 
                 // Enter 키 처리
@@ -205,6 +215,15 @@ export class TimestampManagerBase extends IVodSync {
                     this.timeStampDiv.blur();
                     this.isEditing = false;
                     return;
+                }
+            });
+
+            // 복사 이벤트 처리 - 텍스트만 복사되도록
+            this.timeStampDiv.addEventListener("copy", (event) => {
+                const selectedText = window.getSelection().toString();
+                if (selectedText) {
+                    event.clipboardData.setData("text/plain", selectedText);
+                    event.preventDefault();
                 }
             });
         }

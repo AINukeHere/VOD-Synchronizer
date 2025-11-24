@@ -149,13 +149,13 @@ if (window == top) {
             lastIsVodPage = isVodPage;
             // 상태가 바뀔때 패널을 숨기거나 표시함.
             if (isVodPage) {
-                if (syncPanel) syncPanel.closePanel();
-                if (rpPanel) rpPanel.closePanel();
-                if (tsManager) tsManager.enable();
+                if (cachedSettings.enableSyncPanel && syncPanel) syncPanel.closePanel();
+                if (cachedSettings.enableRpPanel && rpPanel) rpPanel.closePanel();
+                if (cachedSettings.enableTimestamp && tsManager) tsManager.enable();
             } else {
-                if (syncPanel) syncPanel.hideCompletely();
-                if (rpPanel) rpPanel.hideCompletely();
-                if (tsManager) tsManager.disable();
+                if (cachedSettings.enableSyncPanel && syncPanel) syncPanel.hideCompletely();
+                if (cachedSettings.enableRpPanel && rpPanel) rpPanel.hideCompletely();
+                if (cachedSettings.enableTimestamp && tsManager) tsManager.disable();
             }
         }
     }, 500);
