@@ -29,6 +29,7 @@ export class VODLinkerBase extends IVodSync{
             }
         }
         this.startSyncButtonManagement();
+        this.setupSearchInputKeyboardHandler();
     }
     // 주기적으로 동기화 버튼 생성 및 업데이트
     startSyncButtonManagement() {
@@ -175,5 +176,42 @@ export class VODLinkerBase extends IVodSync{
     closeSearchArea(){
         // 파생 클래스들이 오버라이드하여 구현해야함
         throw new Error("Not implemented");
+    }
+    /**
+     * @description 검색창 요소를 반환
+     * @returns {HTMLInputElement|null} 검색창 input 요소
+     */
+    getSearchInputElement(){
+        // 파생 클래스들이 오버라이드하여 구현해야함
+        return null;
+    }
+    /**
+     * @description 검색창에 키보드 이벤트 핸들러 설정 (Ctrl+Shift+Enter로 SyncVOD 버튼 클릭)
+     */
+    setupSearchInputKeyboardHandler() {
+        // 검색창이 동적으로 생성될 수 있으므로 주기적으로 확인
+        setInterval(() => {
+            const searchInput = this.getSearchInputElement();
+            if (!searchInput) return;
+            
+            // 이미 이벤트 리스너가 추가되어 있는지 확인
+            if (searchInput.dataset.vodSyncHandlerAdded === 'true') return;
+            
+            searchInput.addEventListener('keydown', (e) => {
+                // Ctrl+Shift+Enter 감지
+                if (e.key === 'Enter' && e.ctrlKey && e.shiftKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const syncButton = document.querySelector(`.${this.SYNC_BUTTON_CLASSNAME}`);
+                    if (syncButton) {
+                        syncButton.click();
+                    }
+                }
+            });
+            
+            // 이벤트 리스너가 추가되었음을 표시
+            searchInput.dataset.vodSyncHandlerAdded = 'true';
+        }, 500);
     }
 }

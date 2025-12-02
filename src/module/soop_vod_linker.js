@@ -107,4 +107,14 @@ export class SoopVODLinker extends VODLinkerBase{
             }
         }
     }
+    /**
+     * @description 검색창 요소를 반환
+     * @returns {HTMLInputElement|null} 검색창 input 요소
+     * @override
+     */
+    getSearchInputElement(){
+        // SOOP 검색창 선택자 (검색 결과 페이지의 검색창)
+        const searchInput = document.querySelector('#search-inp');
+        return searchInput || null;
+    }
 }

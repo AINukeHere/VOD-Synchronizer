@@ -215,4 +215,14 @@ export class ChzzkVODLinker extends VODLinkerBase{
             closeButton.click();
         }
     }
+    /**
+     * @description 검색창 요소를 반환
+     * @returns {HTMLInputElement|null} 검색창 input 요소
+     * @override
+     */
+    getSearchInputElement(){
+        // CHZZK 검색창 선택자 (검색 결과 페이지의 검색창)
+        const searchInput = document.querySelector('[class^="search_input__"]');
+        return searchInput || null;
+    }
 }
