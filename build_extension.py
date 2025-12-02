@@ -9,8 +9,88 @@ import zipfile
 import shutil
 import json
 import sys
+import re
 from datetime import datetime
 from pathlib import Path
+
+def extract_class_definition(file_path, class_name):
+    """
+    모듈 파일에서 클래스 정의를 추출합니다.
+    export와 import 문을 제거하고 클래스 정의만 반환합니다.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # import 문 제거
+        content = re.sub(r'^import\s+.*?from\s+["\'].*?["\'];?\s*$', '', content, flags=re.MULTILINE)
+        
+        # export 키워드 제거
+        content = re.sub(r'export\s+', '', content)
+        
+        # base_timestamp_manager.js의 const isChromeExtension = true; 제거 (템플릿에서 false로 설정됨)
+        if 'base_timestamp_manager.js' in file_path:
+            content = re.sub(r'const\s+isChromeExtension\s*=\s*true;?\s*', '', content)
+        
+        # SoopTimestampManager의 const MAX_DURATION_DIFF 제거 (템플릿에서 별도 정의됨)
+        if 'soop_timestamp_manager.js' in file_path:
+            content = re.sub(r'const\s+MAX_DURATION_DIFF\s*=\s*30\*1000;?\s*', '', content)
+        
+        # 빈 줄 정리
+        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)
+        content = content.strip()
+        
+        return content
+    except Exception as e:
+        print(f"❌ 클래스 정의 추출 실패 ({file_path}): {e}")
+        return None
+
+def build_tampermonkey_script():
+    """
+    content.user.template.js를 읽어서 클래스 정의를 삽입하여 content.user.js를 생성합니다.
+    """
+    template_path = 'src/content.user.template.js'
+    output_path = 'src/content.user.js'
+    
+    if not os.path.exists(template_path):
+        print(f"⚠️  템플릿 파일을 찾을 수 없습니다: {template_path}")
+        return False
+    
+    try:
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template = f.read()
+        
+        # 클래스 정의 매핑
+        class_mappings = {
+            '{{IVodSync}}': ('src/module/interface4log.js', 'IVodSync'),
+            '{{SoopAPI}}': ('src/module/soop_api.js', 'SoopAPI'),
+            '{{TimestampManagerBase}}': ('src/module/base_timestamp_manager.js', 'TimestampManagerBase'),
+            '{{SoopTimestampManager}}': ('src/module/soop_timestamp_manager.js', 'SoopTimestampManager'),
+            '{{VODLinkerBase}}': ('src/module/base_vod_linker.js', 'VODLinkerBase'),
+            '{{SoopVODLinker}}': ('src/module/soop_vod_linker.js', 'SoopVODLinker'),
+        }
+        
+        # 각 플레이스홀더를 실제 클래스 정의로 교체
+        for placeholder, (file_path, class_name) in class_mappings.items():
+            if placeholder in template:
+                class_def = extract_class_definition(file_path, class_name)
+                if class_def:
+                    template = template.replace(placeholder, class_def)
+                    print(f"✅ 클래스 삽입: {class_name}")
+                else:
+                    print(f"⚠️  클래스 정의를 찾을 수 없습니다: {class_name}")
+                    return False
+        
+        # 결과 파일 저장
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(template)
+        
+        print(f"✅ TamperMonkey 스크립트 생성 완료: {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ TamperMonkey 스크립트 생성 실패: {e}")
+        return False
 
 def create_test_extension():
     """로컬 테스트용 확장 프로그램 폴더 생성"""
@@ -73,6 +153,12 @@ def create_test_extension():
     print(f"🧪 VOD Synchronizer 로컬 테스트용 폴더 생성 시작...")
     print(f"📁 폴더명: {test_folder}")
     print(f"📋 버전: {version}")
+    print()
+    
+    # TamperMonkey 스크립트 생성
+    print("📝 TamperMonkey 스크립트 생성 중...")
+    if not build_tampermonkey_script():
+        print("⚠️  TamperMonkey 스크립트 생성 실패, 계속 진행합니다...")
     print()
     
     # 기존 테스트 폴더가 있으면 삭제
@@ -239,18 +325,20 @@ def show_help():
     print("  python build_extension.py [옵션]")
     print()
     print("옵션:")
-    print("  test     - 테스트용 폴더만 생성")
-    print("  zip      - 배포용 ZIP 파일만 생성")
-    print("  testzip  - 테스트용 폴더를 ZIP으로 압축")
-    print("  all      - 테스트용 폴더 + 배포용 ZIP + 테스트용 ZIP 모두 생성 (기본값)")
-    print("  help     - 이 도움말 표시")
+    print("  test         - 테스트용 폴더만 생성")
+    print("  zip          - 배포용 ZIP 파일만 생성")
+    print("  testzip      - 테스트용 폴더를 ZIP으로 압축")
+    print("  tampermonkey - TamperMonkey용 content.user.js 파일만 생성")
+    print("  all          - 테스트용 폴더 + 배포용 ZIP + 테스트용 ZIP 모두 생성 (기본값)")
+    print("  help         - 이 도움말 표시")
     print()
     print("예시:")
-    print("  python build_extension.py test     # 테스트용 폴더만 생성")
-    print("  python build_extension.py zip      # 배포용 ZIP만 생성")
-    print("  python build_extension.py testzip  # 테스트용 ZIP만 생성")
-    print("  python build_extension.py all      # 모든 파일 생성")
-    print("  python build_extension.py          # 모든 파일 생성 (기본값)")
+    print("  python build_extension.py test         # 테스트용 폴더만 생성")
+    print("  python build_extension.py zip          # 배포용 ZIP만 생성")
+    print("  python build_extension.py testzip      # 테스트용 ZIP만 생성")
+    print("  python build_extension.py tampermonkey # TamperMonkey 스크립트만 생성")
+    print("  python build_extension.py all          # 모든 파일 생성")
+    print("  python build_extension.py              # 모든 파일 생성 (기본값)")
 
 def main():
     """메인 함수"""
@@ -279,7 +367,12 @@ def main():
     
     success = True
     
-    if command in ["test", "all"]:
+    if command == "tampermonkey":
+        print("📝 TamperMonkey 스크립트 생성 중...")
+        if not build_tampermonkey_script():
+            success = False
+        print()
+    elif command in ["test", "all"]:
         print("1️⃣ 테스트용 폴더 생성 중...")
         if not create_test_extension():
             success = False
