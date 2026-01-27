@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Synchronizer (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      0.4.3
+// @version      1.4.0
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.co.kr/*
@@ -30,20 +30,25 @@
     }
     if (window.top !== window.self) return;
 
+    // 환경 구분용 전역 변수 (탬퍼몽키 환경)
+    window.VODSync = window.VODSync || {};
+    window.VODSync.IS_TAMPER_MONKEY_SCRIPT = true;
+
     // 메인 페이지에서 실행되는 경우 (vod.sooplive.co.kr)
     if (window.location.hostname === 'vod.sooplive.co.kr') {
         {{IVodSync}}
         {{SoopAPI}}
-        const isChromeExtension = false;
         {{TimestampManagerBase}}
         const MAX_DURATION_DIFF = 30*1000;
         {{SoopTimestampManager}}
         {{VODLinkerBase}}
         {{SoopVODLinker}}
+        {{SoopPrevChatViewer}}
 
         new SoopAPI();
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
+        new SoopPrevChatViewer();
         
         // 동기화 요청이 있는 경우 타임스탬프 매니저에게 요청
         const params = new URLSearchParams(window.location.search);

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업데이트 알림</title>
+    <link rel="stylesheet" href="update_notification_common.css">
+</head>
+<body>
+    <div class="update-container">
+        <div class="version-number" id="versionNumber">v1.4.0 주요 변경사항</div>
+        <ul class="changes-list" id="changesList">
+            <li>
+                <strong>[SOOP 새 기능]</strong> 이전 채팅 내역 복원 기능이 추가되었습니다.
+                <ul class="bug-fix-list" style="margin-top: 8px; margin-bottom: 8px;">
+                    <li>VOD를 재생한 시점의 이전 채팅 내역을 불러올 수 있습니다.</li>
+                    <li>복원 구간을 설정할 수 있습니다.</li>
+                    <li>복원 버튼에 커서를 올리면 다음 복원 구간이 표시됩니다.</li>
+                </ul>
+                <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: nowrap;">
+                    <img src="../screenshots/prevChatViewer.png" alt="이전 채팅 복원 기능" class="preview-image" onclick="openImageModal(this.src)" style="flex: 1; min-width: 0; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img src="../screenshots/prevChatViewer-restored.png" alt="이전 채팅 복원 후" class="preview-image" onclick="openImageModal(this.src)" style="flex: 1; min-width: 0; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img src="../screenshots/prevChatViewer-setting.png" alt="이전 채팅 복원 설정" class="preview-image" onclick="openImageModal(this.src)" style="flex: 1; min-width: 0; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                </div>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- 이미지 모달 -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal()">
+        <img id="modalImage" src="" alt="확대 이미지">
+    </div>
+
+    <script src="update_notification_common.js"></script>
+</body>
+</html>

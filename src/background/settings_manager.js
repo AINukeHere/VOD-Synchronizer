@@ -6,7 +6,8 @@ export class SettingsManager {
             enableTimestamp: true,
             enableSyncPanel: true,
             enableRpPanel: true,
-            enableUpdateNotification: true
+            enableUpdateNotification: true,
+            soopRestoreInterval: 30
         };
         this.settings = { ...this.defaultSettings };
         this.isLoaded = false;
@@ -87,7 +88,8 @@ export class SettingsManager {
     async saveSettings(newSettings) {
         try {
             const oldSettings = { ...this.settings };
-            this.settings = { ...this.defaultSettings, ...newSettings };
+            // 기존 설정을 유지하면서 파라미터로 받은 설정만 업데이트
+            this.settings = { ...this.settings, ...newSettings };
             await chrome.storage.sync.set({ vodSyncSettings: this.settings });
             this.log('설정 저장 완료:', this.settings);
             

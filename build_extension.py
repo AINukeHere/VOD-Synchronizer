@@ -68,6 +68,7 @@ def build_tampermonkey_script():
             '{{SoopTimestampManager}}': ('src/module/soop_timestamp_manager.js', 'SoopTimestampManager'),
             '{{VODLinkerBase}}': ('src/module/base_vod_linker.js', 'VODLinkerBase'),
             '{{SoopVODLinker}}': ('src/module/soop_vod_linker.js', 'SoopVODLinker'),
+            '{{SoopPrevChatViewer}}': ('src/module/soop_prev_chat_viewer.js', 'SoopPrevChatViewer'),
         }
         
         # 각 플레이스홀더를 실제 클래스 정의로 교체
@@ -134,6 +135,7 @@ def create_test_extension():
         'src/module/chzzk_vod_linker.js',
         'src/module/other_platform_sync_panel.js',
         'src/module/rp_nickname_panel.js',
+        'src/module/soop_prev_chat_viewer.js',
         
         # 리소스 파일
         'res/data/rp_nicknames.json',

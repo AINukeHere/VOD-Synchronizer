@@ -1,6 +1,7 @@
 export class IVodSync {
     constructor(){
         this.vodSyncClassName = this.constructor.name;
+        this.debug('constructor() called');
     }
     log(...data){
         logToExtension(`[${this.vodSyncClassName}]`, ...data);

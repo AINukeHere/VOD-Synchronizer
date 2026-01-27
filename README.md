@@ -83,6 +83,18 @@ CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다.
 - CHZZK의 경우 라이브를 34시간을 초과하여 다시보기가 3개 이상으로 쪼개진 경우 타임스탬프가 잘못 계산될 수 있습니다.
 
 ## 업데이트 내역
+### 1.4.0
+- [SOOP 새 기능] 이전 채팅 내역 복원
+  - VOD를 재생한 시점의 이전 채팅 내역을 불러올 수 있습니다.
+  - 복원 구간을 설정할 수 있습니다. (기본 30초)
+  - 복원 버튼에 커서를 올리면 다음 복원 구간이 표시됩니다.
+  - 채팅 내 시그니처 이모티콘과 기본 이모티콘, ogq가 지원됩니다.
+  - 최대한 데이터를 분석하여 구독 이모티콘, 팬클럽 열혈팬 서포터 뱃지가 알맞게 표시되도록 했지만 제 나름대로 분석한거라 사실과 다를 수 있습니다. 스트리머와 매니저 채팅은 아직 분석하지 않아서 정상적으로 표시되지 않을 것입니다.(닉네임과 채팅은 올바르게 표시됩니다)
+
+<img src="./screenshots/prevChatViewer.png" alt="이전 채팅 복원 기능" style="border: 1px solid #ddd; border-radius: 4px;"> 
+<img src="./screenshots/prevChatViewer-restored.png" alt="이전 채팅 복원 후" style="border: 1px solid #ddd; border-radius: 4px;"> 
+<img src="./screenshots/prevChatViewer-setting.png" alt="이전 채팅 복원 설정" style="border: 1px solid #ddd; border-radius: 4px;">
+
 ### 1.3.2
 - 편의성 개선: 검색창에 동기화 대상 스트리머를 입력하고 Ctrl+Shift+Enter를 누르면 첫 번째 SyncVOD 버튼을 자동으로 클릭합니다.
 - 타임스탬프 부분에 커서를 올리면 도움말 툴팁을 띄웁니다.

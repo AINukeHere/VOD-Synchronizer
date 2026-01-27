@@ -70,12 +70,10 @@ class settingPageManager {
     }
 
     collectSettings() {
-        this.settings = {
-            enableTimestamp: document.getElementById('enableTimestamp').checked,
-            enableSyncPanel: document.getElementById('enableSyncPanel').checked,
-            enableRpPanel: document.getElementById('enableRpPanel').checked,
-            enableUpdateNotification: document.getElementById('enableUpdateNotification').checked,
-        };
+        this.settings.enableTimestamp = document.getElementById('enableTimestamp').checked;
+        this.settings.enableSyncPanel = document.getElementById('enableSyncPanel').checked;
+        this.settings.enableRpPanel = document.getElementById('enableRpPanel').checked;
+        this.settings.enableUpdateNotification = document.getElementById('enableUpdateNotification').checked;
     }
 
     setupEventListeners() {

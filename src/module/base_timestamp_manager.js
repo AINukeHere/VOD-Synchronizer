@@ -1,5 +1,4 @@
 import { IVodSync } from './interface4log.js';
-const isChromeExtension = true;
 export class TimestampManagerBase extends IVodSync {
     constructor() {
         super();
@@ -45,7 +44,7 @@ export class TimestampManagerBase extends IVodSync {
     }
 
     listenBroadcastSyncEvent() {
-        if (isChromeExtension){
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
             chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 if (message.action === 'broadCastSync') {
                     this.moveToGlobalTS(message.request_vod_ts, false);
@@ -141,7 +140,7 @@ export class TimestampManagerBase extends IVodSync {
             
             // 아이콘 이미지 추가
             const iconImage = document.createElement("img");
-            if (isChromeExtension){
+            if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
                 iconImage.src = chrome.runtime.getURL("res/img/broadcastSync.png");
             }
             else{
@@ -237,7 +236,7 @@ export class TimestampManagerBase extends IVodSync {
         }
         e.stopPropagation();
 
-        if (isChromeExtension){
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
             try{
                 chrome.runtime.sendMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
             } catch (error) {
