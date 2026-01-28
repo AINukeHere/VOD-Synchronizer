@@ -58,7 +58,6 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         return new Date(startTime.getTime() + currentTime * 1000);
     }
     
-    /* override methods */
 
     async reloadAll(){
         if (this.updating) return;
@@ -89,6 +88,8 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         }
         this.updating = false;
     }
+    
+    /* override methods */
     observeDOMChanges() {
         const targetNode = document.body;
         const config = { childList: true, subtree: true };
