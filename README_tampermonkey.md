@@ -49,12 +49,17 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
   - 복원 버튼에 커서를 올리면 다음 복원 구간이 표시됩니다.
   - 채팅 내 시그니처 이모티콘과 기본 이모티콘, ogq가 지원됩니다.
   - 최대한 데이터를 분석하여 구독 이모티콘, 팬클럽 열혈팬 서포터 매니저 뱃지가 알맞게 표시되도록 했지만 제 나름대로 분석한거라 사실과 다를 수 있습니다. 스트리머 채팅은 아직 분석하지 않아서 정상적으로 표시되지 않을 것입니다.(닉네임과 채팅은 올바르게 표시됩니다)<br/>
-![이전 채팅 복원 기능](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer.png)
-![이전 채팅 복원 후](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer-restored.png)
-![이전 채팅 복원 설정](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer-setting.png)
+
+  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer.png)  |  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer-restored.png) | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer-setting.png)
+:-------------------------:|:-------------------------:|:-------------------------:
+이전 채팅 복원 버튼            |  이전 채팅 복원 후 | 이전 채팅 복원 설정
 
 - 타임스탬프와 전역 동기화 버튼의 위치가 우 하단 고정에서 vod 플레이어 재생 바 중간으로 변경되었으며 입력이 없을 때 완전히 투명해집니다.
-![SOOP에서의 타임스탬프 위치](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_soop.png)
+
+SOOP에서의 타임스탬프 위치 | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_soop.png)
+:-------------------------:|:-------------------------:
+CHZZK에서의 타임스탬프 위치 | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_chzzk.png)
+
 - 이제 동기화 성공 시 검색창을 깔끔하게 정리합니다.
 
 - 버전 넘버링을 Chrome Web Store 버전과 일치시켰습니다.
