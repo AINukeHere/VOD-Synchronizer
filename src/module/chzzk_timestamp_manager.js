@@ -7,9 +7,34 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         this.videoId = null;
         this.videoInfo = null;
     }
+    update(){
+        super.update();
+        this.checkAndMoveTooltipToCtrlBox();
 
-    log(...data){
-        logToExtension('[chzzk_timestamp_manager.js]', ...data);
+        // vod 보다가 치지직 로고를 누르면 pip모드로 변경되고 pip를 닫는 경우 이 조건으로 체크됨
+        if (this.videoTag && this.videoTag.src == ''){
+            this.videoTag = null;
+            this.videoId = null;
+            this.videoInfo = null;
+            this.reloadAll();
+        }
+    }
+    checkAndMoveTooltipToCtrlBox(){
+        if (this.tooltipContainer.parentElement === document.body ||
+            !this.tooltipContainer.isConnected){
+            const rightButtons = document.querySelector('.pzp-pc__bottom-buttons-right');
+            if (!rightButtons) return false;
+            const playBar = rightButtons.parentElement;
+            if (playBar && rightButtons) {
+                playBar.insertBefore(this.tooltipContainer, rightButtons);
+                this.tooltipContainer.style.position = '';
+                this.tooltipContainer.style.bottom = '';
+                this.tooltipContainer.style.right = '';
+                return true;
+            }
+            return false;
+        }
+        return true;
     }
 
     calculateTimestamp(videoInfo, currentTime) {
@@ -32,28 +57,9 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
 
         return new Date(startTime.getTime() + currentTime * 1000);
     }
+    
+    /* override methods */
 
-    observeDOMChanges() {
-        const targetNode = document.body;
-        const config = { childList: true, subtree: true };
-
-        this.observer = new MutationObserver(() => {
-            this.reloadAll();
-        });
-
-        this.observer.observe(targetNode, config);
-    }
-
-    updateTooltip(){
-        super.updateTooltip();
-        // vod 보다가 치지직 로고를 누르면 pip모드로 변경되고 pip를 닫는 경우 이 조건으로 체크됨
-        if (this.videoTag && this.videoTag.src == ''){
-            this.videoTag = null;
-            this.videoId = null;
-            this.videoInfo = null;
-            this.reloadAll();
-        }
-    }
     async reloadAll(){
         if (this.updating) return;
         this.updating = true;
@@ -83,7 +89,16 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         }
         this.updating = false;
     }
+    observeDOMChanges() {
+        const targetNode = document.body;
+        const config = { childList: true, subtree: true };
 
+        this.observer = new MutationObserver(() => {
+            this.reloadAll();
+        });
+
+        this.observer.observe(targetNode, config);
+    }
     getStreamPeriod(){
         if (!this.videoInfo) {
             return null;
@@ -93,7 +108,6 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         const endTime = this.videoInfo.endDate;
         return [startTime, endTime];
     }
-
     getCurDateTime(){
         if (!this.videoTag || !this.videoInfo) {
             return null;
@@ -102,7 +116,6 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
         const currentTime = this.videoTag.currentTime;
         return new Date(this.videoInfo.realStartTime.getTime() + currentTime * 1000);
     }
-
     // chzzk용 moveToPlaybackTime 메서드 구현
     moveToPlaybackTime(playbackTime, doAlert = true) {
         // chzzk에서는 URL 파라미터로 시간 변경을 지원하지 않으므로 비디오 태그를 직접 제어
@@ -117,7 +130,6 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
             return false;
         }
     }
-
     // 현재 재생 중인지 여부 반환
     isPlaying() {
         if (this.videoTag && this.videoTag.currentTime > 0 && !this.videoTag.paused && !this.videoTag.ended && this.videoTag.readyState > 2)

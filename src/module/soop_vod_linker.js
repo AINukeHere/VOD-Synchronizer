@@ -7,34 +7,33 @@ export class SoopVODLinker extends VODLinkerBase{
      */
     setupSearchAreaOnlyMode() {
         super.setupSearchAreaOnlyMode();
-        (function waitForGnbAndSearchArea() {
-            const gnb = document.querySelector('#soop-gnb');
-            const searchArea = document.querySelector('.sc-hvigdm.khASjK.topSearchArea');
-            const backBtn = document.querySelector('#topSearchArea > div > div > button');
-            let allDone = true;
-            if (gnb) {
-                Array.from(gnb.parentNode.children).forEach(sibling => {
-                    if (sibling !== gnb) sibling.style.display = 'none';
-                });
-            } else {
-                allDone = false;
-            }
-            if (searchArea) {
-                searchArea.style.display = "flow";
-                Array.from(searchArea.parentNode.children).forEach(sibling => {
-                    if (sibling !== searchArea) sibling.remove();
-                });
-            } else {
-                allDone = false;
-            }
-            if (backBtn) {
-                backBtn.style.display = "none";
-            } else {
-                allDone = false;
-            }
+        this.waitForGnbAndSearchArea();
+    }
+    
+    async waitForGnbAndSearchArea() {
+        let allDone = true;
+        const gnb = document.querySelector('#soop-gnb');
+        const searchArea = document.querySelector('.topSearchArea');
+        const backBtn = document.querySelector('#topSearchArea > div > div > button');
+        const searchButton = document.querySelector('.btn-search');
+        if (gnb && searchArea && backBtn && searchButton)
+        {
+            // await new Promise(resolve => setTimeout(resolve, 1000));
+            Array.from(gnb.parentNode.children).forEach(sibling => {
+                if (sibling !== gnb) sibling.style.display = 'none';
+            });
+            searchArea.style.display = "flow";
+            Array.from(searchArea.parentNode.children).forEach(sibling => {
+                if (sibling !== searchArea) sibling.remove();
+            });
+            backBtn.style.display = "none";
             document.body.style.background = 'white';
-            if (!allDone) setTimeout(waitForGnbAndSearchArea, 200);
-        })();
+            searchButton.click();
+        }
+        else
+            allDone = false;
+
+        if (!allDone) setTimeout(() => this.waitForGnbAndSearchArea(), 200);
     }
     getTargetsForCreateSyncButton(){
         const targets = document.querySelectorAll('#areaSuggest > ul > li > a');
@@ -62,10 +61,15 @@ export class SoopVODLinker extends VODLinkerBase{
         if (!nicknameSpan) return null;
         return nicknameSpan.innerText;
     }
+    // 검색어를 제거하고 검색결과미리보기 영역을 닫음
     closeSearchArea(){
-        const closeBtn = document.querySelector('.del_text');
-        if (closeBtn){
-            closeBtn.click();
+        const searchPreviewCloseButton = document.querySelector('.srh_back'); // SOOP 검색 결과 영역 닫기 버튼
+        if (searchPreviewCloseButton) {
+            searchPreviewCloseButton.click();
+        }
+        const delSearcButton = document.querySelector('.del_text');
+        if (delSearcButton){
+            delSearcButton.click();
         }
     }
     async getStreamerId(searchWord){

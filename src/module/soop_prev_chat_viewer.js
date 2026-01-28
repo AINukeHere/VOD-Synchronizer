@@ -19,6 +19,8 @@ export class SoopPrevChatViewer extends IVodSync {
         this.emoticonReplaceMap = new Map(); // 이모티콘 ID -> 이미지 HTML 매핑
         this.cachedChatData = []; // 캐시된 채팅 데이터 [{startTime, endTime, messages}, ...]
         this.restoreInterval = 30; // 복원 구간 단위 (초)
+        this.initialRestoreEndTime = null; // statVBox 재생성 시점의 복구 끝지점 (playbackTime, 초 단위)
+        this.sharedTooltip = null; // 재사용할 공통 툴팁 요소
         this.log('loaded');
         this.loadRestoreInterval();
         this.init();
@@ -72,6 +74,24 @@ export class SoopPrevChatViewer extends IVodSync {
     }
 
     init() {
+        // 공통 툴팁 요소 생성
+        this.sharedTooltip = document.createElement('div');
+        this.sharedTooltip.className = 'vodsync-chat-tooltip';
+        this.sharedTooltip.style.cssText = `
+            position: fixed;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s;
+            z-index: 10000;
+        `;
+        document.body.appendChild(this.sharedTooltip);
+        
         setTimeout(() => {
             this.checkInterval = setInterval(() => this.monitoringChatBoxVstartChange(), 500);
         }, 1000);
@@ -87,6 +107,7 @@ export class SoopPrevChatViewer extends IVodSync {
             this.settingsButton = null;
             this.chatMemo = null;
             this.boxVstart = null;
+            this.initialRestoreEndTime = null; // statVBox 재생성 시 초기화
         }
 
         // ~ 이후에 저장된 채팅입니다. 메시지 찾기
@@ -116,6 +137,11 @@ export class SoopPrevChatViewer extends IVodSync {
 
         const endTime = currentPlaybackTime;
         const startTime = Math.max(0, currentPlaybackTime - this.restoreInterval);
+        
+        // statVBox 재생성 시점의 복구 끝지점 저장 (처음 세팅되는 시점)
+        if (this.initialRestoreEndTime === null) {
+            this.initialRestoreEndTime = endTime;
+        }
         
         this.nextRestorePlan = { 
             startTime, 
@@ -393,6 +419,7 @@ export class SoopPrevChatViewer extends IVodSync {
             userId, 
             userNick, 
             msg, 
+            timestamp,
             nicknameColor, 
             subscriptionMonths, 
             subscriptionTier, 
@@ -460,6 +487,10 @@ export class SoopPrevChatViewer extends IVodSync {
                 badge.className = 'grade-badge-fan';
                 badge.setAttribute('tip', '팬클럽');
                 badge.innerText = 'F';
+            } else if (badgeType === 'manager') {
+                badge.className = 'grade-badge-manager';
+                badge.setAttribute('tip', '매니저');
+                badge.innerText = 'M';
             }
             badge.id = 'author';
             if (userId) badge.setAttribute('user_id', userId);
@@ -518,6 +549,55 @@ export class SoopPrevChatViewer extends IVodSync {
             this.processSignatureEmoticons(p, msg);
         } else {
             p.innerText = msg || '';
+        }
+        
+        // playbackTime 커스텀 툴팁 설정
+        if (timestamp && this.initialRestoreEndTime !== null && this.sharedTooltip) {
+            const playbackTimeSeconds = Math.floor(timestamp / 1000);
+            const secondsAgo = Math.floor(this.initialRestoreEndTime - playbackTimeSeconds);
+            
+            let tooltipText;
+            if (secondsAgo < 0) {
+                // 미래 시간인 경우 (이론적으로는 발생하지 않아야 함)
+                tooltipText = this.formatTime(playbackTimeSeconds);
+            } else if (secondsAgo === 0) {
+                tooltipText = '방금 전';
+            } else {
+                const hours = Math.floor(secondsAgo / 3600);
+                const minutes = Math.floor((secondsAgo % 3600) / 60);
+                const seconds = secondsAgo % 60;
+                
+                const parts = [];
+                if (hours > 0) {
+                    parts.push(`${hours}시간`);
+                }
+                if (minutes > 0) {
+                    parts.push(`${minutes}분`);
+                }
+                if (seconds > 0 || parts.length === 0) {
+                    parts.push(`${seconds}초`);
+                }
+                
+                tooltipText = `${parts.join(' ')} 전`;
+            }
+            
+
+            
+            // 마우스 이벤트로 공통 툴팁 표시/숨김
+            messageTextDiv.addEventListener('mouseenter', (e) => {
+                if (!this.sharedTooltip) return;
+                
+                const rect = messageTextDiv.getBoundingClientRect();
+                this.sharedTooltip.textContent = tooltipText;
+                this.sharedTooltip.style.right = `${window.innerWidth - rect.right}px`;
+                this.sharedTooltip.style.top = `${rect.top - 5}px`;
+                this.sharedTooltip.style.opacity = '1';
+            });
+            messageTextDiv.addEventListener('mouseleave', () => {
+                if (this.sharedTooltip) {
+                    this.sharedTooltip.style.opacity = '0';
+                }
+            });
         }
         
         messageTextDiv.appendChild(p);
@@ -713,6 +793,7 @@ export class SoopPrevChatViewer extends IVodSync {
     getBadgeType(pValue) {
         const pNum = parseInt(pValue || '0', 10);
         
+        if ((pNum & 0x40) !== 0) return 'manager';
         if ((pNum & 0x8000) !== 0) return 'vip';
         if ((pNum & 0x20) !== 0) return 'subscribe';
         if ((pNum & 0x100000) !== 0) return 'support';

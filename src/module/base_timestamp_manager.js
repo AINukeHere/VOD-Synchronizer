@@ -10,7 +10,6 @@ export class TimestampManagerBase extends IVodSync {
         this.isControllableState = false;
         this.lastMouseMoveTime = Date.now();
         this.isVisible = true;
-        this.mouseCheckInterval = null;
         this.isHideCompletly = false; // 툴팁 숨기기 상태
         
         // VODSync 네임스페이스에 자동 등록
@@ -20,99 +19,14 @@ export class TimestampManagerBase extends IVodSync {
         }
         window.VODSync.tsManager = this;
         
-        this.startMonitoring();
-    }
-    // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
-    // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
-    RequestGlobalTSAsync(request_vod_ts, request_real_ts = null){
-        this.request_vod_ts = request_vod_ts;
-        this.request_real_ts = request_real_ts;
-    }
-
-    RequestLocalTSAsync(request_local_ts){
-        this.request_local_ts = request_local_ts;
-    }
-
-    startMonitoring() {
-        this.observeDOMChanges();
         this.createTooltip();
-        setInterval(() => {
-            this.updateTooltip();
-        }, 200);
+        this.observeDOMChanges();
         this.setupMouseTracking();
         this.listenBroadcastSyncEvent();
-    }
-
-    listenBroadcastSyncEvent() {
-        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
-            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-                if (message.action === 'broadCastSync') {
-                    this.moveToGlobalTS(message.request_vod_ts, false);
-                    sendResponse({ success: true });
-                }
-                return true;
-            });
-        }
-        else{
-            this.channel = new BroadcastChannel('vod-synchronizer');
-            this.channel.onmessage = (event) => {
-                if (event.data.action === 'broadCastSync') {
-                    this.moveToGlobalTS(event.data.request_vod_ts, false);
-                }
-            }
-        }
-    }
-
-    setupMouseTracking() {
-        // 마우스 움직임 감지 - 시간만 업데이트
-        document.addEventListener('mousemove', () => {
-            if (this.isHideCompletly) return;
-            this.lastMouseMoveTime = Date.now();
-            this.showTooltip();
-        });
-
-        // 마우스가 페이지 밖으로 나갈 때 툴팁 숨기기
-        document.addEventListener('mouseleave', () => {
-            this.hideTooltip();
-        });
-
-        // 0.2초마다 마우스 상태 체크
-        this.mouseCheckInterval = setInterval(() => {
-            if (this.isHideCompletly) return;
-            const currentTime = Date.now();
-            const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
-            
-            // 2초 이상 마우스가 움직이지 않았고, 편집 중이 아니면 툴팁 숨기기
-            if (timeSinceLastMove >= 2000 && !this.isEditing && this.isVisible) {
-                this.hideTooltip();
-            }
+        setInterval(() => {
+            this.update();
         }, 200);
     }
-
-    showTooltip() {
-        if (this.timeStampDiv) {
-            this.timeStampDiv.style.transition = 'opacity 0.3s ease-in-out';
-            this.timeStampDiv.style.opacity = '1';
-            this.isVisible = true;
-        }
-        if (this.syncButton) {
-            this.syncButton.style.transition = 'opacity 0.3s ease-in-out';
-            this.syncButton.style.opacity = '1';
-        }
-    }
-
-    hideTooltip() {
-        if (this.timeStampDiv && !this.isEditing) {
-            this.timeStampDiv.style.transition = 'opacity 0.5s ease-in-out';
-            this.timeStampDiv.style.opacity = '0.1';
-            this.isVisible = false;
-        }
-        if (this.syncButton) {
-            this.syncButton.style.transition = 'opacity 0.5s ease-in-out';
-            this.syncButton.style.opacity = '0.1';
-        }
-    }
-
     createTooltip() {
         if (!this.timeStampDiv) {
             // 툴팁을 담는 컨테이너 생성
@@ -180,6 +94,9 @@ export class TimestampManagerBase extends IVodSync {
                 // 편집 중일 때는 투명화 방지
                 this.showTooltip();
             });
+            this.timeStampDiv.addEventListener("mouseup", (event) => {
+                event.stopPropagation(); // 치지직의 경우 다른 요소의 이 이벤트가 blur를 호출하게하므로 차단
+            });
 
             this.timeStampDiv.addEventListener("blur", () => {
                 this.timeStampDiv.contentEditable = "false";
@@ -227,6 +144,80 @@ export class TimestampManagerBase extends IVodSync {
             });
         }
     }
+    update(){
+        this.updateTooltip();
+        this.checkMouseState();
+    }
+
+    // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
+    // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
+    RequestGlobalTSAsync(request_vod_ts, request_real_ts = null){
+        this.request_vod_ts = request_vod_ts;
+        this.request_real_ts = request_real_ts;
+    }
+
+    RequestLocalTSAsync(request_local_ts){
+        this.request_local_ts = request_local_ts;
+    }
+
+    listenBroadcastSyncEvent() {
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                if (message.action === 'broadCastSync') {
+                    this.moveToGlobalTS(message.request_vod_ts, false);
+                    sendResponse({ success: true });
+                }
+                return true;
+            });
+        }
+        else{
+            this.channel = new BroadcastChannel('vod-synchronizer');
+            this.channel.onmessage = (event) => {
+                if (event.data.action === 'broadCastSync') {
+                    this.moveToGlobalTS(event.data.request_vod_ts, false);
+                }
+            }
+        }
+    }
+
+    setupMouseTracking() {
+        // 마우스 움직임 감지 - 시간만 업데이트
+        document.addEventListener('mousemove', () => {
+            if (this.isHideCompletly) return;
+            this.lastMouseMoveTime = Date.now();
+            this.showTooltip();
+        });
+
+        // 마우스가 페이지 밖으로 나갈 때 툴팁 숨기기
+        document.addEventListener('mouseleave', () => {
+            this.hideTooltip();
+        });
+    }
+
+    showTooltip() {
+        if (this.timeStampDiv) {
+            this.timeStampDiv.style.transition = 'opacity 0.3s ease-in-out';
+            this.timeStampDiv.style.opacity = '1';
+            this.isVisible = true;
+        }
+        if (this.syncButton) {
+            this.syncButton.style.transition = 'opacity 0.3s ease-in-out';
+            this.syncButton.style.opacity = '1';
+        }
+    }
+
+    hideTooltip() {
+        if (this.timeStampDiv && !this.isEditing) {
+            this.timeStampDiv.style.transition = 'opacity 0.5s ease-in-out';
+            this.timeStampDiv.style.opacity = '0';
+            this.isVisible = false;
+        }
+        if (this.syncButton) {
+            this.syncButton.style.transition = 'opacity 0.5s ease-in-out';
+            this.syncButton.style.opacity = '0';
+        }
+    }
+
 
     handleBroadcastSyncButtonClick(e) {
         const request_vod_ts = this.getCurDateTime();
@@ -247,7 +238,6 @@ export class TimestampManagerBase extends IVodSync {
             this.channel.postMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
         }
     }
-
     updateTooltip() {
         if (!this.timeStampDiv || this.isEditing) return;
         
@@ -291,6 +281,17 @@ export class TimestampManagerBase extends IVodSync {
                 }
                 this.request_local_ts = null;
             }
+        }
+    }
+
+    checkMouseState(){
+        if (this.isHideCompletly) return;
+        const currentTime = Date.now();
+        const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
+        
+        // 2초 이상 마우스가 움직이지 않았고, 편집 중이 아니면 툴팁 숨기기
+        if (timeSinceLastMove >= 2000 && !this.isEditing && this.isVisible) {
+            this.hideTooltip();
         }
     }
 

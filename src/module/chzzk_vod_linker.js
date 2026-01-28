@@ -209,10 +209,19 @@ export class ChzzkVODLinker extends VODLinkerBase{
         
         return null;
     }
+
+    // 검색어를 제거하고 검색결과미리보기 영역을 닫음
     closeSearchArea(){
-        const closeButton = document.querySelector('[class^="search_close_button__"]');
-        if (closeButton){
-            closeButton.click();
+        const searchInputButtons = document.querySelectorAll('[class^="search_form_button__"]');
+        if (searchInputButtons){
+            searchInputButtons.forEach(button => {
+                if (button.type === 'reset')
+                    button.click();
+            });
+        }
+        const searchPreviewCloseButton = document.querySelector('[class^="search_close_button__"]'); // CHZZK 검색 결과 영역 닫기 버튼
+        if (searchPreviewCloseButton){
+            searchPreviewCloseButton.click();
         }
     }
     /**

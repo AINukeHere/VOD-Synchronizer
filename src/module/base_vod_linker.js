@@ -103,6 +103,7 @@ export class VODLinkerBase extends IVodSync{
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
         button.innerText = this.BTN_TEXT_IDLE;
+        this.getSearchInputElement().blur();
         this.closeSearchArea();
     }
     isValidDate(date){
@@ -171,7 +172,7 @@ export class VODLinkerBase extends IVodSync{
         throw new Error("Not implemented");
     }
     /**
-     * @description 검색 영역을 닫음
+     * @description 색어를 제거하고 검색결과미리보기 영역을 닫음
      */
     closeSearchArea(){
         // 파생 클래스들이 오버라이드하여 구현해야함
@@ -202,7 +203,6 @@ export class VODLinkerBase extends IVodSync{
                 if (e.key === 'Enter' && e.ctrlKey && e.shiftKey) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
                     const syncButton = document.querySelector(`.${this.SYNC_BUTTON_CLASSNAME}`);
                     if (syncButton) {
                         syncButton.click();

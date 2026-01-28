@@ -13,75 +13,92 @@ export class SoopTimestampManager extends TimestampManagerBase {
 
         this.vodInfoLoaded = false; // 현재 vod의 정보를 로드했는가
         this.tagLoaded = false; // 현재 VOD 플레이어의 요소를 로드했는가 (video, playTimeTag)
-        this.updating = false; // 현재 VOD 정보와 태그를 업데이트 중인가
-        const checkerInterval = setInterval(async () => {
-            if (this.updating) return;
-            if (!this.vodInfoLoaded || !this.tagLoaded)
-                this.reloadAll();
-        }, 100);
-
-        this.simpleLoopSetting();
+        this.vodInfoUpdating = false; // 현재 VOD 정보와 태그를 업데이트 중인가
+        this.loop_playing = false;
+        this.moveTooltipToCtrlBox();
     }
 
-    simpleLoopSetting(){
+    update(){
+        super.update();
+        this.simpleLoopSettingUpdate();
+
+        if (this.vodInfoUpdating) return;
+        if (!this.vodInfoLoaded || !this.tagLoaded)
+            this.reloadAll();
+    }
+
+    moveTooltipToCtrlBox(){
+        const ctrlBox = document.querySelector('.ctrlBox');
+        const rightCtrl = document.querySelector('.right_ctrl');
+        if (ctrlBox && rightCtrl && this.tooltipContainer) { 
+            ctrlBox.insertBefore(this.tooltipContainer, rightCtrl);
+            this.tooltipContainer.style.position = '';
+            this.tooltipContainer.style.bottom = '';
+            this.tooltipContainer.style.right = '';
+        }
+        else{
+            setTimeout(() => {
+                this.moveTooltipToCtrlBox();
+            }, 200);
+        }
+    }
+
+    simpleLoopSettingUpdate(){
         const LABEL_TEXT = '반복 재생';
         const EM_TEXT_IDLE = '(added by VODSync)';
-        this.loop_playing = false;
-        setInterval(()=>{
 
-            // 반복재생 설정이 켜져있고 비디오 태그를 찾은 경우
-            if (this.tagLoaded && this.loop_playing){
-                // 현재 재생 시간이 영상 전체 재생 시간과 같은 경우 처음으로 이동
-                if (this.getCurPlaybackTime() === Math.floor(this.curVodInfo.total_file_duration / 1000)){
-                    this.moveToPlaybackTime(0);
-                    // 비디오 태그가 일시정지 상태인 경우 재생
-                    if (this.videoTag.paused){
-                        this.videoTag.play();
-                    }
+        // 반복재생 설정이 켜져있고 비디오 태그를 찾은 경우
+        if (this.tagLoaded && this.loop_playing){
+            // 현재 재생 시간이 영상 전체 재생 시간과 같은 경우 처음으로 이동
+            if (this.getCurPlaybackTime() === Math.floor(this.curVodInfo.total_file_duration / 1000)){
+                this.moveToPlaybackTime(0);
+                // 비디오 태그가 일시정지 상태인 경우 재생
+                if (this.videoTag.paused){
+                    this.videoTag.play();
                 }
             }
+        }
 
-            //반복 재생 설정 메뉴 추가 로직
-            const settingList = document.querySelector('.setting_list');
-            if (!settingList) return; // 설정 창을 열지 않음.
-            if (settingList.classList.contains('subLayer_on')) return; // 서브 레이어가 열려있으면 추가하지 않음.
-            const ul = settingList.childNodes[0];
-            const _exists = ul.querySelector('#VODSync');
-            if (_exists) return; // 이미 추가되어 있음.
-            
-            const li = document.createElement('li');
-            li.className = 'switchBtn_wrap loop_playing';
-            li.id = 'VODSync';
-            const label = document.createElement('label');
-            label.for = 'loop_playing';
-            label.innerText = LABEL_TEXT;
-            const em = document.createElement('em');
-            em.innerText = EM_TEXT_IDLE;
-            em.style.color = '#c7cad1';
-            // em.style.fontSize = '12px';
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.id = 'loop_playing';
-            input.checked = this.loop_playing;
-            input.addEventListener('change',()=> {
-                const a = document.querySelector('#VODSync input');
-                this.loop_playing = a.checked;
-                if (this.loop_playing){
-                    const autoPlayInput = document.querySelector('#autoplayChk');
-                    if (autoPlayInput && autoPlayInput.checked){
-                        autoPlayInput.click();
-                    }
+        //반복 재생 설정 메뉴 추가 로직
+        const settingList = document.querySelector('.setting_list');
+        if (!settingList) return; // 설정 창을 열지 않음.
+        if (settingList.classList.contains('subLayer_on')) return; // 서브 레이어가 열려있으면 추가하지 않음.
+        const ul = settingList.childNodes[0];
+        const _exists = ul.querySelector('#VODSync');
+        if (_exists) return; // 이미 추가되어 있음.
+        
+        const li = document.createElement('li');
+        li.className = 'switchBtn_wrap loop_playing';
+        li.id = 'VODSync';
+        const label = document.createElement('label');
+        label.for = 'loop_playing';
+        label.innerText = LABEL_TEXT;
+        const em = document.createElement('em');
+        em.innerText = EM_TEXT_IDLE;
+        em.style.color = '#c7cad1';
+        // em.style.fontSize = '12px';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = 'loop_playing';
+        input.checked = this.loop_playing;
+        input.addEventListener('change',()=> {
+            const a = document.querySelector('#VODSync input');
+            this.loop_playing = a.checked;
+            if (this.loop_playing){
+                const autoPlayInput = document.querySelector('#autoplayChk');
+                if (autoPlayInput && autoPlayInput.checked){
+                    autoPlayInput.click();
                 }
-                this.debug('loop_playing: ', this.loop_playing);
-            });
-            const span = document.createElement('span');
-            label.appendChild(em);
-            label.appendChild(input);
-            label.appendChild(span);
-            li.appendChild(label);
-            ul.appendChild(li);
-            
-        },100);
+            }
+            this.debug('loop_playing: ', this.loop_playing);
+        });
+        const span = document.createElement('span');
+        label.appendChild(em);
+        label.appendChild(input);
+        label.appendChild(span);
+        li.appendChild(label);
+        ul.appendChild(li);
+        
     }
 
     async loadVodInfo(){
@@ -179,8 +196,10 @@ export class SoopTimestampManager extends TimestampManagerBase {
         this.log('영상 정보 로드 완료');
     }
 
+    /* override methods */
+    
     async reloadAll(){
-        if (this.updating) return;
+        if (this.vodInfoUpdating) return;
         const newPlayTimeTag = document.querySelector('span.time-current');
         let newVideoTag = document.querySelector('#video');
         if (newVideoTag === null)
@@ -188,7 +207,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         
         if (!newPlayTimeTag || !newVideoTag) return;
         if (newPlayTimeTag !== this.playTimeTag || newVideoTag !== this.videoTag) {
-            this.updating = true;
+            this.vodInfoUpdating = true;
             this.vodInfoLoaded = false;
             this.tagLoaded = false;
             this.log('VOD 변경 감지됨! 요소 업데이트 중...');
@@ -200,7 +219,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                 if (this.videoTag === null)
                     this.videoTag = document.querySelector('#video_p');
                 // this.log('videoTag 갱신됨', this.videoTag);
-                this.updating = false;
+                this.vodInfoUpdating = false;
                 if (this.playTimeTag !== null && this.videoTag !== null)
                     this.tagLoaded = true;
                 else
@@ -208,7 +227,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
             });
         }
     }
-
     observeDOMChanges() {
         const targetNode = document.body;
         const config = { childList: true, subtree: true };
@@ -219,14 +237,12 @@ export class SoopTimestampManager extends TimestampManagerBase {
 
         this.observer.observe(targetNode, config);
     }
-
     getStreamPeriod(){
         if (!this.curVodInfo || this.curVodInfo.type === 'NORMAL') return null;
         const startDate = this.curVodInfo.originVodInfo === null ? this.curVodInfo.startDate : this.curVodInfo.originVodInfo.startDate;
         const endDate = this.curVodInfo.originVodInfo === null ? this.curVodInfo.endDate : this.curVodInfo.originVodInfo.endDate;
         return [startDate, endDate];
     }
-
     playbackTimeToGlobalTS(totalPlaybackSec){
         if (!this.vodInfoLoaded) return null;
         const reviewStartDate = this.curVodInfo.originVodInfo === null ? this.curVodInfo.startDate : this.curVodInfo.originVodInfo.startDate;
@@ -289,7 +305,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
         return null;
     }
-
     /**
      * @override
      * @description 현재 영상이 스트리밍된 당시 시간을 반환
@@ -311,7 +326,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const globalTS = this.playbackTimeToGlobalTS(totalPlaybackSec);
         return globalTS;
     }
-
     /**
      * @description 현재 재생 시간을 초 단위로 반환
      * @returns {number} 현재 재생 시간(초)
@@ -334,7 +348,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
         return totalPlaybackSec;
     }
-
     /**
      * @override
      * @description 영상 시간을 설정
@@ -355,7 +368,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
         return this.moveToPlaybackTime(playbackTime, doAlert);
     }
-
     moveToPlaybackTime(playbackTime, doAlert = true) {
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
@@ -382,7 +394,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }, 100);
         return true;
     }
-
     // 현재 재생 중인지 여부 반환
     isPlaying() {
         if (this.videoTag) {

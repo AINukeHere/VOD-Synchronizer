@@ -435,7 +435,6 @@
         this.isControllableState = false;
         this.lastMouseMoveTime = Date.now();
         this.isVisible = true;
-        this.mouseCheckInterval = null;
         this.isHideCompletly = false; // 툴팁 숨기기 상태
         
         // VODSync 네임스페이스에 자동 등록
@@ -445,99 +444,14 @@
         }
         window.VODSync.tsManager = this;
         
-        this.startMonitoring();
-    }
-    // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
-    // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
-    RequestGlobalTSAsync(request_vod_ts, request_real_ts = null){
-        this.request_vod_ts = request_vod_ts;
-        this.request_real_ts = request_real_ts;
-    }
-
-    RequestLocalTSAsync(request_local_ts){
-        this.request_local_ts = request_local_ts;
-    }
-
-    startMonitoring() {
-        this.observeDOMChanges();
         this.createTooltip();
-        setInterval(() => {
-            this.updateTooltip();
-        }, 200);
+        this.observeDOMChanges();
         this.setupMouseTracking();
         this.listenBroadcastSyncEvent();
-    }
-
-    listenBroadcastSyncEvent() {
-        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
-            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-                if (message.action === 'broadCastSync') {
-                    this.moveToGlobalTS(message.request_vod_ts, false);
-                    sendResponse({ success: true });
-                }
-                return true;
-            });
-        }
-        else{
-            this.channel = new BroadcastChannel('vod-synchronizer');
-            this.channel.onmessage = (event) => {
-                if (event.data.action === 'broadCastSync') {
-                    this.moveToGlobalTS(event.data.request_vod_ts, false);
-                }
-            }
-        }
-    }
-
-    setupMouseTracking() {
-        // 마우스 움직임 감지 - 시간만 업데이트
-        document.addEventListener('mousemove', () => {
-            if (this.isHideCompletly) return;
-            this.lastMouseMoveTime = Date.now();
-            this.showTooltip();
-        });
-
-        // 마우스가 페이지 밖으로 나갈 때 툴팁 숨기기
-        document.addEventListener('mouseleave', () => {
-            this.hideTooltip();
-        });
-
-        // 0.2초마다 마우스 상태 체크
-        this.mouseCheckInterval = setInterval(() => {
-            if (this.isHideCompletly) return;
-            const currentTime = Date.now();
-            const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
-            
-            // 2초 이상 마우스가 움직이지 않았고, 편집 중이 아니면 툴팁 숨기기
-            if (timeSinceLastMove >= 2000 && !this.isEditing && this.isVisible) {
-                this.hideTooltip();
-            }
+        setInterval(() => {
+            this.update();
         }, 200);
     }
-
-    showTooltip() {
-        if (this.timeStampDiv) {
-            this.timeStampDiv.style.transition = 'opacity 0.3s ease-in-out';
-            this.timeStampDiv.style.opacity = '1';
-            this.isVisible = true;
-        }
-        if (this.syncButton) {
-            this.syncButton.style.transition = 'opacity 0.3s ease-in-out';
-            this.syncButton.style.opacity = '1';
-        }
-    }
-
-    hideTooltip() {
-        if (this.timeStampDiv && !this.isEditing) {
-            this.timeStampDiv.style.transition = 'opacity 0.5s ease-in-out';
-            this.timeStampDiv.style.opacity = '0.1';
-            this.isVisible = false;
-        }
-        if (this.syncButton) {
-            this.syncButton.style.transition = 'opacity 0.5s ease-in-out';
-            this.syncButton.style.opacity = '0.1';
-        }
-    }
-
     createTooltip() {
         if (!this.timeStampDiv) {
             // 툴팁을 담는 컨테이너 생성
@@ -605,6 +519,9 @@
                 // 편집 중일 때는 투명화 방지
                 this.showTooltip();
             });
+            this.timeStampDiv.addEventListener("mouseup", (event) => {
+                event.stopPropagation(); // 치지직의 경우 다른 요소의 이 이벤트가 blur를 호출하게하므로 차단
+            });
 
             this.timeStampDiv.addEventListener("blur", () => {
                 this.timeStampDiv.contentEditable = "false";
@@ -652,6 +569,79 @@
             });
         }
     }
+    update(){
+        this.updateTooltip();
+        this.checkMouseState();
+    }
+
+    // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
+    // 즉, 페이지가 로딩되는 동안의 시차를 적용할지 안할지 결정합니다.
+    RequestGlobalTSAsync(request_vod_ts, request_real_ts = null){
+        this.request_vod_ts = request_vod_ts;
+        this.request_real_ts = request_real_ts;
+    }
+
+    RequestLocalTSAsync(request_local_ts){
+        this.request_local_ts = request_local_ts;
+    }
+
+    listenBroadcastSyncEvent() {
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true){
+            chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+                if (message.action === 'broadCastSync') {
+                    this.moveToGlobalTS(message.request_vod_ts, false);
+                    sendResponse({ success: true });
+                }
+                return true;
+            });
+        }
+        else{
+            this.channel = new BroadcastChannel('vod-synchronizer');
+            this.channel.onmessage = (event) => {
+                if (event.data.action === 'broadCastSync') {
+                    this.moveToGlobalTS(event.data.request_vod_ts, false);
+                }
+            }
+        }
+    }
+
+    setupMouseTracking() {
+        // 마우스 움직임 감지 - 시간만 업데이트
+        document.addEventListener('mousemove', () => {
+            if (this.isHideCompletly) return;
+            this.lastMouseMoveTime = Date.now();
+            this.showTooltip();
+        });
+
+        // 마우스가 페이지 밖으로 나갈 때 툴팁 숨기기
+        document.addEventListener('mouseleave', () => {
+            this.hideTooltip();
+        });
+    }
+
+    showTooltip() {
+        if (this.timeStampDiv) {
+            this.timeStampDiv.style.transition = 'opacity 0.3s ease-in-out';
+            this.timeStampDiv.style.opacity = '1';
+            this.isVisible = true;
+        }
+        if (this.syncButton) {
+            this.syncButton.style.transition = 'opacity 0.3s ease-in-out';
+            this.syncButton.style.opacity = '1';
+        }
+    }
+
+    hideTooltip() {
+        if (this.timeStampDiv && !this.isEditing) {
+            this.timeStampDiv.style.transition = 'opacity 0.5s ease-in-out';
+            this.timeStampDiv.style.opacity = '0';
+            this.isVisible = false;
+        }
+        if (this.syncButton) {
+            this.syncButton.style.transition = 'opacity 0.5s ease-in-out';
+            this.syncButton.style.opacity = '0';
+        }
+    }
 
     handleBroadcastSyncButtonClick(e) {
         const request_vod_ts = this.getCurDateTime();
@@ -672,7 +662,6 @@
             this.channel.postMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
         }
     }
-
     updateTooltip() {
         if (!this.timeStampDiv || this.isEditing) return;
         
@@ -716,6 +705,17 @@
                 }
                 this.request_local_ts = null;
             }
+        }
+    }
+
+    checkMouseState(){
+        if (this.isHideCompletly) return;
+        const currentTime = Date.now();
+        const timeSinceLastMove = currentTime - this.lastMouseMoveTime;
+        
+        // 2초 이상 마우스가 움직이지 않았고, 편집 중이 아니면 툴팁 숨기기
+        if (timeSinceLastMove >= 2000 && !this.isEditing && this.isVisible) {
+            this.hideTooltip();
         }
     }
 
@@ -838,75 +838,92 @@
 
         this.vodInfoLoaded = false; // 현재 vod의 정보를 로드했는가
         this.tagLoaded = false; // 현재 VOD 플레이어의 요소를 로드했는가 (video, playTimeTag)
-        this.updating = false; // 현재 VOD 정보와 태그를 업데이트 중인가
-        const checkerInterval = setInterval(async () => {
-            if (this.updating) return;
-            if (!this.vodInfoLoaded || !this.tagLoaded)
-                this.reloadAll();
-        }, 100);
-
-        this.simpleLoopSetting();
+        this.vodInfoUpdating = false; // 현재 VOD 정보와 태그를 업데이트 중인가
+        this.loop_playing = false;
+        this.moveTooltipToCtrlBox();
     }
 
-    simpleLoopSetting(){
+    update(){
+        super.update();
+        this.simpleLoopSettingUpdate();
+
+        if (this.vodInfoUpdating) return;
+        if (!this.vodInfoLoaded || !this.tagLoaded)
+            this.reloadAll();
+    }
+
+    moveTooltipToCtrlBox(){
+        const ctrlBox = document.querySelector('.ctrlBox');
+        const rightCtrl = document.querySelector('.right_ctrl');
+        if (ctrlBox && rightCtrl && this.tooltipContainer) { 
+            ctrlBox.insertBefore(this.tooltipContainer, rightCtrl);
+            this.tooltipContainer.style.position = '';
+            this.tooltipContainer.style.bottom = '';
+            this.tooltipContainer.style.right = '';
+        }
+        else{
+            setTimeout(() => {
+                this.moveTooltipToCtrlBox();
+            }, 200);
+        }
+    }
+
+    simpleLoopSettingUpdate(){
         const LABEL_TEXT = '반복 재생';
         const EM_TEXT_IDLE = '(added by VODSync)';
-        this.loop_playing = false;
-        setInterval(()=>{
 
-            // 반복재생 설정이 켜져있고 비디오 태그를 찾은 경우
-            if (this.tagLoaded && this.loop_playing){
-                // 현재 재생 시간이 영상 전체 재생 시간과 같은 경우 처음으로 이동
-                if (this.getCurPlaybackTime() === Math.floor(this.curVodInfo.total_file_duration / 1000)){
-                    this.moveToPlaybackTime(0);
-                    // 비디오 태그가 일시정지 상태인 경우 재생
-                    if (this.videoTag.paused){
-                        this.videoTag.play();
-                    }
+        // 반복재생 설정이 켜져있고 비디오 태그를 찾은 경우
+        if (this.tagLoaded && this.loop_playing){
+            // 현재 재생 시간이 영상 전체 재생 시간과 같은 경우 처음으로 이동
+            if (this.getCurPlaybackTime() === Math.floor(this.curVodInfo.total_file_duration / 1000)){
+                this.moveToPlaybackTime(0);
+                // 비디오 태그가 일시정지 상태인 경우 재생
+                if (this.videoTag.paused){
+                    this.videoTag.play();
                 }
             }
+        }
 
-            //반복 재생 설정 메뉴 추가 로직
-            const settingList = document.querySelector('.setting_list');
-            if (!settingList) return; // 설정 창을 열지 않음.
-            if (settingList.classList.contains('subLayer_on')) return; // 서브 레이어가 열려있으면 추가하지 않음.
-            const ul = settingList.childNodes[0];
-            const _exists = ul.querySelector('#VODSync');
-            if (_exists) return; // 이미 추가되어 있음.
-            
-            const li = document.createElement('li');
-            li.className = 'switchBtn_wrap loop_playing';
-            li.id = 'VODSync';
-            const label = document.createElement('label');
-            label.for = 'loop_playing';
-            label.innerText = LABEL_TEXT;
-            const em = document.createElement('em');
-            em.innerText = EM_TEXT_IDLE;
-            em.style.color = '#c7cad1';
-            // em.style.fontSize = '12px';
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.id = 'loop_playing';
-            input.checked = this.loop_playing;
-            input.addEventListener('change',()=> {
-                const a = document.querySelector('#VODSync input');
-                this.loop_playing = a.checked;
-                if (this.loop_playing){
-                    const autoPlayInput = document.querySelector('#autoplayChk');
-                    if (autoPlayInput && autoPlayInput.checked){
-                        autoPlayInput.click();
-                    }
+        //반복 재생 설정 메뉴 추가 로직
+        const settingList = document.querySelector('.setting_list');
+        if (!settingList) return; // 설정 창을 열지 않음.
+        if (settingList.classList.contains('subLayer_on')) return; // 서브 레이어가 열려있으면 추가하지 않음.
+        const ul = settingList.childNodes[0];
+        const _exists = ul.querySelector('#VODSync');
+        if (_exists) return; // 이미 추가되어 있음.
+        
+        const li = document.createElement('li');
+        li.className = 'switchBtn_wrap loop_playing';
+        li.id = 'VODSync';
+        const label = document.createElement('label');
+        label.for = 'loop_playing';
+        label.innerText = LABEL_TEXT;
+        const em = document.createElement('em');
+        em.innerText = EM_TEXT_IDLE;
+        em.style.color = '#c7cad1';
+        // em.style.fontSize = '12px';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = 'loop_playing';
+        input.checked = this.loop_playing;
+        input.addEventListener('change',()=> {
+            const a = document.querySelector('#VODSync input');
+            this.loop_playing = a.checked;
+            if (this.loop_playing){
+                const autoPlayInput = document.querySelector('#autoplayChk');
+                if (autoPlayInput && autoPlayInput.checked){
+                    autoPlayInput.click();
                 }
-                this.debug('loop_playing: ', this.loop_playing);
-            });
-            const span = document.createElement('span');
-            label.appendChild(em);
-            label.appendChild(input);
-            label.appendChild(span);
-            li.appendChild(label);
-            ul.appendChild(li);
-            
-        },100);
+            }
+            this.debug('loop_playing: ', this.loop_playing);
+        });
+        const span = document.createElement('span');
+        label.appendChild(em);
+        label.appendChild(input);
+        label.appendChild(span);
+        li.appendChild(label);
+        ul.appendChild(li);
+        
     }
 
     async loadVodInfo(){
@@ -1004,8 +1021,10 @@
         this.log('영상 정보 로드 완료');
     }
 
+    /* override methods */
+    
     async reloadAll(){
-        if (this.updating) return;
+        if (this.vodInfoUpdating) return;
         const newPlayTimeTag = document.querySelector('span.time-current');
         let newVideoTag = document.querySelector('#video');
         if (newVideoTag === null)
@@ -1013,7 +1032,7 @@
         
         if (!newPlayTimeTag || !newVideoTag) return;
         if (newPlayTimeTag !== this.playTimeTag || newVideoTag !== this.videoTag) {
-            this.updating = true;
+            this.vodInfoUpdating = true;
             this.vodInfoLoaded = false;
             this.tagLoaded = false;
             this.log('VOD 변경 감지됨! 요소 업데이트 중...');
@@ -1025,7 +1044,7 @@
                 if (this.videoTag === null)
                     this.videoTag = document.querySelector('#video_p');
                 // this.log('videoTag 갱신됨', this.videoTag);
-                this.updating = false;
+                this.vodInfoUpdating = false;
                 if (this.playTimeTag !== null && this.videoTag !== null)
                     this.tagLoaded = true;
                 else
@@ -1033,7 +1052,6 @@
             });
         }
     }
-
     observeDOMChanges() {
         const targetNode = document.body;
         const config = { childList: true, subtree: true };
@@ -1044,14 +1062,12 @@
 
         this.observer.observe(targetNode, config);
     }
-
     getStreamPeriod(){
         if (!this.curVodInfo || this.curVodInfo.type === 'NORMAL') return null;
         const startDate = this.curVodInfo.originVodInfo === null ? this.curVodInfo.startDate : this.curVodInfo.originVodInfo.startDate;
         const endDate = this.curVodInfo.originVodInfo === null ? this.curVodInfo.endDate : this.curVodInfo.originVodInfo.endDate;
         return [startDate, endDate];
     }
-
     playbackTimeToGlobalTS(totalPlaybackSec){
         if (!this.vodInfoLoaded) return null;
         const reviewStartDate = this.curVodInfo.originVodInfo === null ? this.curVodInfo.startDate : this.curVodInfo.originVodInfo.startDate;
@@ -1114,7 +1130,6 @@
         }
         return null;
     }
-
     /**
      * @override
      * @description 현재 영상이 스트리밍된 당시 시간을 반환
@@ -1136,7 +1151,6 @@
         const globalTS = this.playbackTimeToGlobalTS(totalPlaybackSec);
         return globalTS;
     }
-
     /**
      * @description 현재 재생 시간을 초 단위로 반환
      * @returns {number} 현재 재생 시간(초)
@@ -1159,7 +1173,6 @@
         }
         return totalPlaybackSec;
     }
-
     /**
      * @override
      * @description 영상 시간을 설정
@@ -1180,7 +1193,6 @@
         }
         return this.moveToPlaybackTime(playbackTime, doAlert);
     }
-
     moveToPlaybackTime(playbackTime, doAlert = true) {
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
@@ -1207,7 +1219,6 @@
         }, 100);
         return true;
     }
-
     // 현재 재생 중인지 여부 반환
     isPlaying() {
         if (this.videoTag) {
@@ -1319,6 +1330,7 @@
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
         button.innerText = this.BTN_TEXT_IDLE;
+        this.getSearchInputElement().blur();
         this.closeSearchArea();
     }
     isValidDate(date){
@@ -1387,7 +1399,7 @@
         throw new Error("Not implemented");
     }
     /**
-     * @description 검색 영역을 닫음
+     * @description 색어를 제거하고 검색결과미리보기 영역을 닫음
      */
     closeSearchArea(){
         // 파생 클래스들이 오버라이드하여 구현해야함
@@ -1418,7 +1430,6 @@
                 if (e.key === 'Enter' && e.ctrlKey && e.shiftKey) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
                     const syncButton = document.querySelector(`.${this.SYNC_BUTTON_CLASSNAME}`);
                     if (syncButton) {
                         syncButton.click();
@@ -1438,34 +1449,33 @@
      */
     setupSearchAreaOnlyMode() {
         super.setupSearchAreaOnlyMode();
-        (function waitForGnbAndSearchArea() {
-            const gnb = document.querySelector('#soop-gnb');
-            const searchArea = document.querySelector('.sc-hvigdm.khASjK.topSearchArea');
-            const backBtn = document.querySelector('#topSearchArea > div > div > button');
-            let allDone = true;
-            if (gnb) {
-                Array.from(gnb.parentNode.children).forEach(sibling => {
-                    if (sibling !== gnb) sibling.style.display = 'none';
-                });
-            } else {
-                allDone = false;
-            }
-            if (searchArea) {
-                searchArea.style.display = "flow";
-                Array.from(searchArea.parentNode.children).forEach(sibling => {
-                    if (sibling !== searchArea) sibling.remove();
-                });
-            } else {
-                allDone = false;
-            }
-            if (backBtn) {
-                backBtn.style.display = "none";
-            } else {
-                allDone = false;
-            }
+        this.waitForGnbAndSearchArea();
+    }
+    
+    async waitForGnbAndSearchArea() {
+        let allDone = true;
+        const gnb = document.querySelector('#soop-gnb');
+        const searchArea = document.querySelector('.topSearchArea');
+        const backBtn = document.querySelector('#topSearchArea > div > div > button');
+        const searchButton = document.querySelector('.btn-search');
+        if (gnb && searchArea && backBtn && searchButton)
+        {
+            // await new Promise(resolve => setTimeout(resolve, 1000));
+            Array.from(gnb.parentNode.children).forEach(sibling => {
+                if (sibling !== gnb) sibling.style.display = 'none';
+            });
+            searchArea.style.display = "flow";
+            Array.from(searchArea.parentNode.children).forEach(sibling => {
+                if (sibling !== searchArea) sibling.remove();
+            });
+            backBtn.style.display = "none";
             document.body.style.background = 'white';
-            if (!allDone) setTimeout(waitForGnbAndSearchArea, 200);
-        })();
+            searchButton.click();
+        }
+        else
+            allDone = false;
+
+        if (!allDone) setTimeout(() => this.waitForGnbAndSearchArea(), 200);
     }
     getTargetsForCreateSyncButton(){
         const targets = document.querySelectorAll('#areaSuggest > ul > li > a');
@@ -1493,10 +1503,15 @@
         if (!nicknameSpan) return null;
         return nicknameSpan.innerText;
     }
+    // 검색어를 제거하고 검색결과미리보기 영역을 닫음
     closeSearchArea(){
-        const closeBtn = document.querySelector('.del_text');
-        if (closeBtn){
-            closeBtn.click();
+        const searchPreviewCloseButton = document.querySelector('.srh_back'); // SOOP 검색 결과 영역 닫기 버튼
+        if (searchPreviewCloseButton) {
+            searchPreviewCloseButton.click();
+        }
+        const delSearcButton = document.querySelector('.del_text');
+        if (delSearcButton){
+            delSearcButton.click();
         }
     }
     async getStreamerId(searchWord){
@@ -1568,6 +1583,8 @@
         this.emoticonReplaceMap = new Map(); // 이모티콘 ID -> 이미지 HTML 매핑
         this.cachedChatData = []; // 캐시된 채팅 데이터 [{startTime, endTime, messages}, ...]
         this.restoreInterval = 30; // 복원 구간 단위 (초)
+        this.initialRestoreEndTime = null; // statVBox 재생성 시점의 복구 끝지점 (playbackTime, 초 단위)
+        this.sharedTooltip = null; // 재사용할 공통 툴팁 요소
         this.log('loaded');
         this.loadRestoreInterval();
         this.init();
@@ -1621,6 +1638,24 @@
     }
 
     init() {
+        // 공통 툴팁 요소 생성
+        this.sharedTooltip = document.createElement('div');
+        this.sharedTooltip.className = 'vodsync-chat-tooltip';
+        this.sharedTooltip.style.cssText = `
+            position: fixed;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s;
+            z-index: 10000;
+        `;
+        document.body.appendChild(this.sharedTooltip);
+        
         setTimeout(() => {
             this.checkInterval = setInterval(() => this.monitoringChatBoxVstartChange(), 500);
         }, 1000);
@@ -1636,6 +1671,7 @@
             this.settingsButton = null;
             this.chatMemo = null;
             this.boxVstart = null;
+            this.initialRestoreEndTime = null; // statVBox 재생성 시 초기화
         }
 
         // ~ 이후에 저장된 채팅입니다. 메시지 찾기
@@ -1665,6 +1701,11 @@
 
         const endTime = currentPlaybackTime;
         const startTime = Math.max(0, currentPlaybackTime - this.restoreInterval);
+        
+        // statVBox 재생성 시점의 복구 끝지점 저장 (처음 세팅되는 시점)
+        if (this.initialRestoreEndTime === null) {
+            this.initialRestoreEndTime = endTime;
+        }
         
         this.nextRestorePlan = { 
             startTime, 
@@ -1942,6 +1983,7 @@
             userId, 
             userNick, 
             msg, 
+            timestamp,
             nicknameColor, 
             subscriptionMonths, 
             subscriptionTier, 
@@ -2009,6 +2051,10 @@
                 badge.className = 'grade-badge-fan';
                 badge.setAttribute('tip', '팬클럽');
                 badge.innerText = 'F';
+            } else if (badgeType === 'manager') {
+                badge.className = 'grade-badge-manager';
+                badge.setAttribute('tip', '매니저');
+                badge.innerText = 'M';
             }
             badge.id = 'author';
             if (userId) badge.setAttribute('user_id', userId);
@@ -2067,6 +2113,53 @@
             this.processSignatureEmoticons(p, msg);
         } else {
             p.innerText = msg || '';
+        }
+        
+        // playbackTime 커스텀 툴팁 설정
+        if (timestamp && this.initialRestoreEndTime !== null && this.sharedTooltip) {
+            const playbackTimeSeconds = Math.floor(timestamp / 1000);
+            const secondsAgo = Math.floor(this.initialRestoreEndTime - playbackTimeSeconds);
+            
+            let tooltipText;
+            if (secondsAgo < 0) {
+                // 미래 시간인 경우 (이론적으로는 발생하지 않아야 함)
+                tooltipText = this.formatTime(playbackTimeSeconds);
+            } else if (secondsAgo === 0) {
+                tooltipText = '방금 전';
+            } else {
+                const hours = Math.floor(secondsAgo / 3600);
+                const minutes = Math.floor((secondsAgo % 3600) / 60);
+                const seconds = secondsAgo % 60;
+                
+                const parts = [];
+                if (hours > 0) {
+                    parts.push(`${hours}시간`);
+                }
+                if (minutes > 0) {
+                    parts.push(`${minutes}분`);
+                }
+                if (seconds > 0 || parts.length === 0) {
+                    parts.push(`${seconds}초`);
+                }
+                
+                tooltipText = `${parts.join(' ')} 전`;
+            }
+
+            // 마우스 이벤트로 공통 툴팁 표시/숨김
+            messageTextDiv.addEventListener('mouseenter', (e) => {
+                if (!this.sharedTooltip) return;
+                
+                const rect = messageTextDiv.getBoundingClientRect();
+                this.sharedTooltip.textContent = tooltipText;
+                this.sharedTooltip.style.right = `${window.innerWidth - rect.right}px`;
+                this.sharedTooltip.style.top = `${rect.top - 5}px`;
+                this.sharedTooltip.style.opacity = '1';
+            });
+            messageTextDiv.addEventListener('mouseleave', () => {
+                if (this.sharedTooltip) {
+                    this.sharedTooltip.style.opacity = '0';
+                }
+            });
         }
         
         messageTextDiv.appendChild(p);
@@ -2262,6 +2355,7 @@
     getBadgeType(pValue) {
         const pNum = parseInt(pValue || '0', 10);
         
+        if ((pNum & 0x40) !== 0) return 'manager';
         if ((pNum & 0x8000) !== 0) return 'vip';
         if ((pNum & 0x20) !== 0) return 'subscribe';
         if ((pNum & 0x100000) !== 0) return 'support';
