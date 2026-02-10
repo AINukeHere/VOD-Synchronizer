@@ -311,7 +311,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const totalPlaybackSec = this.getCurPlaybackTime();
         if (totalPlaybackSec === null) return null;
 
-        if (this.vodInfo.type === 'NORMAL') return '업로드 VOD는 지원하지 않습니다.';
+        if (this.vodInfo.type === 'NORMAL' || this.vodInfo.type === "EDITOR") return '업로드 VOD는 지원하지 않습니다.';
         if (this.vodInfo.startDate === null && 
             this.vodInfo.endDate === null && 
             this.vodInfo.originVodInfo === null) {

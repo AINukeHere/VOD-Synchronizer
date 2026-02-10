@@ -56,9 +56,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 
 - 타임스탬프와 전역 동기화 버튼의 위치가 우 하단 고정에서 vod 플레이어 재생 바 중간으로 변경되었으며 입력이 없을 때 완전히 투명해집니다.
 
-SOOP | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_soop.png)
-:-------------------------:|:-------------------------:
-CHZZK | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_chzzk.png)
+![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_soop.png)
 
 - 이제 동기화 성공 시 검색창을 깔끔하게 정리합니다.
 
