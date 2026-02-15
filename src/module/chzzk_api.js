@@ -1,16 +1,37 @@
 import { IVodSync } from './interface4log.js';
 
+/** 요청 캐시 TTL (밀리초). 동일 요청은 이 시간 동안 캐시된 결과 반환 */
+const REQUEST_CACHE_TTL_MS = 60 * 1000;
+
 export class ChzzkAPI extends IVodSync {
     constructor() {
         super();
+        /** @type {Map<string, { data: any, expiresAt: number }>} */
+        this._requestCache = new Map();
         window.VODSync = window.VODSync || {};
         if (window.VODSync.chzzkAPI) {
             this.warn('[VODSync] ChzzkAPI가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
         }
         this.log('loaded');
-
-        this.vodDetailCache = new Map();
         window.VODSync.chzzkAPI = this;
+    }
+
+    /**
+     * @param {string} key 캐시 키
+     * @returns {any|null} 캐시된 데이터 또는 null
+     */
+    _getCached(key) {
+        const entry = this._requestCache.get(key);
+        if (!entry || Date.now() > entry.expiresAt) return null;
+        return entry.data;
+    }
+
+    /**
+     * @param {string} key 캐시 키
+     * @param {any} data 저장할 데이터
+     */
+    _setCache(key, data) {
+        this._requestCache.set(key, { data, expiresAt: Date.now() + REQUEST_CACHE_TTL_MS });
     }
 
     /**
@@ -19,6 +40,10 @@ export class ChzzkAPI extends IVodSync {
      * @returns {Object} VOD info or null
      */
     async GetChzzkVodInfo(videoId) {
+        const cacheKey = `GetChzzkVodInfo:${videoId}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
         try {
             const response = await fetch(`https://api.chzzk.naver.com/service/v2/videos/${videoId}`);
             
@@ -28,6 +53,7 @@ export class ChzzkAPI extends IVodSync {
             }
             
             const data = await response.json();
+            this._setCache(cacheKey, data);
             return data;
         } catch (error) {
             this.log('GetChzzkVodInfo error:', error);
@@ -53,11 +79,16 @@ export class ChzzkAPI extends IVodSync {
             url.searchParams.set('publishDateAt', '');
             url.searchParams.set('videoType', 'REPLAY');
             
+            const cacheKey = `GetChzzkVOD_List:${url.toString()}`;
+            const cached = this._getCached(cacheKey);
+            if (cached !== null) return cached;
+
             this.log(`GetChzzkVOD_List: ${url.toString()}`);
             
             const response = await fetch(url.toString());
             
             const data = await response.json();
+            this._setCache(cacheKey, data);
             return data;            
         } catch (error) {
             this.log('GetChzzkVOD_List error:', error);
@@ -79,6 +110,10 @@ export class ChzzkAPI extends IVodSync {
             url.searchParams.set('offset', '0');
             url.searchParams.set('limit', limit.toString());
             
+            const cacheKey = `SearchChannels:${url.toString()}`;
+            const cached = this._getCached(cacheKey);
+            if (cached !== null) return cached;
+
             this.log(`SearchChannels: ${url.toString()}`);
             
             const response = await fetch(url.toString());
@@ -89,6 +124,7 @@ export class ChzzkAPI extends IVodSync {
             }
             
             const data = await response.json();
+            this._setCache(cacheKey, data);
             return data;
         } catch (error) {
             this.log('SearchChannels error:', error);
@@ -98,28 +134,13 @@ export class ChzzkAPI extends IVodSync {
 
 
     /**
-     * @description VOD 상세 정보를 캐시와 함께 가져오기
+     * @description VOD 상세 정보를 캐시와 함께 가져오기 (GetChzzkVodInfo TTL 캐시 사용)
      * @param {string|number} videoNo 
      * @returns {Object|null}
      */
     async getVodDetailWithCache(videoNo) {
-        // 캐시에서 먼저 확인
-        if (this.vodDetailCache.has(videoNo)) {
-            this.log(`VOD ${videoNo}: 캐시에서 상세 정보 반환`);
-            return this.vodDetailCache.get(videoNo);
-        }
-        
-        // 캐시에 없으면 API 호출
-        this.log(`VOD ${videoNo}: API 호출하여 상세 정보 조회`);
-        const vodDetail = await window.VODSync.chzzkAPI.GetChzzkVodInfo(videoNo);
-        
-        if (vodDetail && vodDetail.content) {
-            // 캐시에 저장
-            this.vodDetailCache.set(videoNo, vodDetail.content);
-            return vodDetail.content;
-        }
-        
-        return null;
+        const vodDetail = await this.GetChzzkVodInfo(videoNo);
+        return vodDetail?.content ?? null;
     }
 
     /**

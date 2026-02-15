@@ -1,7 +1,13 @@
 import { IVodSync } from './interface4log.js';
+
+/** 요청 캐시 TTL (밀리초). 동일 요청은 이 시간 동안 캐시된 결과 반환 */
+const REQUEST_CACHE_TTL_MS = 60 * 1000;
+
 export class SoopAPI extends IVodSync{
     constructor(){
         super();
+        /** @type {Map<string, { data: any, expiresAt: number }>} */
+        this._requestCache = new Map();
         window.VODSync = window.VODSync || {};
         if (window.VODSync.soopAPI) {
             this.warn('[VODSync] SoopAPI가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
@@ -11,11 +17,33 @@ export class SoopAPI extends IVodSync{
     }
 
     /**
+     * @param {string} key 캐시 키
+     * @returns {any|null} 캐시된 데이터 또는 null
+     */
+    _getCached(key) {
+        const entry = this._requestCache.get(key);
+        if (!entry || Date.now() > entry.expiresAt) return null;
+        return entry.data;
+    }
+
+    /**
+     * @param {string} key 캐시 키
+     * @param {any} data 저장할 데이터
+     */
+    _setCache(key, data) {
+        this._requestCache.set(key, { data, expiresAt: Date.now() + REQUEST_CACHE_TTL_MS });
+    }
+
+    /**
      * @description Get Soop VOD Period
      * @param {number | string} videoId 
      * @returns {string} period or null
      */
     async GetSoopVodInfo(videoId) {
+        const cacheKey = `GetSoopVodInfo:${videoId}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
         const a = await fetch("https://api.m.sooplive.co.kr/station/video/a/view", {
             "headers": {
                 "accept": "application/json, text/plain, */*",
@@ -29,6 +57,7 @@ export class SoopAPI extends IVodSync{
             return null;
         }
         const b = await a.json();
+        this._setCache(cacheKey, b);
         return b;
     }
     async GetStreamerID(nickname){
@@ -38,13 +67,19 @@ export class SoopAPI extends IVodSync{
         url.searchParams.set('v', '3.0');
         url.searchParams.set('szOrder', 'score');
         url.searchParams.set('szKeyword', encodedNickname);
+        const cacheKey = `GetStreamerID:${url.toString()}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
         this.log(`GetStreamerID: ${url.toString()}`);
         const res = await fetch(url.toString());
         if (res.status !== 200){
             return null;
         }
         const b = await res.json();
-        return b.DATA[0].user_id;
+        const userId = b.DATA[0]?.user_id ?? null;
+        if (userId !== null) this._setCache(cacheKey, userId);
+        return userId;
     }
     /**
      * @description Get Soop VOD List
@@ -65,9 +100,14 @@ export class SoopAPI extends IVodSync{
         url.searchParams.set("per_page", "60");
         url.searchParams.set("start_date", start_date_str);
         url.searchParams.set("end_date", end_date_str);
+        const cacheKey = `GetSoopVOD_List:${url.toString()}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
         this.log(`GetSoopVOD_List: ${url.toString()}`);
         const res = await fetch(url.toString());
         const b = await res.json();
+        this._setCache(cacheKey, b);
         return b;
     }
     /**
@@ -227,7 +267,10 @@ export class SoopAPI extends IVodSync{
             const baseUrl = new URL(chatUrl);
             baseUrl.searchParams.set("startTime", relativeStartTime);
             const url = baseUrl.toString();
-            
+            const cacheKey = `_fetchChatLogFromFile:${url}`;
+            const cached = this._getCached(cacheKey);
+            if (cached !== null) return cached;
+
             const res = await fetch(url);
             if (res.status !== 200) {
                 this.warn(`GetChatLog: HTTP ${res.status} - ${url}`);
@@ -235,6 +278,7 @@ export class SoopAPI extends IVodSync{
             }
             
             const xmlText = await res.text();
+            this._setCache(cacheKey, xmlText);
             return xmlText;
         } catch (error) {
             this.error("GetChatLog: fetch 오류:", error);
@@ -346,14 +390,23 @@ export class SoopAPI extends IVodSync{
     }
 
     async GetEmoticon(){
+        const cacheKey = 'GetEmoticon:https://st.sooplive.co.kr/api/emoticons.php';
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
         const res = await fetch("https://st.sooplive.co.kr/api/emoticons.php");
         if (res.status !== 200){
             return null;
         }
         const b = await res.json();
+        this._setCache(cacheKey, b);
         return b;
     }
     async GetSignitureEmoticon(streamerId){
+        const cacheKey = `GetSignitureEmoticon:${streamerId}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
         const res = await fetch("https://live.sooplive.co.kr/api/signature_emoticon_api.php", {
             "headers": {
                 "accept": "*/*",
@@ -366,6 +419,7 @@ export class SoopAPI extends IVodSync{
             return null;
         }
         const b = await res.json();
+        this._setCache(cacheKey, b);
         return b;
     }
 }
