@@ -19,6 +19,7 @@ export class SoopPrevChatViewer extends IVodSync {
         this.emoticonReplaceMap = new Map(); // 이모티콘 ID -> 이미지 HTML 매핑
         this.cachedChatData = []; // 캐시된 채팅 데이터 [{startTime, endTime, messages}, ...]
         this.restoreInterval = 30; // 복원 구간 단위 (초)
+        this.excludeEmoticonOnlyChat = false; // 이모티콘만으로 이루어진 채팅 복원 제외 여부
         this.initialRestoreEndTime = null; // statVBox 재생성 시점의 복구 끝지점 (playbackTime, 초 단위)
         this.sharedTooltip = null; // 재사용할 공통 툴팁 요소
         this.log('loaded');
@@ -48,6 +49,10 @@ export class SoopPrevChatViewer extends IVodSync {
                     this.restoreInterval = interval;
                     this.log(`복원 구간 설정 로드: ${interval}초`);
                 }
+                if (response.settings.soopExcludeEmoticonOnlyChat !== undefined) {
+                    this.excludeEmoticonOnlyChat = response.settings.soopExcludeEmoticonOnlyChat;
+                    this.log('이모티콘만 복원 제외 설정 로드:', this.excludeEmoticonOnlyChat);
+                }
             }
         } catch (error) {
             this.log('복원 구간 설정 로드 실패:', error);
@@ -61,12 +66,15 @@ export class SoopPrevChatViewer extends IVodSync {
             return;
         }
         try {
-            const response = await chrome.runtime.sendMessage({ 
-                action: 'saveSettings', 
-                settings: { soopRestoreInterval: this.restoreInterval }
+            const response = await chrome.runtime.sendMessage({
+                action: 'saveSettings',
+                settings: {
+                    soopRestoreInterval: this.restoreInterval,
+                    soopExcludeEmoticonOnlyChat: this.excludeEmoticonOnlyChat
+                }
             });
             if (response && response.success) {
-                this.log(`복원 구간 설정 저장: ${this.restoreInterval}초`);
+                this.log(`복원 구간 설정 저장: ${this.restoreInterval}초, 이모티콘만 제외: ${this.excludeEmoticonOnlyChat}`);
             }
         } catch (error) {
             this.log('복원 구간 설정 저장 실패:', error);
@@ -256,29 +264,44 @@ export class SoopPrevChatViewer extends IVodSync {
             }
 
             // 실제 복원 구간만 필터링
-            const filteredMessages = messages.filter(msg => 
+            let filteredMessages = messages.filter(msg =>
                 msg.timestamp >= startTime * 1000 && msg.timestamp <= endTime * 1000
             );
+
+            let excludedCount = 0;
+            if (this.excludeEmoticonOnlyChat) {
+                const included = [];
+                for (const msg of filteredMessages) {
+                    if (this.isEmoticonOnlyMessage(msg)) {
+                        excludedCount++;
+                    } else {
+                        included.push(msg);
+                    }
+                }
+                filteredMessages = included;
+            }
 
             let restoredCount = 0;
             if (filteredMessages.length > 0) {
                 const chatElements = filteredMessages.map(msg => this.createChatElement(msg)).filter(el => el !== null);
                 restoredCount = chatElements.length;
                 this.insertChatsBelowButton(chatElements);
-                this.log(`${restoredCount}개 채팅 복원 완료`);
+                this.log(`${restoredCount}개 채팅 복원 완료` + (excludedCount > 0 ? ` (${excludedCount}개 제외)` : ''));
             } else {
                 this.log('복원할 채팅이 없습니다.');
             }
 
             // 다음 복원 구간 계산 (더 이전 restoreInterval만큼)
-            this.nextRestorePlan = { 
-                startTime: Math.max(0, startTime - this.restoreInterval), 
+            this.nextRestorePlan = {
+                startTime: Math.max(0, startTime - this.restoreInterval),
                 endTime: startTime
             };
 
             // 복원 완료 후 버튼 텍스트 업데이트
             if (this.restoreButton) {
-                const suffix = ` - ${restoredCount}개 복원됨`;
+                const suffix = excludedCount > 0
+                    ? ` - ${restoredCount}개, ${excludedCount} 제외`
+                    : ` - ${restoredCount}개`;
                 this.updateButtonText(suffix, false);
             }
 
@@ -737,6 +760,22 @@ export class SoopPrevChatViewer extends IVodSync {
         }
     }
 
+    // 이모티콘만으로 이루어진 메시지 여부 (복원 제외 대상 판별용)
+    isEmoticonOnlyMessage(chatData) {
+        const { msg, isOgq } = chatData;
+        // OGQ만 있고 텍스트가 없으면 이모티콘만
+        if (isOgq && (!msg || !String(msg).trim())) {
+            return true;
+        }
+        const text = (msg || '').trim();
+        if (!text) return false;
+        let rest = text;
+        this.emoticonReplaceMap.forEach((_, pattern) => {
+            rest = rest.split(pattern).join('');
+        });
+        return rest.trim() === '';
+    }
+
     // 메시지 텍스트에서 시그니처 이모티콘 처리
     processSignatureEmoticons(pElement, msgText) {
         if (this.emoticonReplaceMap.size === 0) {
@@ -864,6 +903,14 @@ export class SoopPrevChatViewer extends IVodSync {
             label.innerText = `복원 구간: ${value}초`;
         });
 
+        const excludeEmoticonOnlyLabel = document.createElement('label');
+        excludeEmoticonOnlyLabel.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 15px; font-size: 14px; cursor: pointer;';
+        const excludeEmoticonOnlyCheck = document.createElement('input');
+        excludeEmoticonOnlyCheck.type = 'checkbox';
+        excludeEmoticonOnlyCheck.checked = this.excludeEmoticonOnlyChat;
+        excludeEmoticonOnlyLabel.appendChild(excludeEmoticonOnlyCheck);
+        excludeEmoticonOnlyLabel.appendChild(document.createTextNode('이모티콘만으로 이루어진 채팅 복원 제외'));
+
         const buttonContainer = document.createElement('div');
         buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
 
@@ -894,8 +941,9 @@ export class SoopPrevChatViewer extends IVodSync {
         saveBtn.addEventListener('click', async () => {
             const newInterval = parseInt(slider.value, 10);
             this.restoreInterval = newInterval;
-            this.log(`복원 구간 단위 변경: ${newInterval}초`);
-            
+            this.excludeEmoticonOnlyChat = excludeEmoticonOnlyCheck.checked;
+            this.log(`복원 구간 단위 변경: ${newInterval}초, 이모티콘만 제외: ${this.excludeEmoticonOnlyChat}`);
+
             // 설정 저장
             await this.saveRestoreInterval();
             
@@ -917,6 +965,7 @@ export class SoopPrevChatViewer extends IVodSync {
         popup.appendChild(title);
         popup.appendChild(label);
         popup.appendChild(slider);
+        popup.appendChild(excludeEmoticonOnlyLabel);
         popup.appendChild(buttonContainer);
 
         document.body.appendChild(popup);
