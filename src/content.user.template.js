@@ -43,11 +43,17 @@
         {{SoopTimestampManager}}
         {{VODLinkerBase}}
         {{SoopVODLinker}}
+        {{TimelineCommentProcessorBase}}
+        {{SoopTimelineCommentProcessor}}
         {{SoopPrevChatViewer}}
 
         new SoopAPI();
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
+        if (/\/player\/\d+/.test(window.location.pathname)) {
+            const timelineProcessor = new SoopTimelineCommentProcessor();
+            timelineProcessor.startWatching();
+        }
         new SoopPrevChatViewer();
         
         // 동기화 요청이 있는 경우 타임스탬프 매니저에게 요청
@@ -68,6 +74,26 @@
             const url = new URL(window.location.href);
             url.searchParams.delete('request_vod_ts');
             url.searchParams.delete('request_real_ts');
+            window.history.replaceState({}, '', url.toString());
+        }
+
+        // timeline_sync=1 이면 localStorage에서 페이로드 로드 후 URL에서 제거
+        const timelineSyncVal = params.get('timeline_sync');
+        if (timelineSyncVal) {
+            let payload = null;
+            try {
+                const storageKey = 'vodSync_timeline';
+                const raw = localStorage.getItem(storageKey);
+                if (raw) {
+                    payload = JSON.parse(raw);
+                    localStorage.removeItem(storageKey);
+                }
+            } catch (_) { /* ignore */ }
+            if (Array.isArray(payload)) {
+                window.VODSync.timelineCommentProcessor?.receiveTimelineSyncPayload?.(payload);
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.delete('timeline_sync');
             window.history.replaceState({}, '', url.toString());
         }
     }

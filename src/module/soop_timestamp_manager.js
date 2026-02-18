@@ -200,10 +200,15 @@ export class SoopTimestampManager extends TimestampManagerBase {
     async reloadAll(videoId){
         if (this.reloadingAll) return;
         this.reloadingAll = true;
-        await this.loadVodInfo(videoId);
-        this.reloadVideoTag();
-        this.reloadingAll = false;
-        this.moveTooltipToCtrlBox();
+        try {
+            const time = this.vodInfo == null ? 0 : 1000;
+            await new Promise(r => setTimeout(r, time));
+            await this.loadVodInfo(videoId);
+            this.reloadVideoTag();
+            this.moveTooltipToCtrlBox();
+        } finally {
+            this.reloadingAll = false;
+        }
     }
     reloadVideoTag(){
         this.playTimeTag = document.querySelector('span.time-current');
@@ -300,6 +305,12 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
         return null;
     }
+
+    /** @override 전역 타임스탬프 → 재생 시각 변환 가능 여부 (vodInfo, videoTag 준비 시 true) */
+    canConvertGlobalTSToPlaybackTime() {
+        return this.vodInfo != null;
+    }
+
     /**
      * @override
      * @description 현재 영상이 스트리밍된 당시 시간을 반환

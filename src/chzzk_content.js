@@ -57,8 +57,26 @@ if (window == top) {
             url.searchParams.delete('request_real_ts');
             window.history.replaceState({}, '', url.toString());
         }
-    }    
-    
+        const timelineSyncVal = urlParams.get('timeline_sync');
+        if (timelineSyncVal) {
+            let payload = null;
+            try {
+                const storageKey = 'vodSync_timeline_' + window.location.href;
+                const raw = localStorage.getItem(storageKey);
+                if (raw) {
+                    payload = JSON.parse(raw);
+                    localStorage.removeItem(storageKey);
+                }
+            } catch (_) { /* ignore */ }
+            if (Array.isArray(payload)) {
+                window.VODSync.timelineCommentProcessor?.receiveTimelineSyncPayload?.(payload);
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.delete('timeline_sync');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }
+
     // 설정에 따라 기능 초기화
     async function initializeFeatures() {
         // CHZZK 플랫폼에서 필요한 클래스들 구성
@@ -66,6 +84,7 @@ if (window == top) {
             'ChzzkAPI': 'src/module/chzzk_api.js',
             'ChzzkTimestampManager': 'src/module/chzzk_timestamp_manager.js',
             'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
+            'ChzzkTimelineCommentProcessor': 'src/module/chzzk_timeline_comment_processor.js',
             'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
         };
@@ -77,6 +96,8 @@ if (window == top) {
         new classes.ChzzkAPI();
         tsManager = new classes.ChzzkTimestampManager();
         new classes.ChzzkVODLinker(false);
+        const timelineProcessor = new classes.ChzzkTimelineCommentProcessor();
+        timelineProcessor.startWatching();
         syncPanel = new classes.OtherPlatformSyncPanel('chzzk');
         rpPanel = new classes.RPNicknamePanel();
     

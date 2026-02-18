@@ -56,6 +56,9 @@
                 "src/module/chzzk_timestamp_manager.js",
                 "src/module/chzzk_vod_linker.js",
                 "src/module/soop_vod_linker.js",
+                "src/module/base_timeline_comment_processor.js",
+                "src/module/soop_timeline_comment_processor.js",
+                "src/module/chzzk_timeline_comment_processor.js",
                 "src/module/other_platform_sync_panel.js",
                 "src/module/rp_nickname_panel.js",
                 "src/module/soop_prev_chat_viewer.js"

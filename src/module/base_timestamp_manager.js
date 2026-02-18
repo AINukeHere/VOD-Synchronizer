@@ -308,6 +308,15 @@ export class TimestampManagerBase extends IVodSync {
         throw new Error("getStreamPeriod must be implemented by subclass");
     }
 
+    /**
+     * @description 재생 시점(초)을 전역 시각(global time)으로 변환. 파생 클래스에서 구현.
+     * @param {number} totalPlaybackSec VOD 재생 시점(초)
+     * @returns {Date|null} 전역 시각 또는 변환 불가 시 null
+     */
+    playbackTimeToGlobalTS(totalPlaybackSec) {
+        return null;
+    }
+
     // 현재 재생 중인지 여부를 반환하는 추상 메서드
     isPlaying() {
         throw new Error("isPlaying must be implemented by subclass");
@@ -390,6 +399,15 @@ export class TimestampManagerBase extends IVodSync {
         
         const playbackTime = Math.floor((globalDateTime.getTime() - streamStartDateTime.getTime()) / 1000);
         return this.moveToPlaybackTime(playbackTime, doAlert);
+    }
+
+    /**
+     * 전역 타임스탬프(ms) → 재생 시각(초) 변환이 가능한지 여부.
+     * 타임라인 동기화 미리보기 등에서 변환 준비가 됐을 때만 사용. 서브클래스에서 오버라이드.
+     * @returns {boolean}
+     */
+    canConvertGlobalTSToPlaybackTime() {
+        return false;
     }
 
     /**

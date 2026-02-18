@@ -100,6 +100,14 @@ export class VODLinkerBase extends IVodSync{
         if (request_real_ts){
             url.searchParams.set('request_real_ts', request_real_ts);
         }
+        // 타임라인 댓글 동기화 요청 처리
+        const timelinePayload = (window.VODSync?.timelineCommentProcessor?.getTimelineSyncPayload?.() ?? []);
+        if (timelinePayload.length > 0) {
+            url.searchParams.set('timeline_sync', '1');
+            try {
+                localStorage.setItem('vodSync_timeline', JSON.stringify(timelinePayload));
+            } catch (_) { /* quota or disabled */ }
+        }
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
         button.innerText = this.BTN_TEXT_IDLE;

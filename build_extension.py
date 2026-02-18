@@ -68,6 +68,9 @@ def build_tampermonkey_script():
             '{{SoopTimestampManager}}': ('src/module/soop_timestamp_manager.js', 'SoopTimestampManager'),
             '{{VODLinkerBase}}': ('src/module/base_vod_linker.js', 'VODLinkerBase'),
             '{{SoopVODLinker}}': ('src/module/soop_vod_linker.js', 'SoopVODLinker'),
+            '{{TimelineCommentProcessorBase}}': ('src/module/base_timeline_comment_processor.js', 'TimelineCommentProcessorBase'),
+            '{{SoopTimelineCommentProcessor}}': ('src/module/soop_timeline_comment_processor.js', 'SoopTimelineCommentProcessor'),
+            '{{ChzzkTimelineCommentProcessor}}': ('src/module/chzzk_timeline_comment_processor.js', 'ChzzkTimelineCommentProcessor'),
             '{{SoopPrevChatViewer}}': ('src/module/soop_prev_chat_viewer.js', 'SoopPrevChatViewer'),
         }
         
@@ -136,6 +139,10 @@ def create_test_extension():
         'src/module/other_platform_sync_panel.js',
         'src/module/rp_nickname_panel.js',
         'src/module/soop_prev_chat_viewer.js',
+        'src/module/base_timeline_comment_processor.js',
+        'src/module/soop_timeline_comment_processor.js',
+        'src/module/chzzk_timeline_comment_processor.js',
+        
         
         # 리소스 파일
         'res/data/rp_nicknames.json',

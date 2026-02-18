@@ -30,6 +30,7 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
             'SoopAPI': 'src/module/soop_api.js',
             'SoopTimestampManager': 'src/module/soop_timestamp_manager.js',
             'SoopVODLinker': 'src/module/soop_vod_linker.js',
+            'SoopTimelineCommentProcessor': 'src/module/soop_timeline_comment_processor.js',
             'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
             'SoopPrevChatViewer': 'src/module/soop_prev_chat_viewer.js'
@@ -42,6 +43,10 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
         new classes.SoopAPI();
         tsManager = new classes.SoopTimestampManager();
         new classes.SoopVODLinker(false);
+        if (/\/player\/\d+/.test(window.location.pathname)) {
+            const timelineProcessor = new classes.SoopTimelineCommentProcessor();
+            timelineProcessor.startWatching();
+        }
         syncPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
         new classes.SoopPrevChatViewer();
@@ -67,7 +72,27 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
             url.searchParams.delete('request_real_ts');
             window.history.replaceState({}, '', url.toString());
         }
-        
+
+        // timeline_sync=1 이면 localStorage에서 페이로드 로드 후 URL에서 제거
+        const timelineSyncVal = params.get('timeline_sync');
+        if (timelineSyncVal) {
+            let payload = null;
+            try {
+                const storageKey = 'vodSync_timeline';
+                const raw = localStorage.getItem(storageKey);
+                if (raw) {
+                    payload = JSON.parse(raw);
+                    // localStorage.removeItem(storageKey);
+                }
+            } catch (_) { /* ignore */ }
+            if (Array.isArray(payload)) {
+                window.VODSync.timelineCommentProcessor?.receiveTimelineSyncPayload?.(payload);
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.delete('timeline_sync');
+            window.history.replaceState({}, '', url.toString());
+        }
+
         // 설정 로딩이 완료될 때까지 기다림
         await getAllSettings();
         
