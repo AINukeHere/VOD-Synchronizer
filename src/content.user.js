@@ -921,6 +921,7 @@ class SoopAPI extends IVodSync{
         const match = url.pathname.match(/\/player\/(\d+)/);
         const curVideoId = match[1];
         if (this.vodInfo === null || curVideoId !== this.vodInfo.id){
+            this.log('VOD 변경 감지됨! 요소 업데이트 중...');
             this.reloadAll(curVideoId);
         }
     }
@@ -1094,14 +1095,15 @@ class SoopAPI extends IVodSync{
     async reloadAll(videoId){
         if (this.reloadingAll) return;
         this.reloadingAll = true;
-        const time = this.vodInfo == null ? 0 : 1000;
-        setTimeout(()=>{
-            this.loadVodInfo(videoId).then(()=>{
-                this.reloadVideoTag();
-                this.reloadingAll = false;
-                this.moveTooltipToCtrlBox();
-            });
-        }, time);
+        try {
+            const time = this.vodInfo == null ? 0 : 1000;
+            await new Promise(r => setTimeout(r, time));
+            await this.loadVodInfo(videoId);
+            this.reloadVideoTag();
+            this.moveTooltipToCtrlBox();
+        } finally {
+            this.reloadingAll = false;
+        }
     }
     reloadVideoTag(){
         this.playTimeTag = document.querySelector('span.time-current');
@@ -1332,7 +1334,7 @@ class SoopAPI extends IVodSync{
         this.startSyncButtonManagement();
         this.setupSearchInputKeyboardHandler();
     }
-    // 주기적으로 동기화 버튼 생성 및 업데이트 (검색 결과·VOD 페이지 모두)
+    // 주기적으로 동기화 버튼 생성 및 업데이트
     startSyncButtonManagement() {
         setInterval(() => {
             const requestDate = this.getRequestVodDate();
@@ -1401,6 +1403,7 @@ class SoopAPI extends IVodSync{
         if (request_real_ts){
             url.searchParams.set('request_real_ts', request_real_ts);
         }
+        // 타임라인 댓글 동기화 요청 처리
         const timelinePayload = (window.VODSync?.timelineCommentProcessor?.getTimelineSyncPayload?.() ?? []);
         if (timelinePayload.length > 0) {
             url.searchParams.set('timeline_sync', '1');
@@ -1744,8 +1747,8 @@ class TimelineCommentProcessorBase extends IVodSync {
         const h = Math.floor(playbackSec / 3600);
         const m = Math.floor((playbackSec % 3600) / 60);
         const s = Math.floor(playbackSec % 60);
-        if (h > 0) return `[${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}] `;
-        return `[${m}:${String(s).padStart(2, '0')}] `;
+        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} `;
+        return `${m}:${String(s).padStart(2, '0')} `;
     }
 
     /**
@@ -2167,6 +2170,7 @@ class TimelineCommentProcessorBase extends IVodSync {
         a.appendChild(document.createTextNode('[ '));
         const strong = document.createElement('strong');
         strong.className = 'time_link';
+        strong.style.color = '#0182ff';
         strong.setAttribute('data-time', String(sec));
         strong.textContent = this.getTimelineDisplayText(playbackSec);
         a.appendChild(strong);

@@ -98,8 +98,8 @@ export class TimelineCommentProcessorBase extends IVodSync {
         const h = Math.floor(playbackSec / 3600);
         const m = Math.floor((playbackSec % 3600) / 60);
         const s = Math.floor(playbackSec % 60);
-        if (h > 0) return `[${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}] `;
-        return `[${m}:${String(s).padStart(2, '0')}] `;
+        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} `;
+        return `${m}:${String(s).padStart(2, '0')} `;
     }
 
     /**

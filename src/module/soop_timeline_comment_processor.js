@@ -66,6 +66,7 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
         a.appendChild(document.createTextNode('[ '));
         const strong = document.createElement('strong');
         strong.className = 'time_link';
+        strong.style.color = '#0182ff';
         strong.setAttribute('data-time', String(sec));
         strong.textContent = this.getTimelineDisplayText(playbackSec);
         a.appendChild(strong);

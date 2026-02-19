@@ -82,7 +82,7 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
                 const raw = localStorage.getItem(storageKey);
                 if (raw) {
                     payload = JSON.parse(raw);
-                    // localStorage.removeItem(storageKey);
+                    localStorage.removeItem(storageKey);
                 }
             } catch (_) { /* ignore */ }
             if (Array.isArray(payload)) {
