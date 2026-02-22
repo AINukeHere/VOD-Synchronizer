@@ -320,34 +320,34 @@ function createAndShowUpdateModal(version) {
 // iframe 크기 자동 조절 함수 (postMessage로 받은 크기 정보 사용)
 function resizeIframe(iframe, contentWidth, contentHeight) {
     try {
-        // 최소/최대 크기 제한
         const minWidth = 300;
         const maxWidth = 600;
         const minHeight = 200;
         const maxHeight = 960;
-        
+        const headerHeight = 60;
+        // SOOP 등 스크롤 있는 페이지에서 모달이 뷰포트를 뚫고 나가지 않도록 90vh 이내로 제한
+        const maxModalHeight = Math.floor(window.innerHeight * 0.9);
+        const maxIframeHeight = Math.max(minHeight, maxModalHeight - headerHeight);
+
         const newWidth = Math.max(minWidth, Math.min(maxWidth, contentWidth));
-        const newHeight = Math.max(minHeight, Math.min(maxHeight, contentHeight));
-        
+        const newHeight = Math.max(minHeight, Math.min(maxHeight, maxIframeHeight, contentHeight));
+
         iframe.style.width = newWidth + 'px';
         iframe.style.height = newHeight + 'px';
-        
-        // 모달 컨테이너도 iframe 크기에 맞게 조절
+
         const modalContent = document.getElementById('modalContent');
         if (modalContent) {
             modalContent.style.width = newWidth + 'px';
-            modalContent.style.height = (newHeight + 60) + 'px'; // 헤더 높이(60px) 추가
+            modalContent.style.height = Math.min(newHeight + headerHeight, maxModalHeight) + 'px';
         }
     } catch (error) {
         console.error('iframe 크기 조절 중 오류:', error);
-        // 오류 발생 시 기본 크기 유지
         iframe.style.width = '500px';
         iframe.style.height = '300px';
-        
         const modalContent = document.getElementById('modalContent');
         if (modalContent) {
             modalContent.style.width = '500px';
-            modalContent.style.height = '360px'; // 헤더 높이(60px) 추가
+            modalContent.style.height = '360px';
         }
     }
 }
