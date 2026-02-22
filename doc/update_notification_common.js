@@ -37,48 +37,34 @@ function toggleBugFix() {
 
 // 페이지 로드 완료 후 부모 페이지에 크기 정보 전송
 function sendSizeToParent() {
-    // 컨텐츠 컨테이너의 실제 크기 측정
     const updateContainer = document.querySelector('.update-container');
-    
-    if (updateContainer) {
-        // 컨테이너의 실제 렌더링 크기 측정
-        const rect = updateContainer.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(updateContainer);
-        
-        // 패딩과 마진을 고려한 실제 크기 계산
-        const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
-        const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
-        const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
-        const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
-        
-        const width = rect.width + paddingLeft + paddingRight;
-        const height = rect.height + paddingTop + paddingBottom;
-        
-        // 디버깅을 위한 로그
-        console.log('컨텐츠 크기 측정 결과:', {
-            rectWidth: rect.width,
-            rectHeight: rect.height,
-            paddingTop,
-            paddingBottom,
-            paddingLeft,
-            paddingRight,
-            최종너비: width,
-            최종높이: height,
-            bodyScrollHeight: document.body.scrollHeight,
-            htmlScrollHeight: document.documentElement.scrollHeight
-        });
-        
-        // 부모 페이지에 크기 정보 전송
-        if (window.parent && window.parent !== window) {
-            console.log('크기 전송', width, height);
-            window.parent.postMessage({
-                type: 'vodSync-iframe-resize',
-                width: width,
-                height: height
-            }, '*');
-        }
-    } else {
+    if (!updateContainer) {
         console.error('컨텐츠 컨테이너를 찾을 수 없습니다.');
+        return;
+    }
+
+    const rect = updateContainer.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(updateContainer);
+    const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
+    const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
+    const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+
+    const width = rect.width + paddingLeft + paddingRight;
+    // 스크롤이 생겨도 높이를 뚫고 나가지 않도록 문서 전체 높이(scrollHeight) 사용
+    const contentHeight = Math.max(
+        updateContainer.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight
+    );
+    const height = contentHeight + paddingTop + paddingBottom;
+
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+            type: 'vodSync-iframe-resize',
+            width: width,
+            height: height
+        }, '*');
     }
 }
 
