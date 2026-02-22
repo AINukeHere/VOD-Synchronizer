@@ -574,14 +574,13 @@ export class SoopPrevChatViewer extends IVodSync {
             p.innerText = msg || '';
         }
         
-        // playbackTime 커스텀 툴팁 설정
+        // playbackTime 커스텀 툴팁 및 클릭 시 해당 시점으로 이동
+        const playbackTimeSeconds = timestamp ? Math.floor(timestamp / 1000) : 0;
         if (timestamp && this.initialRestoreEndTime !== null && this.sharedTooltip) {
-            const playbackTimeSeconds = Math.floor(timestamp / 1000);
             const secondsAgo = Math.floor(this.initialRestoreEndTime - playbackTimeSeconds);
-            
+
             let tooltipText;
             if (secondsAgo < 0) {
-                // 미래 시간인 경우 (이론적으로는 발생하지 않아야 함)
                 tooltipText = this.formatTime(playbackTimeSeconds);
             } else if (secondsAgo === 0) {
                 tooltipText = '방금 전';
@@ -589,27 +588,14 @@ export class SoopPrevChatViewer extends IVodSync {
                 const hours = Math.floor(secondsAgo / 3600);
                 const minutes = Math.floor((secondsAgo % 3600) / 60);
                 const seconds = secondsAgo % 60;
-                
                 const parts = [];
-                if (hours > 0) {
-                    parts.push(`${hours}시간`);
-                }
-                if (minutes > 0) {
-                    parts.push(`${minutes}분`);
-                }
-                if (seconds > 0 || parts.length === 0) {
-                    parts.push(`${seconds}초`);
-                }
-                
+                if (hours > 0) parts.push(`${hours}시간`);
+                if (minutes > 0) parts.push(`${minutes}분`);
+                if (seconds > 0 || parts.length === 0) parts.push(`${seconds}초`);
                 tooltipText = `${parts.join(' ')} 전`;
             }
-            
-
-            
-            // 마우스 이벤트로 공통 툴팁 표시/숨김
             messageTextDiv.addEventListener('mouseenter', (e) => {
                 if (!this.sharedTooltip) return;
-                
                 const rect = messageTextDiv.getBoundingClientRect();
                 this.sharedTooltip.textContent = tooltipText;
                 this.sharedTooltip.style.right = `${window.innerWidth - rect.right}px`;
@@ -617,12 +603,21 @@ export class SoopPrevChatViewer extends IVodSync {
                 this.sharedTooltip.style.opacity = '1';
             });
             messageTextDiv.addEventListener('mouseleave', () => {
-                if (this.sharedTooltip) {
+                if (this.sharedTooltip) this.sharedTooltip.style.opacity = '0';
+            });
+        }
+
+        if (timestamp && playbackTimeSeconds >= 0) {
+            messageContainer.style.cursor = 'pointer';
+            messageContainer.addEventListener('click', () => {
+                const tsManager = window.VODSync?.tsManager;
+                if (tsManager && typeof tsManager.moveToPlaybackTime === 'function') {
+                    tsManager.moveToPlaybackTime(playbackTimeSeconds, true);
                     this.sharedTooltip.style.opacity = '0';
                 }
             });
         }
-        
+
         messageTextDiv.appendChild(p);
 
         messageContainer.appendChild(usernameDiv);
