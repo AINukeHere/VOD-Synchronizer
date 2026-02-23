@@ -8,6 +8,9 @@
 // @match        https://www.sooplive.co.kr/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_info
 // @run-at       document-end
 // @license      MIT
 // ==/UserScript==
@@ -97,4 +100,153 @@
             window.history.replaceState({}, '', url.toString());
         }
     }
+
+    // ===================== 탬퍼몽키 업데이트 알림 =====================
+    (function initUpdateNotificationTM() {
+        if (typeof GM_info === 'undefined' || !GM_info.script || typeof GM_getValue !== 'function' || typeof GM_setValue !== 'function') return;
+
+        function compareVersions(version1, version2) {
+            const v1parts = version1.split('.').map(Number);
+            const v2parts = version2.split('.').map(Number);
+            for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+                const v1part = v1parts[i] || 0;
+                const v2part = v2parts[i] || 0;
+                if (v1part > v2part) return 1;
+                if (v1part < v2part) return -1;
+            }
+            return 0;
+        }
+
+        const MODAL_HTML_TEMPLATE = `
+    <div id="vodSyncUpdateModal" style="
+        position: fixed;
+        z-index: 999999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        ">
+        <div id="modalContent" style="
+            background-color: #fefefe;
+            margin: auto;
+            padding: 0;
+            border-radius: 10px;
+            width: auto;
+            min-width: 300px;
+            max-width: 90vw;
+            height: auto;
+            min-height: 200px;
+            max-height: 90vh;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: vodSyncModalSlideIn 0.3s ease-out;
+            position: relative;
+            ">
+            <div style="
+                background: linear-gradient(135deg, #007bff, #0056b3);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px 10px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                ">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Synchronizer 업데이트 알림</h2>
+                <span class="vod-sync-close" style="
+                color: white;
+                font-size: 28px;
+                font-weight: bold;
+                cursor: pointer;
+                line-height: 1;
+                ">&times;</span>
+            </div>
+            <iframe id="updateIframe" style="
+            width: 500px;
+            height: 300px;
+            border: none;
+            border-radius: 0 0 10px 10px;
+            transition: width 0.3s ease, height 0.3s ease;
+            "></iframe>
+        </div>
+    </div>
+    <style>
+        @keyframes vodSyncModalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .vod-sync-close:hover { opacity: 0.7; }
+    </style>
+`;
+
+        function createAndShowUpdateModal(version) {
+            const existingModal = document.getElementById('vodSyncUpdateModal');
+            if (existingModal) existingModal.remove();
+            document.body.insertAdjacentHTML('beforeend', MODAL_HTML_TEMPLATE);
+            const modal = document.getElementById('vodSyncUpdateModal');
+            const iframe = document.getElementById('updateIframe');
+            if (modal && iframe) {
+                modal.style.display = 'flex';
+                iframe.src = 'https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v' + version + '.html';
+                const closeModal = () => modal.remove();
+                modal.querySelector('.vod-sync-close').onclick = closeModal;
+                modal.onclick = function(e) { if (e.target === modal) closeModal(); };
+                const handleEscKey = function(e) {
+                    if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', handleEscKey); }
+                };
+                document.addEventListener('keydown', handleEscKey);
+            }
+        }
+
+        function resizeIframe(iframe, contentWidth, contentHeight) {
+            try {
+                const minWidth = 300, maxWidth = 600, minHeight = 200, maxHeight = 960, headerHeight = 60;
+                const maxModalHeight = Math.floor(window.innerHeight * 0.9);
+                const maxIframeHeight = Math.max(minHeight, maxModalHeight - headerHeight);
+                const newWidth = Math.max(minWidth, Math.min(maxWidth, contentWidth));
+                const newHeight = Math.max(minHeight, Math.min(maxHeight, maxIframeHeight, contentHeight));
+                iframe.style.width = newWidth + 'px';
+                iframe.style.height = newHeight + 'px';
+                const modalContent = document.getElementById('modalContent');
+                if (modalContent) {
+                    modalContent.style.width = newWidth + 'px';
+                    modalContent.style.height = Math.min(newHeight + headerHeight, maxModalHeight) + 'px';
+                }
+            } catch (e) {
+                const iframe = document.getElementById('updateIframe');
+                const modalContent = document.getElementById('modalContent');
+                if (iframe) { iframe.style.width = '500px'; iframe.style.height = '300px'; }
+                if (modalContent) { modalContent.style.width = '500px'; modalContent.style.height = '360px'; }
+            }
+        }
+
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'vodSync-iframe-resize') {
+                const iframe = document.getElementById('updateIframe');
+                if (iframe) resizeIframe(iframe, event.data.width, event.data.height);
+            }
+        });
+
+        async function checkForUpdatesTM() {
+            try {
+                const currentVersion = (GM_info.script && GM_info.script.version) ? GM_info.script.version : '';
+                if (!currentVersion) return;
+                let lastCheckedVersion = GM_getValue('vodSync_lastCheckedVersion', null);
+                lastCheckedVersion = await Promise.resolve(lastCheckedVersion);
+                if (typeof lastCheckedVersion !== 'string') lastCheckedVersion = null;
+                if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
+                    createAndShowUpdateModal(currentVersion);
+                    const setResult = GM_setValue('vodSync_lastCheckedVersion', currentVersion);
+                    await Promise.resolve(setResult);
+                }
+            } catch (err) {
+                logToExtension('업데이트 확인 중 오류:', err);
+            }
+        }
+
+        setTimeout(checkForUpdatesTM, 2000);
+    })();
 })(); 
