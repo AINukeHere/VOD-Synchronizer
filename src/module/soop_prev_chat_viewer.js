@@ -22,6 +22,7 @@ export class SoopPrevChatViewer extends IVodSync {
         this.excludeEmoticonOnlyChat = false; // 이모티콘만으로 이루어진 채팅 복원 제외 여부
         this.initialRestoreEndTime = null; // statVBox 재생성 시점의 복구 끝지점 (playbackTime, 초 단위)
         this.sharedTooltip = null; // 재사용할 공통 툴팁 요소
+        this._tooltipHideTimeout = null; // 툴팁 mouseleave 시 지연 숨김용
         this.log('loaded');
         this.loadRestoreInterval();
         this.init();
@@ -98,6 +99,35 @@ export class SoopPrevChatViewer extends IVodSync {
             transition: opacity 0.1s;
             z-index: 10000;
         `;
+        // 툴팁 클릭 시 해당 시점으로 이동 (툴팁만 클릭 가능하도록 여기서만 처리)
+        this.sharedTooltip.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const sec = this.sharedTooltip.dataset.playbackTimeSeconds;
+            if (sec === undefined || sec === '') return;
+            const playbackTimeSeconds = parseInt(sec, 10);
+            const tsManager = window.VODSync?.tsManager;
+            if (tsManager && typeof tsManager.moveToPlaybackTime === 'function') {
+                tsManager.moveToPlaybackTime(playbackTimeSeconds, true);
+            }
+            this.sharedTooltip.style.opacity = '0';
+            this.sharedTooltip.style.pointerEvents = 'none';
+        });
+        this.sharedTooltip.addEventListener('mouseenter', () => {
+            if (this._tooltipHideTimeout) {
+                clearTimeout(this._tooltipHideTimeout);
+                this._tooltipHideTimeout = null;
+            }
+        });
+        this.sharedTooltip.addEventListener('mouseleave', () => {
+            this._tooltipHideTimeout = setTimeout(() => {
+                this._tooltipHideTimeout = null;
+                if (this.sharedTooltip) {
+                    this.sharedTooltip.style.opacity = '0';
+                    this.sharedTooltip.style.pointerEvents = 'none';
+                }
+            }, 100);
+        });
         document.body.appendChild(this.sharedTooltip);
         
         setTimeout(() => {
@@ -596,25 +626,29 @@ export class SoopPrevChatViewer extends IVodSync {
             }
             messageTextDiv.addEventListener('mouseenter', (e) => {
                 if (!this.sharedTooltip) return;
+                if (this._tooltipHideTimeout) {
+                    clearTimeout(this._tooltipHideTimeout);
+                    this._tooltipHideTimeout = null;
+                }
                 const rect = messageTextDiv.getBoundingClientRect();
+                this.sharedTooltip.dataset.playbackTimeSeconds = String(playbackTimeSeconds);
                 this.sharedTooltip.textContent = tooltipText;
                 this.sharedTooltip.style.right = `${window.innerWidth - rect.right}px`;
                 this.sharedTooltip.style.top = `${rect.top - 5}px`;
                 this.sharedTooltip.style.opacity = '1';
+                this.sharedTooltip.style.pointerEvents = 'auto';
+                this.sharedTooltip.style.cursor = 'pointer';
             });
-            messageTextDiv.addEventListener('mouseleave', () => {
-                if (this.sharedTooltip) this.sharedTooltip.style.opacity = '0';
-            });
-        }
-
-        if (timestamp && playbackTimeSeconds >= 0) {
-            messageContainer.style.cursor = 'pointer';
-            messageContainer.addEventListener('click', () => {
-                const tsManager = window.VODSync?.tsManager;
-                if (tsManager && typeof tsManager.moveToPlaybackTime === 'function') {
-                    tsManager.moveToPlaybackTime(playbackTimeSeconds, true);
-                    this.sharedTooltip.style.opacity = '0';
-                }
+            messageTextDiv.addEventListener('mouseleave', (e) => {
+                if (!this.sharedTooltip) return;
+                if (e.relatedTarget === this.sharedTooltip) return;
+                this._tooltipHideTimeout = setTimeout(() => {
+                    this._tooltipHideTimeout = null;
+                    if (this.sharedTooltip) {
+                        this.sharedTooltip.style.opacity = '0';
+                        this.sharedTooltip.style.pointerEvents = 'none';
+                    }
+                }, 100);
             });
         }
 
