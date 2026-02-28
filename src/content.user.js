@@ -2177,9 +2177,9 @@ class TimelineCommentProcessorBase extends IVodSync {
     // restoreTimeRange getter/setter (setter에서 자동으로 버튼 텍스트 업데이트)
     get nextRestorePlan() {return this._restoreTimeRange;}
 
-    set nextRestorePlan(value) { 
-        this._restoreTimeRange = value; 
-        this.updateButtonText();    
+    set nextRestorePlan(value) {
+        this._restoreTimeRange = value;
+        this.updateButtonText();
     }
 
     // 설정에서 복원 구간 불러오기
@@ -2408,7 +2408,7 @@ class TimelineCommentProcessorBase extends IVodSync {
         if (this.isRestoring || !this.restoreButton || !this.nextRestorePlan) return;
 
         this.isRestoring = true;
-        this.updateButtonText(' - 복원 중...', true);
+        this.updateButtonText();
 
         try {
             const { startTime, endTime } = this.nextRestorePlan;
@@ -2468,26 +2468,21 @@ class TimelineCommentProcessorBase extends IVodSync {
             }
 
             // 다음 복원 구간 계산 (더 이전 restoreInterval만큼)
-            this.nextRestorePlan = {
-                startTime: Math.max(0, startTime - this.restoreInterval),
-                endTime: startTime
-            };
-
-            // 복원 완료 후 버튼 텍스트 업데이트
-            if (this.restoreButton) {
-                const suffix = excludedCount > 0
-                    ? ` - ${restoredCount}개, ${excludedCount} 제외`
-                    : ` - ${restoredCount}개`;
-                this.updateButtonText(suffix, false);
-            }
+            const nextStart = Math.max(0, startTime - this.restoreInterval);
+            const nextEnd = startTime;
+            const suffix = excludedCount > 0
+                ? ` - ${restoredCount}개, ${excludedCount} 제외`
+                : ` - ${restoredCount}개`;
+            this._restoreTimeRange = { startTime: nextStart, endTime: nextEnd };
+            this.isRestoring = false;
+            this.updateButtonText(suffix);
 
         } catch (error) {
+            this.isRestoring = false;
             this.error('채팅 복원 오류:', error);
             if (this.restoreButton) {
-                this.updateButtonText(' - 복원 실패, 다시 시도', false);
+                this.updateButtonText(' - 복원 실패, 다시 시도');
             }
-        } finally {
-            this.isRestoring = false;
         }
     }
 
@@ -2822,35 +2817,42 @@ class TimelineCommentProcessorBase extends IVodSync {
         }
     }
 
-    // 버튼 텍스트 및 상태 업데이트
-    updateButtonText(suffix = '', disabled = undefined) {
+    // 기본 버튼 문구 (nextRestorePlan + suffix 기준, 복원 중이면 복원 중 문구)
+    generateRestoreButtonText(suffix = '') {
+        if (this.isRestoring) return `이전 채팅 복원 (${this.restoreInterval}초) - 복원 중...`;
+        if (!this.nextRestorePlan) return '이전 채팅 복원 준비 중';
+        const { startTime, endTime } = this.nextRestorePlan;
+        if (startTime === 0 && endTime === 0) return '영상의 시작 지점에 도달함';
+        return `이전 채팅 복원 (${this.restoreInterval}초)${suffix}`;
+    }
+
+    // 버튼 텍스트 및 상태 업데이트 (nextRestorePlan / isRestoring 기준, suffix는 매개변수로 받음)
+    updateButtonText(suffix = '') {
         if (!this.restoreButton) return;
-        
-        if (disabled !== undefined) {
-            this.restoreButton.disabled = disabled;
-            // 비활성화 상태에 따른 스타일 업데이트
-            if (disabled) {
-                this.restoreButton.style.backgroundColor = '#cccccc';
-                this.restoreButton.style.cursor = 'not-allowed';
-                this.restoreButton.style.opacity = '0.6';
-            } else {
-                this.restoreButton.style.backgroundColor = '#4CAF50';
-                this.restoreButton.style.cursor = 'pointer';
-                this.restoreButton.style.opacity = '1';
-            }
+
+        const atStart = this.nextRestorePlan && this.nextRestorePlan.startTime === 0 && this.nextRestorePlan.endTime === 0;
+        const disabled = this.isRestoring || atStart;
+
+        this.restoreButton.disabled = disabled;
+        if (disabled) {
+            this.restoreButton.style.backgroundColor = '#cccccc';
+            this.restoreButton.style.color = '#333333';
+            this.restoreButton.style.cursor = 'not-allowed';
+            this.restoreButton.style.opacity = '0.6';
+        } else {
+            this.restoreButton.style.backgroundColor = '#4CAF50';
+            this.restoreButton.style.color = 'white';
+            this.restoreButton.style.cursor = 'pointer';
+            this.restoreButton.style.opacity = '1';
         }
-        
+
+        this.restoreButton.innerText = this.generateRestoreButtonText(suffix);
+
         if (!this.nextRestorePlan) {
-            // nextRestorePlan이 없을 때는 suffix가 있으면 사용, 없으면 "준비 중" 표시
-            const text = suffix ? `이전 채팅 복원${suffix}` : '이전 채팅 복원 준비 중';
-            this.restoreButton.innerText = text;
             this.restoreButton.title = '';
             return;
         }
-
         const { startTime, endTime } = this.nextRestorePlan;
-        
-        // 툴팁에 복원 구간 표시
         if (startTime !== undefined && endTime !== undefined) {
             if (startTime === 0 && endTime === 0) {
                 this.restoreButton.title = '영상의 시작 지점에 도달함';
@@ -2860,9 +2862,6 @@ class TimelineCommentProcessorBase extends IVodSync {
         } else {
             this.restoreButton.title = '';
         }
-
-        // 버튼 텍스트에는 복원 구간 길이(초)만 표시
-        this.restoreButton.innerText = `이전 채팅 복원 (${this.restoreInterval}초)${suffix}`;
     }
 
     // 초를 HH:MM:SS 형식으로 변환
@@ -3129,12 +3128,10 @@ class TimelineCommentProcessorBase extends IVodSync {
             // 현재 restoreTimeRange가 있으면 새로운 interval로 재계산
             if (this.nextRestorePlan) {
                 const { endTime } = this.nextRestorePlan;
-                this.nextRestorePlan = {
-                    startTime: Math.max(0, endTime - this.restoreInterval),
-                    endTime: endTime
-                };
+                const nextStart = Math.max(0, endTime - this.restoreInterval);
+                this.nextRestorePlan = { startTime: nextStart, endTime: endTime };
             }
-            
+
             popup.remove();
         });
 
@@ -3156,8 +3153,7 @@ class TimelineCommentProcessorBase extends IVodSync {
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
         if (/\/player\/\d+/.test(window.location.pathname)) {
-            const timelineProcessor = new SoopTimelineCommentProcessor();
-            timelineProcessor.startWatching();
+            new SoopTimelineCommentProcessor();
         }
         new SoopPrevChatViewer();
         
