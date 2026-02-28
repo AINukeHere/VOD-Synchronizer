@@ -44,8 +44,7 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
         tsManager = new classes.SoopTimestampManager();
         new classes.SoopVODLinker(false);
         if (/\/player\/\d+/.test(window.location.pathname)) {
-            const timelineProcessor = new classes.SoopTimelineCommentProcessor();
-            timelineProcessor.startWatching();
+            new classes.SoopTimelineCommentProcessor();
         }
         syncPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
@@ -82,7 +81,7 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
                 const raw = localStorage.getItem(storageKey);
                 if (raw) {
                     payload = JSON.parse(raw);
-                    localStorage.removeItem(storageKey);
+                    // localStorage.removeItem(storageKey);
                 }
             } catch (_) { /* ignore */ }
             if (Array.isArray(payload)) {

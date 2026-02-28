@@ -13,7 +13,9 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
     }
 
     buildSyncSegmentsFromCheckbox(checkboxEl) {
-        const rowEl = this.getTimelineCommentRowContaining(checkboxEl);
+        if (!this._cachedCommentContainer) return null;
+        const rows = this._getComments(this._cachedCommentContainer);
+        const rowEl = rows.find(row => row.contains(checkboxEl)) || null;
         const cmmtTxt = rowEl?.querySelector('.cmmt-txt');
         if (!cmmtTxt) return [];
         const tsManager = window.VODSync?.tsManager;

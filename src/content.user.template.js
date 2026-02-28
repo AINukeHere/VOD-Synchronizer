@@ -54,8 +54,7 @@
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
         if (/\/player\/\d+/.test(window.location.pathname)) {
-            const timelineProcessor = new SoopTimelineCommentProcessor();
-            timelineProcessor.startWatching();
+            new SoopTimelineCommentProcessor();
         }
         new SoopPrevChatViewer();
         

@@ -7,6 +7,7 @@ import { IVodSync } from './interface4log.js';
 
 export class TimelineCommentProcessorBase extends IVodSync {
     static CHECKBOX_CLASS = 'vodSync-timeline-sync-cb';
+    static CHECKBOX_WRAP_CLASS = 'vodSync-timeline-sync-wrap';
 
     /**
      * 자식 클래스에서 설정할 selector 변수들.
@@ -20,8 +21,6 @@ export class TimelineCommentProcessorBase extends IVodSync {
     constructor() {
         super();
         this._started = false;
-        /** 미리보기 내용을 채웠으면 true (인터벌에서 한 번만 채움) */
-        this._timelinePayloadApplied = false;
         /** 전달받은 타임라인 동기화 페이로드 (receive 시 저장) */
         this._incomingTimelineSyncPayload = null;
         /** 미리보기 창 뼈대 (receive 시 생성). listWrap은 뼈대의 내용 영역 참조용. */
@@ -41,6 +40,59 @@ export class TimelineCommentProcessorBase extends IVodSync {
         this.checkboxWrapUncheckedStyle = { backgroundColor: 'rgba(0,0,0,0.06)', color: '#888' };
         window.VODSync = window.VODSync || {};
         window.VODSync.timelineCommentProcessor = this;
+
+        this.startWatching();
+    }
+
+    /**
+     * 타임라인 댓글 감시 시작. 주기적으로 컨테이너를 찾고, 있으면 해당 컨테이너에서 댓글을 찾아 체크박스를 붙인다.
+     * 수신 페이로드가 있으면 미리보기 목록 영역에 내용 채움.
+     */
+    startWatching() {
+        if (this._started) return;
+        this._started = true;
+        setInterval(() => {
+            let container = this._cachedCommentContainer;
+            if (!container || !container.isConnected) {
+                container = this._getContainer();
+                this._cachedCommentContainer = container;
+            }
+            this.scanAndAttachCheckboxes(container);
+            if (this._incomingTimelineSyncPayload)
+                this.fillTimelinePreviewContent(this._incomingTimelineSyncPayload);
+        }, 500);
+    }
+
+    /**
+     * 댓글 컨테이너에서 댓글들을 찾아, 타임라인 댓글이면 변환 체크박스를 추가한다.
+     * (이미 체크박스가 있는 행은 스킵. 수정·접기 등으로 DOM이 바뀌어도 주기 호출로 다시 붙일 수 있음)
+     */
+    scanAndAttachCheckboxes(container) {
+        if (!container) return;
+        const comments = this._getComments(container);
+        for (const comment of comments) {
+            if (comment.querySelector(`.${this.constructor.CHECKBOX_CLASS}`)) continue;
+            const text = this._extractTextContent(comment);
+            const sec = this.parsePlaybackSecondsFromText(text);
+            if (sec == null) continue;
+            this.appendSyncCheckboxToRow(comment);
+        }
+    }
+
+    /** selector로 컨테이너 안 댓글 행 목록 반환 */
+    _getComments(container) {
+        if (!container) return [];
+        const sel = this.commentRowSelector;
+        if (!sel) return [];
+        return Array.from(container.querySelectorAll(sel));
+    }
+
+    /** selector로 댓글 한 줄에서 표시용 텍스트 추출 */
+    _extractTextContent(rowEl) {
+        const sel = this.commentTextSelector;
+        if (!sel) return rowEl?.textContent || '';
+        const el = rowEl.querySelector(sel);
+        return (el ? el.textContent : rowEl.textContent) || '';
     }
 
     /** style 객체를 요소에 적용. camelCase 키를 element.style에 그대로 대입. */
@@ -58,22 +110,6 @@ export class TimelineCommentProcessorBase extends IVodSync {
         return sel ? document.querySelector(sel) || null : null;
     }
 
-    /** selector로 컨테이너 안 댓글 행 목록 반환 */
-    _getCommentRows(container) {
-        if (!container) return [];
-        const sel = this.commentRowSelector;
-        if (!sel) return [];
-        return Array.from(container.querySelectorAll(sel));
-    }
-
-    /** selector로 댓글 한 줄에서 표시용 텍스트 추출 */
-    getTimelineCommentText(rowEl) {
-        const sel = this.commentTextSelector;
-        if (!sel) return rowEl?.textContent || '';
-        const el = rowEl.querySelector(sel);
-        return (el ? el.textContent : rowEl.textContent) || '';
-    }
-
     /** HH:MM:SS / MM:SS 패턴으로 재생 시각(초) 파싱. 서브클래스에서 오버라이드 가능. */
     parsePlaybackSecondsFromText(text) {
         if (!text || typeof text !== 'string') return null;
@@ -85,6 +121,41 @@ export class TimelineCommentProcessorBase extends IVodSync {
         return null;
     }
 
+    // 특정 댓글 한 줄 요소에 변환 체크박스를 추가. 체크/해제 시 _selectedCommentRows에 반영·배경색 시각화.
+    appendSyncCheckboxToRow(rowEl) {
+        const slot = this._getCheckboxInsertSlot(rowEl);
+        if (!slot) return false;
+        const wrap = document.createElement('span');
+        wrap.className = this.constructor.CHECKBOX_WRAP_CLASS;
+        this._applyStyle(wrap, this.checkboxWrapStyle);
+        const label = document.createElement('label');
+        label.title = '다른 스트리머의 다시보기가 동기화될 때 이 타임라인 댓글이 동기화된 다시보기에 맞춰 변환됩니다';
+        this._applyStyle(label, this.checkboxLabelStyle);
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = this.constructor.CHECKBOX_CLASS;
+        this._applyStyle(cb, this.checkboxInputStyle);
+        const updateWrapStyle = () => {
+            this._applyStyle(wrap, cb.checked ? this.checkboxWrapCheckedStyle : this.checkboxWrapUncheckedStyle);
+        };
+        cb.addEventListener('change', () => {
+            updateWrapStyle();
+            if (cb.checked) {
+                if (!this._selectedCommentRows.includes(rowEl)) this._selectedCommentRows.push(rowEl);
+            } else {
+                this._selectedCommentRows = this._selectedCommentRows.filter(r => r !== rowEl);
+            }
+        });
+        updateWrapStyle();
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode('동기화할 때 이 타임라인을 변환'));
+        wrap.appendChild(label);
+        const pos = window.getComputedStyle(slot).position;
+        if (!pos || pos === 'static') slot.style.position = 'relative';
+        slot.appendChild(wrap);
+        return true;
+    }
+
     /** selector로 체크박스를 넣을 슬롯 반환 (없으면 rowEl) */
     _getCheckboxInsertSlot(rowEl) {
         const sel = this.checkboxSlotSelector;
@@ -92,42 +163,32 @@ export class TimelineCommentProcessorBase extends IVodSync {
         return rowEl.querySelector(sel) || rowEl;
     }
 
-    /** 재생 시각(초)을 댓글용 시간 문자열로 포맷. 자식 클래스에서 오버라이드 가능. */
-    formatPlaybackTimeAsComment(playbackSec) {
-        if (typeof playbackSec !== 'number' || playbackSec < 0 || !isFinite(playbackSec)) return '';
-        const h = Math.floor(playbackSec / 3600);
-        const m = Math.floor((playbackSec % 3600) / 60);
-        const s = Math.floor(playbackSec % 60);
-        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} `;
-        return `${m}:${String(s).padStart(2, '0')} `;
+    /** VOD linker가 호출. 변환 체크된 댓글 요소들을 모아 가공한 페이로드 반환. */
+    getTimelineSyncPayload() {
+        // _selectedCommentRows에서 연결된(실제 DOM에 남아있는) row만 추림
+        this._selectedCommentRows = this._selectedCommentRows.filter(row => row.isConnected);
+
+        // 결과 배열을 reduce와 flatMap 활용해서 가독성 높임
+        const result = this._selectedCommentRows.flatMap((rowEl, idx) => {
+            const cb = rowEl.querySelector(`.${this.constructor.CHECKBOX_CLASS}`);
+            if (!cb) return [];
+            const segs = this.buildSyncSegmentsFromCheckbox(cb);
+            if (!Array.isArray(segs)) return [];
+            // 각 row는 첫 줄 빼고 앞에 줄바꿈(\n) 삽입
+            const filteredSegs = segs.filter(x => typeof x === 'string' || (typeof x === 'number' && !isNaN(x)));
+            return idx === 0 ? filteredSegs : ['\n', ...filteredSegs];
+        });
+
+        return result;
     }
 
     /**
-     * 미리보기 패널에서 타임라인 한 칸에 표시할 문자열 (H:MM:SS 또는 M:SS). 자식에서 오버라이드 가능.
-     * @param {number} playbackSec
-     * @returns {string}
+     * 체크박스가 속한 댓글 하나에서 동기화용 세그먼트 생성. 파생 클래스에서 오버라이드.
+     * @param {HTMLInputElement} checkboxEl
+     * @returns {(string|number)[]}
      */
-    getTimelineDisplayText(playbackSec) {
-        if (typeof playbackSec !== 'number' || playbackSec < 0 || !isFinite(playbackSec)) return '--:--';
-        const h = Math.floor(playbackSec / 3600);
-        const m = Math.floor((playbackSec % 3600) / 60);
-        const s = Math.floor(playbackSec % 60);
-        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        return `${m}:${String(s).padStart(2, '0')}`;
-    }
-
-    /**
-     * 미리보기/댓글에 넣을 타임라인 한 칸 DOM 요소 생성. 플랫폼별로 오버라이드.
-     * @param {number} playbackSec 재생 시각(초)
-     * @returns {HTMLElement}
-     */
-    createTimelineDisplayElement(playbackSec) {
-        const span = document.createElement('span');
-        span.className = 'vodSync-timeline-preview-time';
-        span.textContent = this.getTimelineDisplayText(playbackSec);
-        span.style.cssText = 'font-family:monospace;font-size:13px;cursor:pointer;text-decoration:underline;';
-        span._vodSyncUpdateTime = (sec) => { span.textContent = this.getTimelineDisplayText(sec); };
-        return span;
+    buildSyncSegmentsFromCheckbox(checkboxEl) {
+        throw this.error('buildSyncSegmentsFromCheckbox is not implemented');
     }
 
     /**
@@ -137,15 +198,12 @@ export class TimelineCommentProcessorBase extends IVodSync {
     receiveTimelineSyncPayload(payload) {
         if (!Array.isArray(payload) || payload.length === 0) return;
         this._incomingTimelineSyncPayload = payload;
-        this._timelinePayloadApplied = false;
         if (!this._timelinePreviewWrap?.isConnected) {
             this._createTimelinePreviewSkeleton();
         }
     }
-
-    /**
-     * 미리보기 창 뼈대만 생성 (헤더·빈 목록 영역·푸터). 내용은 fillTimelinePreviewContent()에서 채움.
-     */
+    
+    // 미리보기 창 뼈대만 생성 (헤더·빈 목록 영역·푸터). 내용은 fillTimelinePreviewContent()에서 채움.
     _createTimelinePreviewSkeleton() {
         const wrap = document.createElement('div');
         wrap.className = 'vodSync-timeline-preview-wrap';
@@ -210,12 +268,8 @@ export class TimelineCommentProcessorBase extends IVodSync {
         this._timelinePreviewListWrap = listWrap;
     }
 
-    /**
-     * 수신 페이로드가 있고 tsManager가 변환 가능할 때만 미리보기 목록 영역에 내용 채움. 인터벌에서 주기 호출.
-     */
-    fillTimelinePreviewContent() {
-        if (this._timelinePayloadApplied) return;
-        const payload = this._incomingTimelineSyncPayload;
+    // 수신한 페이로드로부터 변환된 타임라인 댓글 미리보기 목록 영역에 내용 채움.
+    fillTimelinePreviewContent(payload) {
         if (!Array.isArray(payload) || payload.length === 0) return;
         if (!this._timelinePreviewListWrap?.isConnected) return;
         const tsManager = window.VODSync?.tsManager;
@@ -225,8 +279,6 @@ export class TimelineCommentProcessorBase extends IVodSync {
 
         // 페이로드 → 순서 유지 fragments (string | timeline), \n 기준으로 행 분리
         const fragments = [];
-        let globalTsCount = 0;
-        let convertedCount = 0;
         for (const item of payload) {
             const asGlobalMs = typeof item === 'number' && !isNaN(item)
                 ? item
@@ -234,10 +286,8 @@ export class TimelineCommentProcessorBase extends IVodSync {
                     ? parseInt(item, 10)
                     : NaN);
             if (!isNaN(asGlobalMs)) {
-                globalTsCount++;
                 const sec = globalTSToPlaybackTime.call(tsManager, asGlobalMs);
                 if (sec != null) {
-                    convertedCount++;
                     fragments.push({ type: 'timeline', playbackSec: Math.max(0, Math.floor(sec)) });
                 } else {
                     fragments.push({ type: 'timeline', playbackSec: null });
@@ -246,7 +296,6 @@ export class TimelineCommentProcessorBase extends IVodSync {
                 fragments.push({ type: 'string', value: item });
             }
         }
-        if (globalTsCount > 0 && convertedCount === 0) return;
 
         const rows = [];
         let currentRow = [];
@@ -267,7 +316,6 @@ export class TimelineCommentProcessorBase extends IVodSync {
         if (currentRow.length > 0) rows.push(currentRow);
         if (rows.length === 0) return;
 
-        this._timelinePayloadApplied = true;
         this._incomingTimelineSyncPayload = null;
         this._timelinePreviewRows = rows;
 
@@ -325,133 +373,41 @@ export class TimelineCommentProcessorBase extends IVodSync {
         });
     }
 
-    /** 체크박스(또는 그 자식)가 속한 댓글 한 줄 요소 반환 */
-    getTimelineCommentRowContaining(descendantEl) {
-        let container = this._cachedCommentContainer?.isConnected ? this._cachedCommentContainer : null;
-        if (!container) {
-            container = this._getContainer();
-            this._cachedCommentContainer = container;
-        }
-        if (!container) return null;
-        const rows = this._getCommentRows(container);
-        return rows.find(row => row.contains(descendantEl)) || null;
+    // 재생 시각(초)을 댓글용 시간 문자열로 포맷. 자식 클래스에서 오버라이드 가능.
+    formatPlaybackTimeAsComment(playbackSec) {
+        if (typeof playbackSec !== 'number' || playbackSec < 0 || !isFinite(playbackSec)) return '';
+        const h = Math.floor(playbackSec / 3600);
+        const m = Math.floor((playbackSec % 3600) / 60);
+        const s = Math.floor(playbackSec % 60);
+        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} `;
+        return `${m}:${String(s).padStart(2, '0')} `;
     }
 
     /**
-     * 댓글 컨테이너에서 댓글들을 찾아, 타임라인 댓글이면 변환 체크박스를 추가한다.
-     * (이미 체크박스가 있는 행은 스킵. 수정·접기 등으로 DOM이 바뀌어도 주기 호출로 다시 붙일 수 있음)
+     * 미리보기 패널에서 타임라인 한 칸에 표시할 문자열 (H:MM:SS 또는 M:SS). 자식에서 오버라이드 가능.
+     * @param {number} playbackSec
+     * @returns {string}
      */
-    scanAndAttachCheckboxes(container) {
-        if (!container) return;
-        const rows = this._getCommentRows(container);
-        for (const rowEl of rows) {
-            if (rowEl.querySelector(`.${this.constructor.CHECKBOX_CLASS}`)) continue;
-            const text = this.getTimelineCommentText(rowEl);
-            const sec = this.parsePlaybackSecondsFromText(text);
-            if (sec == null) continue;
-            this.appendSyncCheckboxToRow(rowEl, sec);
-        }
+    getTimelineDisplayText(playbackSec) {
+        if (typeof playbackSec !== 'number' || playbackSec < 0 || !isFinite(playbackSec)) return '--:--';
+        const h = Math.floor(playbackSec / 3600);
+        const m = Math.floor((playbackSec % 3600) / 60);
+        const s = Math.floor(playbackSec % 60);
+        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        return `${m}:${String(s).padStart(2, '0')}`;
     }
 
     /**
-     * 특정 댓글 한 줄 요소에 변환 체크박스를 추가. 체크/해제 시 _selectedCommentRows에 반영·배경색 시각화.
+     * 미리보기/댓글에 넣을 타임라인 한 칸 DOM 요소 생성. 플랫폼별로 오버라이드.
+     * @param {number} playbackSec 재생 시각(초)
+     * @returns {HTMLElement}
      */
-    appendSyncCheckboxToRow(rowEl, playbackTimeSec) {
-        const slot = this._getCheckboxInsertSlot(rowEl);
-        if (!slot) return false;
-        const wrap = document.createElement('span');
-        wrap.className = 'vodSync-timeline-sync-wrap';
-        this._applyStyle(wrap, this.checkboxWrapStyle);
-        const label = document.createElement('label');
-        label.title = '다른 스트리머의 다시보기가 동기화될 때 이 타임라인 댓글이 동기화된 다시보기에 맞춰 변환됩니다';
-        this._applyStyle(label, this.checkboxLabelStyle);
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = this.constructor.CHECKBOX_CLASS;
-        cb.dataset.playbackSec = String(playbackTimeSec);
-        this._applyStyle(cb, this.checkboxInputStyle);
-        const updateWrapStyle = () => {
-            this._applyStyle(wrap, cb.checked ? this.checkboxWrapCheckedStyle : this.checkboxWrapUncheckedStyle);
-        };
-        cb.addEventListener('change', () => {
-            updateWrapStyle();
-            if (cb.checked) {
-                if (!this._selectedCommentRows.includes(rowEl)) this._selectedCommentRows.push(rowEl);
-            } else {
-                this._selectedCommentRows = this._selectedCommentRows.filter(r => r !== rowEl);
-            }
-        });
-        updateWrapStyle();
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode('동기화할 때 이 타임라인을 변환'));
-        wrap.appendChild(label);
-        const pos = window.getComputedStyle(slot).position;
-        if (!pos || pos === 'static') slot.style.position = 'relative';
-        slot.appendChild(wrap);
-        return true;
-    }
-
-    /** VOD linker가 호출. 변환 체크된 댓글 요소들을 모아 가공한 페이로드 반환. */
-    getTimelineSyncPayload() {
-        const connected = this._selectedCommentRows.filter(r => r.isConnected);
-        this._selectedCommentRows = connected;
-        return this.buildPayloadFromCommentRows(connected);
-    }
-
-    /**
-     * 1개 이상의 댓글 요소를 받아 동기화 전달용 데이터로 가공. 각 행의 체크박스로 세그먼트를 만든 뒤 이어 붙임.
-     * @param {Element[]} rowElements
-     * @returns {(string|number)[]}
-     */
-    buildPayloadFromCommentRows(rowElements) {
-        const result = [];
-        let first = true;
-        for (const rowEl of rowElements) {
-            const cb = rowEl.querySelector(`.${this.constructor.CHECKBOX_CLASS}`);
-            if (!cb) continue;
-            if (!first) result.push('\n');
-            first = false;
-            const segs = this.buildSyncSegmentsFromCheckbox(cb);
-            if (Array.isArray(segs)) {
-                for (const x of segs) {
-                    if (typeof x === 'string' || (typeof x === 'number' && !isNaN(x))) result.push(x);
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
-     * 체크박스가 속한 댓글 한 줄에서 동기화용 세그먼트 생성. 파생 클래스에서 오버라이드 가능.
-     * @param {HTMLInputElement} checkboxEl
-     * @returns {(string|number)[]}
-     */
-    buildSyncSegmentsFromCheckbox(checkboxEl) {
-        const rowEl = this.getTimelineCommentRowContaining(checkboxEl);
-        const text = rowEl ? this.getTimelineCommentText(rowEl) : '';
-        const sec = parseInt(checkboxEl.dataset.playbackSec, 10);
-        if (isNaN(sec)) return text ? [text] : [];
-        const tsManager = window.VODSync?.tsManager;
-        const globalDate = tsManager?.playbackTimeToGlobalTS?.(sec);
-        const globalMs = globalDate instanceof Date && !isNaN(globalDate.getTime()) ? globalDate.getTime() : null;
-        if (globalMs != null) return [globalMs, text];
-        return text ? [text] : [];
-    }
-
-    /**
-     * 타임라인 댓글 감시 시작. 주기적으로 컨테이너를 찾고, 있으면 해당 컨테이너에서 댓글을 찾아 체크박스를 붙인다.
-     */
-    startWatching() {
-        if (this._started) return;
-        this._started = true;
-        setInterval(() => {
-            let container = this._cachedCommentContainer;
-            if (!container || !container.isConnected) {
-                container = this._getContainer();
-                this._cachedCommentContainer = container;
-            }
-            this.scanAndAttachCheckboxes(container);
-            this.fillTimelinePreviewContent();
-        }, 500);
+    createTimelineDisplayElement(playbackSec) {
+        const span = document.createElement('span');
+        span.className = 'vodSync-timeline-preview-time';
+        span.textContent = this.getTimelineDisplayText(playbackSec);
+        span.style.cssText = 'font-family:monospace;font-size:13px;cursor:pointer;text-decoration:underline;';
+        span._vodSyncUpdateTime = (sec) => { span.textContent = this.getTimelineDisplayText(sec); };
+        return span;
     }
 }
