@@ -5,7 +5,7 @@ export class SettingsManager {
         this.defaultSettings = {
             enableTimestamp: true,
             enableSyncPanel: true,
-            enableRpPanel: true,
+            enableRpPanel: false,
             enableUpdateNotification: true,
             soopRestoreInterval: 30,
             soopExcludeEmoticonOnlyChat: false
