@@ -8,6 +8,24 @@ import { IVodSync } from './interface4log.js';
 export class TimelineCommentProcessorBase extends IVodSync {
     static CHECKBOX_CLASS = 'vodSync-timeline-sync-cb';
     static CHECKBOX_WRAP_CLASS = 'vodSync-timeline-sync-wrap';
+    /** 더보기 레이어(_moreDot_layer) 안에 넣는 편집 버튼 식별용 */
+    static EDIT_IN_MORE_CLASS = 'vodSync-timeline-edit-in-more';
+
+    // ---- 문자열 리소스 (UI 노출용) ----
+    static LABEL_SYNC_TOOLTIP = '다른 스트리머의 다시보기가 동기화될 때 이 타임라인 댓글이 동기화된 다시보기에 맞춰 변환됩니다';
+    static LABEL_SYNC_CHECKBOX = '동기화할 때 이 타임라인을 변환';
+    static BTN_EDIT_IN_MORE = '타임라인 편집';
+    static BTN_EDIT_IN_MORE_TOOLTIP = '이 타임라인 댓글을 미리보기 창에서 편집·복사합니다';
+    static PANEL_HEADER = '타임라인 편집기';
+    static BTN_COLLAPSE = '접기';
+    static BTN_EXPAND = '펴기';
+    static BTN_COPY = '변환된 타임라인 복사';
+    static BTN_COPIED = '복사됨';
+    static BTN_COPY_FAILED = '복사 실패';
+    static BTN_CLOSE = '닫기';
+    static TIME_PLACEHOLDER = '--:--';
+    static BTN_TIME_MINUS = '-1';
+    static BTN_TIME_PLUS = '+1';
 
     /**
      * 자식 클래스에서 설정할 selector 변수들.
@@ -58,6 +76,7 @@ export class TimelineCommentProcessorBase extends IVodSync {
                 this._cachedCommentContainer = container;
             }
             this.scanAndAttachCheckboxes(container);
+            this._injectEditButtonIntoMoreLayers(container);
             if (this._incomingTimelineSyncPayload)
                 this.fillTimelinePreviewContent(this._incomingTimelineSyncPayload);
         }, 500);
@@ -122,21 +141,22 @@ export class TimelineCommentProcessorBase extends IVodSync {
     }
 
     // 특정 댓글 한 줄 요소에 변환 체크박스를 추가. 체크/해제 시 _selectedCommentRows에 반영·배경색 시각화.
+    // '타임라인 댓글 편집하기' 버튼은 댓글 더보기 레이어(_moreDot_layer) 안에 주기적으로 주입됨.
     appendSyncCheckboxToRow(rowEl) {
         const slot = this._getCheckboxInsertSlot(rowEl);
         if (!slot) return false;
-        const wrap = document.createElement('span');
-        wrap.className = this.constructor.CHECKBOX_WRAP_CLASS;
-        this._applyStyle(wrap, this.checkboxWrapStyle);
+        const toggleWrap = document.createElement('span');
+        toggleWrap.className = this.constructor.CHECKBOX_WRAP_CLASS;
+        this._applyStyle(toggleWrap, this.checkboxWrapStyle);
         const label = document.createElement('label');
-        label.title = '다른 스트리머의 다시보기가 동기화될 때 이 타임라인 댓글이 동기화된 다시보기에 맞춰 변환됩니다';
+        label.title = this.constructor.LABEL_SYNC_TOOLTIP;
         this._applyStyle(label, this.checkboxLabelStyle);
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = this.constructor.CHECKBOX_CLASS;
         this._applyStyle(cb, this.checkboxInputStyle);
         const updateWrapStyle = () => {
-            this._applyStyle(wrap, cb.checked ? this.checkboxWrapCheckedStyle : this.checkboxWrapUncheckedStyle);
+            this._applyStyle(toggleWrap, cb.checked ? this.checkboxWrapCheckedStyle : this.checkboxWrapUncheckedStyle);
         };
         cb.addEventListener('change', () => {
             updateWrapStyle();
@@ -148,12 +168,39 @@ export class TimelineCommentProcessorBase extends IVodSync {
         });
         updateWrapStyle();
         label.appendChild(cb);
-        label.appendChild(document.createTextNode('동기화할 때 이 타임라인을 변환'));
-        wrap.appendChild(label);
+        label.appendChild(document.createTextNode(this.constructor.LABEL_SYNC_CHECKBOX));
+        toggleWrap.appendChild(label);
+
         const pos = window.getComputedStyle(slot).position;
         if (!pos || pos === 'static') slot.style.position = 'relative';
-        slot.appendChild(wrap);
+        slot.appendChild(toggleWrap);
         return true;
+    }
+
+    /**
+     * 댓글 더보기 레이어(._moreDot_layer)가 보일 때, 타임라인 댓글인 경우에만 그 안에 '타임라인 댓글 편집하기' 버튼을 넣음.
+     */
+    _injectEditButtonIntoMoreLayers(container) {
+        if (!container?.isConnected) return;
+        const layers = container.querySelectorAll('._moreDot_layer');
+        for (const layer of layers) {
+            if (layer.querySelector(`.${this.constructor.EDIT_IN_MORE_CLASS}`)) continue;
+            const rowEl = layer.closest(this.commentRowSelector);
+            if (!rowEl || !rowEl.querySelector(`.${this.constructor.CHECKBOX_CLASS}`)) continue;
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = this.constructor.EDIT_IN_MORE_CLASS;
+            editBtn.textContent = this.constructor.BTN_EDIT_IN_MORE;
+            editBtn.title = this.constructor.BTN_EDIT_IN_MORE_TOOLTIP;
+            // editBtn.style.cssText = 'display:block;width:100%;margin-top:4px;padding:4px 8px;font-size:12px;cursor:pointer;text-align:left;';
+            editBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.openPreviewWithCurrentPageTimelineComments(rowEl);
+                if (layer.parentNode.parentNode.childNodes[0]) layer.parentNode.parentNode.childNodes[0].click(); // 더보기 버튼 한번 더 눌러 닫기
+            });
+            layer.appendChild(editBtn);
+        }
     }
 
     /** selector로 체크박스를 넣을 슬롯 반환 (없으면 rowEl) */
@@ -163,32 +210,59 @@ export class TimelineCommentProcessorBase extends IVodSync {
         return rowEl.querySelector(sel) || rowEl;
     }
 
-    /** VOD linker가 호출. 변환 체크된 댓글 요소들을 모아 가공한 페이로드 반환. */
+    /** VOD linker가 호출. 변환 체크된 댓글 요소들을 모아 가공한 페이로드 반환. (storage/동기화와 동일한 형식: (string|number)[]) */
     getTimelineSyncPayload() {
         // _selectedCommentRows에서 연결된(실제 DOM에 남아있는) row만 추림
         this._selectedCommentRows = this._selectedCommentRows.filter(row => row.isConnected);
-
-        // 결과 배열을 reduce와 flatMap 활용해서 가독성 높임
-        const result = this._selectedCommentRows.flatMap((rowEl, idx) => {
-            const cb = rowEl.querySelector(`.${this.constructor.CHECKBOX_CLASS}`);
-            if (!cb) return [];
-            const segs = this.buildSyncSegmentsFromCheckbox(cb);
-            if (!Array.isArray(segs)) return [];
-            // 각 row는 첫 줄 빼고 앞에 줄바꿈(\n) 삽입
-            const filteredSegs = segs.filter(x => typeof x === 'string' || (typeof x === 'number' && !isNaN(x)));
-            return idx === 0 ? filteredSegs : ['\n', ...filteredSegs];
-        });
-
-        return result;
+        return this._buildPayloadFromComments(this._selectedCommentRows);
     }
 
     /**
-     * 체크박스가 속한 댓글 하나에서 동기화용 세그먼트 생성. 파생 클래스에서 오버라이드.
-     * @param {HTMLInputElement} checkboxEl
+     * 댓글 행 목록으로부터 storage/동기화와 동일한 페이로드 형식 생성.
+     * 미리보기(편집하기)와 변환 결과 모두 이 형식으로 fillTimelinePreviewContent에 넘긴다.
+     * @param {HTMLElement[]} rowEls 체크박스가 붙은 댓글 행 요소 배열
      * @returns {(string|number)[]}
      */
-    buildSyncSegmentsFromCheckbox(checkboxEl) {
-        throw this.error('buildSyncSegmentsFromCheckbox is not implemented');
+    _buildPayloadFromComments(rowEls) {
+        if (!Array.isArray(rowEls)) return [];
+        const segs = this.buildSegmentsFromComments(rowEls);
+        if (!Array.isArray(segs)) return [];
+        return segs;
+    }
+
+    /**
+     * 한 개 이상의 댓글에서 미리보기용 세그먼트 생성. 파생 클래스에서 오버라이드.
+     * @param {HTMLElement[]} commentEls 댓글 요소 배열
+     * @returns {(string|number)[]}
+     */
+    buildSegmentsFromComments(commentEls) {
+        throw this.error('buildSegmentsFromComments is not implemented');
+    }
+
+    /**
+     * 미리보기 창을 열고 행 데이터로 채움. 변환 결과·현재 페이지 수집 모두 이 진입점 사용.
+     * @param {Array<Array<{type:'string',value:string}|{type:'timeline',playbackSec:number|null}>>} rows
+     */
+    openTimelinePreview(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) return;
+        if (!this._timelinePreviewWrap?.isConnected) {
+            this._createTimelinePreviewSkeleton();
+        }
+        this._incomingTimelineSyncPayload = null;
+        this._timelinePreviewRows = rows;
+        this._renderPreviewRows(rows);
+    }
+
+    /**
+     * 타임라인 편집하기 버튼이 클릭되면 이 함수가 호출됨.
+     * 해당 댓글 내용을 미리보기에 채우고 미리보기 창을 엽니다.
+     * @param {HTMLElement} commentEl 편집하기 버튼이 속한 댓글 요소
+     */
+    openPreviewWithCurrentPageTimelineComments(commentEl) {
+        if (!commentEl?.isConnected) return;
+        const payload = this._buildPayloadFromComments([commentEl]);
+        if (payload.length === 0) return;
+        this.fillTimelinePreviewContent(payload);
     }
 
     /**
@@ -213,10 +287,10 @@ export class TimelineCommentProcessorBase extends IVodSync {
 
         const header = document.createElement('div');
         header.style.cssText = 'padding:10px 12px;border-bottom:1px solid #eee;font-weight:bold;font-size:14px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;';
-        header.textContent = '타임라인 동기화 미리보기';
+        header.textContent = this.constructor.PANEL_HEADER;
         const collapseBtn = document.createElement('button');
         collapseBtn.type = 'button';
-        collapseBtn.textContent = '접기';
+        collapseBtn.textContent = this.constructor.BTN_COLLAPSE;
         collapseBtn.style.cssText = 'padding:4px 10px;font-size:12px;cursor:pointer;';
         const bodyArea = document.createElement('div');
         bodyArea.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;';
@@ -227,19 +301,19 @@ export class TimelineCommentProcessorBase extends IVodSync {
 
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';
-        copyBtn.textContent = '변환된 타임라인 복사';
+        copyBtn.textContent = this.constructor.BTN_COPY;
         copyBtn.style.cssText = 'padding:6px 12px;cursor:pointer;background:#1a73e8;color:#fff;border:none;border-radius:4px;font-size:12px;';
         copyBtn.addEventListener('click', () => {
             const rows = this._timelinePreviewRows;
             if (!rows || rows.length === 0) return;
             const text = rows.map(rowFrags =>
-                rowFrags.map(f => f.type === 'string' ? f.value : (f.playbackSec != null ? this.formatPlaybackTimeAsComment(f.playbackSec).trim() : '--:-- ')).join('')
+                rowFrags.map(f => f.type === 'string' ? f.value : (f.playbackSec != null ? this.formatPlaybackTimeAsComment(f.playbackSec).trim() : this.constructor.TIME_PLACEHOLDER + ' ')).join('')
             ).join('\n');
-            if (text) navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = '복사됨'; setTimeout(() => { copyBtn.textContent = '변환된 타임라인 복사'; }, 1500); }).catch(() => { copyBtn.textContent = '복사 실패'; });
+            if (text) navigator.clipboard.writeText(text).then(() => { copyBtn.textContent = this.constructor.BTN_COPIED; setTimeout(() => { copyBtn.textContent = this.constructor.BTN_COPY; }, 1500); }).catch(() => { copyBtn.textContent = this.constructor.BTN_COPY_FAILED; });
         });
         const closeBtn = document.createElement('button');
         closeBtn.type = 'button';
-        closeBtn.textContent = '닫기';
+        closeBtn.textContent = this.constructor.BTN_CLOSE;
         closeBtn.style.cssText = 'padding:6px 12px;cursor:pointer;background:#666;color:#fff;border:none;border-radius:4px;font-size:12px;';
         closeBtn.addEventListener('click', () => {
             wrap.remove();
@@ -251,7 +325,7 @@ export class TimelineCommentProcessorBase extends IVodSync {
         collapseBtn.addEventListener('click', () => {
             const collapsed = bodyArea.style.display === 'none';
             bodyArea.style.display = collapsed ? 'flex' : 'none';
-            collapseBtn.textContent = collapsed ? '접기' : '펴기';
+            collapseBtn.textContent = collapsed ? this.constructor.BTN_COLLAPSE : this.constructor.BTN_EXPAND;
         });
 
         header.appendChild(collapseBtn);
@@ -268,10 +342,9 @@ export class TimelineCommentProcessorBase extends IVodSync {
         this._timelinePreviewListWrap = listWrap;
     }
 
-    // 수신한 페이로드로부터 변환된 타임라인 댓글 미리보기 목록 영역에 내용 채움.
+    // 수신한 페이로드로부터 변환된 타임라인 댓글 미리보기 목록 영역에 내용 채움. 내부에서 openTimelinePreview(rows) 호출.
     fillTimelinePreviewContent(payload) {
         if (!Array.isArray(payload) || payload.length === 0) return;
-        if (!this._timelinePreviewListWrap?.isConnected) return;
         const tsManager = window.VODSync?.tsManager;
         if (!tsManager?.canConvertGlobalTSToPlaybackTime()) return;
         const globalTSToPlaybackTime = tsManager.globalTSToPlaybackTime;
@@ -316,11 +389,12 @@ export class TimelineCommentProcessorBase extends IVodSync {
         if (currentRow.length > 0) rows.push(currentRow);
         if (rows.length === 0) return;
 
-        this._incomingTimelineSyncPayload = null;
-        this._timelinePreviewRows = rows;
+        this.openTimelinePreview(rows);
+    }
 
-        // TODO: 치지직에서도 간단하게 element 구성만으로 이동이 가능하다면 굳이 이걸 타임라인부분에 이벤트리스너를 추가할 필요가 없음.
-        // const moveToPlaybackTime = tsManager?.moveToPlaybackTime?.bind(tsManager);
+    /** 미리보기 목록 영역에 행 데이터를 DOM으로 채움. openTimelinePreview → fillTimelinePreviewContent / openPreviewWithCurrentPageTimelineComments 에서 사용. */
+    _renderPreviewRows(rows) {
+        if (!this._timelinePreviewListWrap?.isConnected || !Array.isArray(rows) || rows.length === 0) return;
         const listWrap = this._timelinePreviewListWrap;
         listWrap.textContent = '';
 
@@ -336,20 +410,20 @@ export class TimelineCommentProcessorBase extends IVodSync {
                 } else {
                     if (frag.playbackSec == null) {
                         const placeholder = document.createElement('span');
-                        placeholder.textContent = '--:--';
+                        placeholder.textContent = this.constructor.TIME_PLACEHOLDER;
                         placeholder.style.cssText = 'font-family:monospace;color:#999;';
+                        // TODO: 치지직에서도 간단하게 element 구성만으로 이동이 가능하다면 굳이 이걸 타임라인부분에 이벤트리스너를 추가할 필요가 없음.
+                        // timeEl.addEventListener('click', (e) => { e.stopPropagation(); if (moveToPlaybackTime) moveToPlaybackTime(frag.playbackSec, false); });
                         row.appendChild(placeholder);
                     } else {
                         const timeEl = this.createTimelineDisplayElement(frag.playbackSec);
-                        // TODO: 치지직에서도 간단하게 element 구성만으로 이동이 가능하다면 굳이 이걸 타임라인부분에 이벤트리스너를 추가할 필요가 없음.
-                        // timeEl.addEventListener('click', (e) => { e.stopPropagation(); if (moveToPlaybackTime) moveToPlaybackTime(frag.playbackSec, false); });
                         const btnMinus = document.createElement('button');
                         btnMinus.type = 'button';
-                        btnMinus.textContent = '-1';
+                        btnMinus.textContent = this.constructor.BTN_TIME_MINUS;
                         btnMinus.style.cssText = 'padding:2px 6px;font-size:11px;cursor:pointer;';
                         const btnPlus = document.createElement('button');
                         btnPlus.type = 'button';
-                        btnPlus.textContent = '+1';
+                        btnPlus.textContent = this.constructor.BTN_TIME_PLUS;
                         btnPlus.style.cssText = 'padding:2px 6px;font-size:11px;cursor:pointer;';
                         btnMinus.addEventListener('click', (e) => {
                             e.stopPropagation();
@@ -389,7 +463,7 @@ export class TimelineCommentProcessorBase extends IVodSync {
      * @returns {string}
      */
     getTimelineDisplayText(playbackSec) {
-        if (typeof playbackSec !== 'number' || playbackSec < 0 || !isFinite(playbackSec)) return '--:--';
+        if (typeof playbackSec !== 'number' || playbackSec < 0 || !isFinite(playbackSec)) return this.constructor.TIME_PLACEHOLDER;
         const h = Math.floor(playbackSec / 3600);
         const m = Math.floor((playbackSec % 3600) / 60);
         const s = Math.floor(playbackSec % 60);

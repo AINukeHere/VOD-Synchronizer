@@ -12,48 +12,42 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
         this.commentInputSelector = '#commentWrite, .comment_write textarea, [class*="commentWrite"] textarea, [class*="comment_write"]';
     }
 
-    buildSyncSegmentsFromCheckbox(checkboxEl) {
-        if (!this._cachedCommentContainer) return null;
-        const rows = this._getComments(this._cachedCommentContainer);
-        const rowEl = rows.find(row => row.contains(checkboxEl)) || null;
-        const cmmtTxt = rowEl?.querySelector('.cmmt-txt');
-        if (!cmmtTxt) return [];
+    /**
+     * 한 개 이상의 댓글에서 미리보기용 세그먼트 생성.
+     * @param {HTMLElement[]} rowEls 댓글 행 요소 배열
+     * @returns {(string|number)[]}
+     */
+    buildSegmentsFromComments(commentEls) {
         const tsManager = window.VODSync?.tsManager;
-        const root = cmmtTxt.querySelector('p') || cmmtTxt;
         const result = [];
-        const nodes = root.childNodes;
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-            if (node.nodeType === Node.TEXT_NODE) {
+        for (const commentEl of commentEls) {
+            const cmmtTxt = commentEl?.querySelector('.cmmt-txt');
+            if (!cmmtTxt) continue;
+            const root = cmmtTxt.querySelector('p') || cmmtTxt;
+            const nodes = root.childNodes;
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const t = node.textContent;
+                    if (t) result.push(t);
+                    continue;
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) continue;
+                if (node.classList?.contains('best')) continue;
+                if (node.tagName === 'BR') { result.push('\n'); continue; }
+                if (node.classList?.contains('time_link') && node.hasAttribute('data-time')) {
+                    const sec = parseInt(node.getAttribute('data-time'), 10);
+                    if (!isNaN(sec) && tsManager?.playbackTimeToGlobalTS) {
+                        const globalDate = tsManager.playbackTimeToGlobalTS(sec);
+                        if (globalDate instanceof Date && !isNaN(globalDate.getTime())) {
+                            result.push(globalDate.getTime());
+                        }
+                    }
+                    continue;
+                }
                 const t = node.textContent?.trim();
                 if (t) result.push(t);
-                continue;
             }
-            if (node.nodeType !== Node.ELEMENT_NODE) continue;
-            if (node.classList?.contains('best')) continue;
-            if (node.tagName === 'BR') { result.push('\n'); continue; }
-            if (node.classList?.contains('time_link') && node.hasAttribute('data-time')) {
-                const sec = parseInt(node.getAttribute('data-time'), 10);
-                if (!isNaN(sec) && tsManager?.playbackTimeToGlobalTS) {
-                    const globalDate = tsManager.playbackTimeToGlobalTS(sec);
-                    if (globalDate instanceof Date && !isNaN(globalDate.getTime())) {
-                        result.push(globalDate.getTime());
-                    }
-                }
-                let text = '';
-                for (i++; i < nodes.length; i++) {
-                    const n = nodes[i];
-                    if (n.nodeType === Node.TEXT_NODE) text += n.textContent;
-                    else if (n.nodeType === Node.ELEMENT_NODE && n.tagName === 'BR') break;
-                    else if (n.nodeType === Node.ELEMENT_NODE && !n.classList?.contains('best')) text += n.textContent || '';
-                }
-                const trimmed = text.trim();
-                if (trimmed) result.push(trimmed);
-                i--;
-                continue;
-            }
-            const t = node.textContent?.trim();
-            if (t) result.push(t);
         }
         return result;
     }
