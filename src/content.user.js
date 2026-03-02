@@ -1676,8 +1676,8 @@ class TimelineCommentProcessorBase extends IVodSync {
     static BTN_COPY_FAILED = '복사 실패';
     static BTN_CLOSE = '닫기';
     static TIME_PLACEHOLDER = '--:--';
-    static BTN_TIME_MINUS = '-1';
-    static BTN_TIME_PLUS = '+1';
+    static BTN_TIME_MINUS = '-';
+    static BTN_TIME_PLUS = '+';
 
     /**
      * 자식 클래스에서 설정할 selector 변수들.

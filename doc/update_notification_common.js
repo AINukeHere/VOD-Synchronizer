@@ -51,13 +51,8 @@ function sendSizeToParent() {
     const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
 
     const width = rect.width + paddingLeft + paddingRight;
-    // 스크롤이 생겨도 높이를 뚫고 나가지 않도록 문서 전체 높이(scrollHeight) 사용
-    const contentHeight = Math.max(
-        updateContainer.scrollHeight,
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight
-    );
-    const height = contentHeight + paddingTop + paddingBottom;
+    // 컨테이너의 scrollHeight만 사용. document/body scrollHeight를 쓰면 iframe 높이 설정 → body가 그만큼 늘어남 → 다음 전송 시 그 값이 다시 전달되어 토글할 때마다 높이가 커지는 현상 발생
+    const height = updateContainer.scrollHeight + paddingTop + paddingBottom;
 
     if (window.parent && window.parent !== window) {
         window.parent.postMessage({
