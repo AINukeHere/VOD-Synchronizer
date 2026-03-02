@@ -1667,11 +1667,11 @@ class TimelineCommentProcessorBase extends IVodSync {
     static LABEL_SYNC_TOOLTIP = '다른 스트리머의 다시보기가 동기화될 때 이 타임라인 댓글이 동기화된 다시보기에 맞춰 변환됩니다';
     static LABEL_SYNC_CHECKBOX = '동기화할 때 이 타임라인을 변환';
     static BTN_EDIT_IN_MORE = '타임라인 편집';
-    static BTN_EDIT_IN_MORE_TOOLTIP = '이 타임라인 댓글을 미리보기 창에서 편집·복사합니다';
+    static BTN_EDIT_IN_MORE_TOOLTIP = '이 타임라인 댓글을 편집기에서 편집·복사합니다';
     static PANEL_HEADER = '타임라인 편집기';
     static BTN_COLLAPSE = '접기';
     static BTN_EXPAND = '펴기';
-    static BTN_COPY = '변환된 타임라인 복사';
+    static BTN_COPY = '전체 복사';
     static BTN_COPIED = '복사됨';
     static BTN_COPY_FAILED = '복사 실패';
     static BTN_CLOSE = '닫기';
@@ -2069,14 +2069,25 @@ class TimelineCommentProcessorBase extends IVodSync {
                         row.appendChild(placeholder);
                     } else {
                         const timeEl = this.createTimelineDisplayElement(frag.playbackSec);
+                        const timeBtnStyle = 'min-width:24px;padding:4px 8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;color:#333;line-height:1;';
                         const btnMinus = document.createElement('button');
                         btnMinus.type = 'button';
                         btnMinus.textContent = this.constructor.BTN_TIME_MINUS;
-                        btnMinus.style.cssText = 'padding:2px 6px;font-size:11px;cursor:pointer;';
+                        btnMinus.style.cssText = timeBtnStyle;
+                        btnMinus.title = '1초 감소';
                         const btnPlus = document.createElement('button');
                         btnPlus.type = 'button';
                         btnPlus.textContent = this.constructor.BTN_TIME_PLUS;
-                        btnPlus.style.cssText = 'padding:2px 6px;font-size:11px;cursor:pointer;';
+                        btnPlus.style.cssText = timeBtnStyle;
+                        btnPlus.title = '1초 증가';
+                        const setTimeBtnHover = (btn, hover) => {
+                            btn.style.background = hover ? '#e0e0e0' : '#f5f5f5';
+                            btn.style.borderColor = hover ? '#999' : '#ccc';
+                        };
+                        btnMinus.addEventListener('mouseenter', () => setTimeBtnHover(btnMinus, true));
+                        btnMinus.addEventListener('mouseleave', () => setTimeBtnHover(btnMinus, false));
+                        btnPlus.addEventListener('mouseenter', () => setTimeBtnHover(btnPlus, true));
+                        btnPlus.addEventListener('mouseleave', () => setTimeBtnHover(btnPlus, false));
                         btnMinus.addEventListener('click', (e) => {
                             e.stopPropagation();
                             frag.playbackSec = Math.max(0, frag.playbackSec - 1);
