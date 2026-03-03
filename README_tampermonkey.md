@@ -46,6 +46,11 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - 새 기능: 타임라인 편집
   - 기존 기능인 타임라인 댓글 동기화 시 타임라인을 수정하고 복사하는 기능을 동기화하지 않고도 일반 댓글의 내용으로부터 가져올 수 있게 타임라인 편집 기능을 추가했습니다.
   - 타임라인이 포함된 댓글의 더보기 옵션(점 세개)을 누르면 타임라인 편집 버튼이 나타납니다. 
+  
+![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/soop_timeline_edit_option.png)  |  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/timeline_editor.png)
+:-------------------------:|:-------------------------:
+타임라인 편집 옵션 버튼            |  타임라인 편집기
+
 - 이전 채팅 복원
   - 이제 다음 영상 복원 구간이 0초에 도달하면 버튼이 비활성화됩니다.
 - 버그수정
