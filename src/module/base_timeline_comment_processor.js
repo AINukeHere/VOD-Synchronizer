@@ -422,12 +422,12 @@ export class TimelineCommentProcessorBase extends IVodSync {
                         btnMinus.type = 'button';
                         btnMinus.textContent = this.constructor.BTN_TIME_MINUS;
                         btnMinus.style.cssText = timeBtnStyle;
-                        btnMinus.title = '1초 감소';
+                        btnMinus.title = '쉬프트를 누른 상태로 클릭하면 10초씩 감소';
                         const btnPlus = document.createElement('button');
                         btnPlus.type = 'button';
                         btnPlus.textContent = this.constructor.BTN_TIME_PLUS;
                         btnPlus.style.cssText = timeBtnStyle;
-                        btnPlus.title = '1초 증가';
+                        btnPlus.title = '쉬프트를 누른 상태로 클릭하면 10초씩 증가';
                         const setTimeBtnHover = (btn, hover) => {
                             btn.style.background = hover ? '#e0e0e0' : '#f5f5f5';
                             btn.style.borderColor = hover ? '#999' : '#ccc';
@@ -438,13 +438,15 @@ export class TimelineCommentProcessorBase extends IVodSync {
                         btnPlus.addEventListener('mouseleave', () => setTimeBtnHover(btnPlus, false));
                         btnMinus.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            frag.playbackSec = Math.max(0, frag.playbackSec - 1);
+                            const delta = e.shiftKey ? 10 : 1;
+                            frag.playbackSec = Math.max(0, frag.playbackSec - delta);
                             if (timeEl._vodSyncUpdateTime) timeEl._vodSyncUpdateTime(frag.playbackSec);
                             else timeEl.textContent = this.getTimelineDisplayText(frag.playbackSec);
                         });
                         btnPlus.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            frag.playbackSec += 1;
+                            const delta = e.shiftKey ? 10 : 1;
+                            frag.playbackSec += delta;
                             if (timeEl._vodSyncUpdateTime) timeEl._vodSyncUpdateTime(frag.playbackSec);
                             else timeEl.textContent = this.getTimelineDisplayText(frag.playbackSec);
                         });
