@@ -3,13 +3,17 @@ import { TimelineCommentProcessorBase } from './base_timeline_comment_processor.
 export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
     constructor() {
         super();
+        // Selector override
         this.containerSelector = '#commentHighlight';
         this.commentRowSelector = 'li';
         this.commentTextSelector = '.cmmt-txt';
         this.checkboxSlotSelector = '.cmmt-header';
+        this.commentInputSelector = 'section.cmmt_inp'; // 댓글 작성란 입력 요소
+        this.commentInputCurrentTimeButtonSlotSelector = 'div.grid-start'; // 댓글 작성란 입력 요소 내부의 현재 시간 삽입 버튼 추가 슬롯
+        this.commentInputTextareaSelector = 'div.write-inp'; // 댓글 작성란 입력 요소 내부의 텍스트 입력 요소
+
+        // Style override
         this.checkboxWrapStyle.right = '30px';
-        /** 댓글 작성란 입력 요소 (동기화된 타임라인 자동 기입 시 사용) */
-        this.commentInputSelector = '#commentWrite, .comment_write textarea, [class*="commentWrite"] textarea, [class*="comment_write"]';
     }
 
     /**
@@ -76,4 +80,6 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
         };
         return a;
     }
+
+    
 }

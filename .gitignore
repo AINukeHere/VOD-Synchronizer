@@ -24,6 +24,8 @@ res/data/.singleLine.md
 data_processing/
 icons/.*.png
 src/.test/
+res/img/*.py
+res/img/.*.png
 
 # Temporary files
 *.log

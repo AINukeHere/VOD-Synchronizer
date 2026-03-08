@@ -46,6 +46,7 @@
             "resources": [
                 "res/data/rp_nicknames.json",
                 "res/img/broadcastSync.png",
+                "res/img/AddCurrentTime.png",
                 "src/background/settings_manager.js",
                 "src/module/interface4log.js",
                 "src/module/base_vod_linker.js",

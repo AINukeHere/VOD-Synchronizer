@@ -1662,6 +1662,8 @@ class TimelineCommentProcessorBase extends IVodSync {
     static CHECKBOX_WRAP_CLASS = 'vodSync-timeline-sync-wrap';
     /** 더보기 레이어(_moreDot_layer) 안에 넣는 편집 버튼 식별용 */
     static EDIT_IN_MORE_CLASS = 'vodSync-timeline-edit-in-more';
+    static BTN_INSERT_CURRENT_TIME_CLASS = 'vodSync-timeline-insert-current-time';
+    static BTN_INSERT_CURRENT_TIME_LABEL = '현재 시간 삽입';
 
     // ---- 문자열 리소스 (UI 노출용) ----
     static LABEL_SYNC_TOOLTIP = '다른 스트리머의 다시보기가 동기화될 때 이 타임라인 댓글이 동기화된 다시보기에 맞춰 변환됩니다';
@@ -1687,6 +1689,8 @@ class TimelineCommentProcessorBase extends IVodSync {
      * - commentTextSelector: string — 댓글 한 줄에서 텍스트를 꺼낼 하위 요소 선택자
      * - checkboxSlotSelector: string — 댓글 한 줄에서 체크박스를 넣을 슬롯 요소 선택자(없으면 해당 행 사용)
      * - commentInputSelector: string — 댓글 작성란 입력 요소 선택자(동기화된 타임라인 자동 기입 시 사용, 자식에서 설정)
+     * - commentInputCurrentTimeButtonSlotSelector: string — 댓글 작성란 입력 요소 안에 현재 시간 삽입 버튼을 넣을 슬롯 요소 선택자
+     * - commentInputTextareaSelector: string — 댓글 작성란 입력 요소 안에 텍스트 입력 요소 선택자
      */
     constructor() {
         super();
@@ -1708,6 +1712,18 @@ class TimelineCommentProcessorBase extends IVodSync {
         this.checkboxInputStyle = { position: 'absolute', inset: 0, width: '100%', height: '100%', margin: 0, opacity: 0, cursor: 'pointer' };
         this.checkboxWrapCheckedStyle = { backgroundColor: '#a8d8ea', color: '#1a1a1a' };
         this.checkboxWrapUncheckedStyle = { backgroundColor: 'rgba(0,0,0,0.06)', color: '#888' };
+        /** 현재 시간 삽입 버튼 스타일. backgroundImage는 런타임 URL 사용 */
+        this.insertCurrentTimeButtonStyle = {
+            backgroundImage: `url(${chrome.runtime.getURL('res/img/AddCurrentTime.png')})`,
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            width: '32px',
+            height: '32px',
+            verticalAlign: 'middle',
+            borderRadius: '8px'
+        };
+        this.insertCurrentTimeButtonHoverStyle = { backgroundColor: 'rgb(232,232,232)' };
         window.VODSync = window.VODSync || {};
         window.VODSync.timelineCommentProcessor = this;
 
@@ -1722,22 +1738,27 @@ class TimelineCommentProcessorBase extends IVodSync {
         if (this._started) return;
         this._started = true;
         setInterval(() => {
+            // 댓글 컨테이너 찾기
             let container = this._cachedCommentContainer;
             if (!container || !container.isConnected) {
                 container = this._getContainer();
                 this._cachedCommentContainer = container;
             }
+
+            // 타임라인 댓글에 동기화시 변환 버튼 추가하기
             this.scanAndAttachCheckboxes(container);
+            // 타임라인 댓글의 더보기를 눌렀을 때 편집 버튼 추가하기
             this._injectEditButtonIntoMoreLayers(container);
+            // 댓글 작성 입력창에 타임라인 입력 버튼 추가하기
+            this._injectTinelineInsertButton(container);
+
+            // 수신 페이로드가 있으면 미리보기 목록 영역에 내용 채움
             if (this._incomingTimelineSyncPayload)
                 this.fillTimelinePreviewContent(this._incomingTimelineSyncPayload);
         }, 500);
     }
 
-    /**
-     * 댓글 컨테이너에서 댓글들을 찾아, 타임라인 댓글이면 변환 체크박스를 추가한다.
-     * (이미 체크박스가 있는 행은 스킵. 수정·접기 등으로 DOM이 바뀌어도 주기 호출로 다시 붙일 수 있음)
-     */
+    // 댓글 컨테이너에서 댓글들을 찾아, 타임라인 댓글이면 변환 체크박스를 추가한다.
     scanAndAttachCheckboxes(container) {
         if (!container) return;
         const comments = this._getComments(container);
@@ -1829,9 +1850,7 @@ class TimelineCommentProcessorBase extends IVodSync {
         return true;
     }
 
-    /**
-     * 댓글 더보기 레이어(._moreDot_layer)가 보일 때, 타임라인 댓글인 경우에만 그 안에 '타임라인 댓글 편집하기' 버튼을 넣음.
-     */
+    // 댓글 더보기 레이어(._moreDot_layer)가 보일 때, 타임라인 댓글인 경우에만 그 안에 '타임라인 댓글 편집하기' 버튼을 넣음.
     _injectEditButtonIntoMoreLayers(container) {
         if (!container?.isConnected) return;
         const layers = container.querySelectorAll('._moreDot_layer');
@@ -2149,17 +2168,94 @@ class TimelineCommentProcessorBase extends IVodSync {
         span._vodSyncUpdateTime = (sec) => { span.textContent = this.getTimelineDisplayText(sec); };
         return span;
     }
+
+    _injectTinelineInsertButton() {
+        const inputList = document.querySelectorAll(this.commentInputSelector);
+        if (!inputList || inputList.length === 0) return;
+        for (const input of inputList) {
+            const existingButton = input.querySelector(`.${this.constructor.BTN_INSERT_CURRENT_TIME_CLASS}`);
+            if (existingButton) continue;
+            const buttonParent = input.querySelector(this.commentInputCurrentTimeButtonSlotSelector);
+            const button = document.createElement('button');
+            const textarea = input.querySelector(this.commentInputTextareaSelector);
+            button.type = 'button';
+            button.className = this.constructor.BTN_INSERT_CURRENT_TIME_CLASS;
+            this._applyStyle(button, this.insertCurrentTimeButtonStyle);
+            button.addEventListener('mouseenter', () => this._applyStyle(button, this.insertCurrentTimeButtonHoverStyle));
+            button.addEventListener('mouseleave', () => { button.style.backgroundColor = ''; });
+            button.title = this.constructor.BTN_INSERT_CURRENT_TIME_LABEL;
+            const span = document.createElement('span');
+            span.textContent = this.constructor.BTN_INSERT_CURRENT_TIME_LABEL;
+            span.style.font = '0/0 a';
+            button.appendChild(span);
+            const doInsert = () => {
+                const tsManager = window.VODSync?.tsManager;
+                if (!tsManager?.getCurPlaybackTime()) return;
+                const currentTime = tsManager.getCurPlaybackTime();
+                const currentTimeText = this.formatPlaybackTimeAsComment(currentTime);
+                const selection = window.getSelection();
+                const range = selection.rangeCount ? selection.getRangeAt(0) : null;
+                if (range && textarea.contains(range.startContainer))
+                    this.insertTimeTextAtRange(textarea, range, currentTimeText);
+                else
+                    this.insertTimeTextAtEnd(textarea, currentTimeText);
+            };
+            button.addEventListener('click', doInsert);
+            input.addEventListener('keydown', (e) => {
+                if (!e.altKey || e.key !== 't') return;
+                if (textarea !== document.activeElement && !textarea.contains(document.activeElement)) return;
+                e.preventDefault();
+                doInsert();
+            });
+            buttonParent.appendChild(button);
+        }
+    }
+
+    /** Range 위치에 현재 시간 텍스트를 삽입하고, 캐럿을 삽입된 텍스트 끝으로 둔다 */
+    insertTimeTextAtRange(textarea, range, currentTimeText) {
+        if (!textarea.contains(range.startContainer) || !textarea.contains(range.endContainer))
+            return;
+
+        range.deleteContents();
+        const newTextNode = document.createTextNode(currentTimeText);
+        range.insertNode(newTextNode);
+        this._setCaretAfterNodeAndFocus(textarea, newTextNode);
+    }
+
+    /** textarea 끝에 현재 시간 텍스트를 붙이고, 캐럿을 삽입된 텍스트 끝으로 둔다 */
+    insertTimeTextAtEnd(textarea, currentTimeText) {
+        const newTextNode = document.createTextNode(currentTimeText);
+        textarea.appendChild(newTextNode);
+        this._setCaretAfterNodeAndFocus(textarea, newTextNode);
+    }
+
+    /** 텍스트 노드 끝에 캐럿을 두고 textarea에 포커스한다. */
+    _setCaretAfterNodeAndFocus(textarea, node) {
+        const range = document.createRange();
+        range.setStart(node, node.length);
+        range.setEnd(node, node.length);
+        const sel = window.getSelection();
+        if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        setTimeout(() => textarea.focus(), 0);
+    }
 }
         class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
     constructor() {
         super();
+        // Selector override
         this.containerSelector = '#commentHighlight';
         this.commentRowSelector = 'li';
         this.commentTextSelector = '.cmmt-txt';
         this.checkboxSlotSelector = '.cmmt-header';
+        this.commentInputSelector = 'section.cmmt_inp'; // 댓글 작성란 입력 요소
+        this.commentInputCurrentTimeButtonSlotSelector = 'div.grid-start'; // 댓글 작성란 입력 요소 내부의 현재 시간 삽입 버튼 추가 슬롯
+        this.commentInputTextareaSelector = 'div.write-inp'; // 댓글 작성란 입력 요소 내부의 텍스트 입력 요소
+
+        // Style override
         this.checkboxWrapStyle.right = '30px';
-        /** 댓글 작성란 입력 요소 (동기화된 타임라인 자동 기입 시 사용) */
-        this.commentInputSelector = '#commentWrite, .comment_write textarea, [class*="commentWrite"] textarea, [class*="comment_write"]';
     }
 
     /**
@@ -2226,6 +2322,7 @@ class TimelineCommentProcessorBase extends IVodSync {
         };
         return a;
     }
+
 }
         class SoopPrevChatViewer extends IVodSync {
     constructor() {

@@ -147,6 +147,7 @@ def create_test_extension():
         # 리소스 파일
         'res/data/rp_nicknames.json',
         'res/img/broadcastSync.png',
+        'res/img/AddCurrentTime.png',
     ]
     
     # manifest.json에서 버전 정보 읽기
