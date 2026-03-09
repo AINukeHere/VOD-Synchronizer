@@ -524,8 +524,11 @@ export class TimelineCommentProcessorBase extends IVodSync {
             const existingButton = input.querySelector(`.${this.constructor.BTN_INSERT_CURRENT_TIME_CLASS}`);
             if (existingButton) continue;
             const buttonParent = input.querySelector(this.commentInputCurrentTimeButtonSlotSelector);
-            const button = document.createElement('button');
+            if (!buttonParent) continue;
             const textarea = input.querySelector(this.commentInputTextareaSelector);
+            if (!textarea)  continue;
+            
+            const button = document.createElement('button');
             button.type = 'button';
             button.className = this.constructor.BTN_INSERT_CURRENT_TIME_CLASS;
             this._applyStyle(button, this.insertCurrentTimeButtonStyle);
