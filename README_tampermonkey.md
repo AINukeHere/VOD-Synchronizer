@@ -42,12 +42,13 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - 아직은 없는 것 같군요.
 
 ## 업데이트 내역
-### 1.5.3+
+### 1.5.3
 - 타임라인 편집기
   - 쉬프트를 누른채로 미세조정 시 10초씩 증감됩니다.
+  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/timeline_editor_shiftKey.png)
 - 새 기능: 현재 시간 삽입
-  - VOD 댓글 작성 시 VOD의 현재 시점을 댓글 내용에 타임라인 형식으로 삽입합니다.
-  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/insertCurrentTime_demo.gif)
+  - VOD 댓글 작성 및 수정 시 VOD의 현재 시점을 댓글 내용에 타임라인 형식으로 삽입합니다.
+  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/insertCurrentTime_demo.gif)
 
 ### 1.5.2
 - 새 기능: 타임라인 편집
