@@ -115,6 +115,14 @@
             }
             return 0;
         }
+        // 패치(세 번째 자릿수)만 바뀐 경우 false. 메이저/마이너가 바뀌면 true.
+        function shouldShowUpdateNotification(oldVersion, newVersion) {
+            const oldParts = (oldVersion || '').split('.').map(Number);
+            const newParts = (newVersion || '').split('.').map(Number);
+            const oldMajor = oldParts[0] || 0, oldMinor = oldParts[1] || 0;
+            const newMajor = newParts[0] || 0, newMinor = newParts[1] || 0;
+            return oldMajor !== newMajor || oldMinor !== newMinor;
+        }
 
         const MODAL_HTML_TEMPLATE = `
     <div id="vodSyncUpdateModal" style="
@@ -236,8 +244,10 @@
                 let lastCheckedVersion = GM_getValue('vodSync_lastCheckedVersion', null);
                 lastCheckedVersion = await Promise.resolve(lastCheckedVersion);
                 if (typeof lastCheckedVersion !== 'string') lastCheckedVersion = null;
-                if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
-                    createAndShowUpdateModal(currentVersion);
+                const versionUpgraded = !lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0;
+                if (versionUpgraded) {
+                    const showNotification = !lastCheckedVersion || shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
+                    if (showNotification) createAndShowUpdateModal(currentVersion);
                     const setResult = GM_setValue('vodSync_lastCheckedVersion', currentVersion);
                     await Promise.resolve(setResult);
                 }

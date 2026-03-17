@@ -193,6 +193,17 @@ function compareVersions(version1, version2) {
     return 0;
 }
 
+// 패치(세 번째 자릿수)만 바뀐 경우 false. 메이저/마이너가 바뀌면 true.
+function shouldShowUpdateNotification(oldVersion, newVersion) {
+    const oldParts = (oldVersion || '').split('.').map(Number);
+    const newParts = (newVersion || '').split('.').map(Number);
+    const oldMajor = oldParts[0] || 0;
+    const oldMinor = oldParts[1] || 0;
+    const newMajor = newParts[0] || 0;
+    const newMinor = newParts[1] || 0;
+    return oldMajor !== newMajor || oldMinor !== newMinor;
+}
+
 // 간단한 iframe 모달 템플릿
 const MODAL_HTML_TEMPLATE = `
     <div id="vodSyncUpdateModal" style="
@@ -372,15 +383,18 @@ async function checkForUpdates() {
         // 처음 설치하거나 버전이 다른 경우
         if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
             logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
-            
-            // 업데이트 알림 설정 확인
-            const settings = await getSettings();
-            if (settings.enableUpdateNotification) {
-                createAndShowUpdateModal(currentVersion);
+            // 패치(세 번째 자릿수)만 바뀐 경우 알림 표시 안 함 (예: 1.3.4 → 1.3.5)
+            const showNotification = !lastCheckedVersion || shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
+            if (showNotification) {
+                const settings = await getSettings();
+                if (settings.enableUpdateNotification) {
+                    createAndShowUpdateModal(currentVersion);
+                } else {
+                    logToExtension(`업데이트 알림이 비활성화되어 있습니다.`);
+                }
             } else {
-                logToExtension(`업데이트 알림이 비활성화되어 있습니다.`);
+                logToExtension(`패치 업데이트(v${currentVersion})라 알림을 표시하지 않습니다.`);
             }
-            
             // 현재 버전을 마지막 확인 버전으로 저장
             await setLastCheckedVersion(currentVersion);
         } else {
