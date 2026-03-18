@@ -84,7 +84,7 @@ if (window == top) {
             'ChzzkAPI': 'src/module/chzzk_api.js',
             'ChzzkTimestampManager': 'src/module/chzzk_timestamp_manager.js',
             'ChzzkVODLinker': 'src/module/chzzk_vod_linker.js',
-            'ChzzkTimelineCommentProcessor': 'src/module/chzzk_timeline_comment_processor.js',
+            // 'ChzzkTimelineCommentProcessor': 'src/module/chzzk_timeline_comment_processor.js',
             'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
         };
@@ -96,8 +96,8 @@ if (window == top) {
         new classes.ChzzkAPI();
         tsManager = new classes.ChzzkTimestampManager();
         new classes.ChzzkVODLinker(false);
-        const timelineProcessor = new classes.ChzzkTimelineCommentProcessor();
-        timelineProcessor.startWatching();
+        // const timelineProcessor = new classes.ChzzkTimelineCommentProcessor();
+        // timelineProcessor.startWatching();
         syncPanel = new classes.OtherPlatformSyncPanel('chzzk');
         rpPanel = new classes.RPNicknamePanel();
     
