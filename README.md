@@ -56,16 +56,18 @@ CHZZK VOD 플레이어 페이지에서도 동일하게 동작합니다.
 [![데모 영상](https://img.youtube.com/vi/ILtVKUIkyGg/0.jpg)](https://youtu.be/ILtVKUIkyGg)
 
 
-## 지원 플랫폼
+## 플랫폼 별 지원 중인 기능
 
 ### SOOP
 - VOD 타임스탬프 표시 및 편집
-- 다른 플랫폼 스트리머 VOD 동기화
+- **다른 플랫폼 스트리머 VOD 동기화**
 - RP 닉네임 패널
+- VOD 댓글 작성 시 현재 시간 삽입
+- 동기화 시 타임라인 댓글 자동 변환
 
 ### CHZZK
 - VOD 타임스탬프 표시 및 편집
-- 다른 플랫폼 스트리머 VOD 동기화
+- **다른 플랫폼 스트리머 VOD 동기화**
 - RP 닉네임 패널
 
 
