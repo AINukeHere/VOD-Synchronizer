@@ -47,18 +47,19 @@
 
             <section id="panel-timestamp" class="feature-panel" role="tabpanel">
                 <h2>라이브 당시 시간 표시</h2>
-                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 재생 바 근처에 방송 당시 시각이 표시됩니다.</p>
+                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 재생 바에 라이브 당시 시간이 표시됩니다.</p>
                 <ul>
-                    <li>표시된 시간을 더블 클릭하여 수정해 입력하고 Enter 키를 누르면 해당 시점으로 VOD가 <strong>재생</strong>됩니다.</li>
-                    <li>마우스를 올리면 도움말 툴팁이 뜹니다. 입력 중 방향키로 플레이어 앞/뒤 이동이 겹치지 않도록 처리되어 있습니다.</li>
-                    <li>복사 시에는 글자·배경 스타일 없이 텍스트만 복사됩니다.</li>
+                    <li>표시된 시간을 더블 클릭하여 수정해 입력하고 Enter 키를 누르면 해당 시점에서 VOD가 <strong>재생</strong>됩니다.</li>
                 </ul>
                 <div class="img-row">
                     <img src="../screenshots/new_timestamp_position_soop.png" alt="SOOP 라이브 당시 시간 표시 위치">
                     <img src="../screenshots/new_timestamp_position_chzzk.png" alt="CHZZK 라이브 당시 시간 표시 위치">
                 </div>
                 <img src="../screenshots/editTimeStampDemo.gif" alt="라이브 당시 시간 수정·재생 데모">
-                <p class="note">CHZZK에서 라이브가 매우 길어 다시보기가 여러 개로 나뉜 경우, 표시 시각이 어긋날 수 있습니다.</p>
+                <p class="note">
+                    CHZZK에서 라이브가 매우 길어 다시보기가 3개 이상으로 나뉜 경우, 표시 시각이 어긋날 수 있습니다.<br/>
+                    시간 좌측의 버튼은 <a href="#global">전역 동기화 버튼</a>입니다.
+                </p>
             </section>
 
             <section id="panel-sync-vod" class="feature-panel" role="tabpanel">
@@ -68,7 +69,6 @@
                     <li>버튼을 누르면 현재 보고 있는 VOD 시점과 맞는 상대 스트리머의 다시보기를 찾아 <strong>새 탭</strong>으로 엽니다.</li>
                     <li>처음 사용 시 팝업 차단을 해제해야 할 수 있습니다.</li>
                     <li>검색어 입력 후 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>로 첫 번째 다시보기 동기화 버튼을 바로 누를 수 있습니다.</li>
-                    <li>동기화에 성공하면 검색 영역이 정리됩니다.</li>
                 </ul>
                 <div class="img-row">
                     <img src="../screenshots/soop_soop_sync.png" alt="SOOP에서 SOOP 스트리머와 다시보기 동기화">
@@ -104,11 +104,9 @@
             <section id="panel-global" class="feature-panel" role="tabpanel">
                 <h2>전역 동기화</h2>
                 <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 현재 탭의 VOD를 기준으로, <strong>다른 탭에 열려 있는 VOD</strong>들을 한 번에 맞춥니다.</p>
-                <ul>
-                    <li>재생 바 근처의 전역 동기화 버튼으로 실행합니다.</li>
-                    <li>VOD 페이지를 벗어나면 버튼은 사라집니다.</li>
-                </ul>
+                <p>라이브 당시 시간 좌측의 버튼을 눌러 실행합니다.</p>
                 <img src="../screenshots/broadcastSync.png" alt="전역 동기화 버튼">
+                <p>즉 동기화된 다시보기를 연 다음 그 다시보기에서 앞,뒤로 움직이며 시청하면 다시 두 다시보기의 시점이 달라지는데 이때 이 버튼을 누르면 다시 두 시점이 맞춰집니다.</p>
                 <h3>데모 영상</h3>
                 <p class="video-embed-caption">열어 둔 여러 다시보기 탭을 한 번에 같은 시점으로 맞추는 사용 예입니다.</p>
                 <div class="video-embed-wrap">
@@ -135,6 +133,8 @@
             <section id="panel-editor" class="feature-panel" role="tabpanel">
                 <h2>타임라인 편집기</h2>
                 <p class="lead"><span class="platform-tag soop">SOOP</span> 동기화 없이도 댓글 내용에서 타임라인을 꺼내 <strong>편집·복사</strong>할 수 있습니다.</p>
+                <p>타임라인 댓글을 작성할 때 작성모드에서는 타임라인 테스트를 못해서 매번 수정하고 테스트하고 반복하셨나요?
+                    <br/>이제 편집기로 미세조정과 테스트를 동시에 해보세요</p>
                 <ul>
                     <li>타임라인이 있는 댓글의 더보기(⋮)에서 타임라인 편집을 선택합니다.</li>
                     <li>미세조정 시 <kbd>Shift</kbd>를 누르면 10초 단위로 증감합니다.</li>
@@ -159,7 +159,6 @@
                     <li>복원 구간(기본 30초 등)은 설정에서 조절합니다.</li>
                     <li>이모티콘만 있는 채팅 제외 옵션이 있습니다.</li>
                     <li><code>~초 전</code> 툴팁을 누르면 해당 채팅이 나온 시점으로 이동합니다.</li>
-                    <li>다음 복원 구간이 0초에 닿으면 복원 버튼이 비활성화됩니다.</li>
                 </ul>
                 <div class="img-row">
                     <img src="../screenshots/prevChatViewer.png" alt="이전 채팅 복원 버튼">
@@ -181,7 +180,7 @@
 
             <section id="panel-loop" class="feature-panel" role="tabpanel">
                 <h2>반복 재생</h2>
-                <p class="lead"><span class="platform-tag soop">SOOP</span> VOD 플레이어 <strong>설정</strong> 메뉴에 반복 재생 항목이 추가됩니다.</p>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> <br/>재생 바의 설정 버튼을 누르면 반복 재생 옵션이 추가됩니다.<br/>활성화하면 영상이 계속 반복 재생됩니다.</p>
                 <img src="../screenshots/loop_playing.png" alt="반복 재생 설정">
             </section>
         </main>
