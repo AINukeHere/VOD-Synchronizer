@@ -1,0 +1,263 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOD Synchronizer — 기능 소개</title>
+    <link rel="stylesheet" href="features.css">
+</head>
+<body>
+    <div class="features-layout">
+        <aside class="feature-sidebar" id="featureSidebar">
+            <button type="button" class="mobile-nav-toggle" id="navToggle" aria-expanded="true" aria-controls="featureNavList">
+                <span>기능 목록</span>
+                <span id="navToggleIcon">▼</span>
+            </button>
+            <h1><a href="https://github.com/AINukeHere/VOD-Synchronizer" target="_blank" rel="noopener">VOD Synchronizer</a></h1>
+            <ul class="feature-nav" id="featureNavList">
+                <li><button type="button" role="tab" data-panel="panel-intro" class="active">소개</button></li>
+                <li class="feature-nav-group-block">
+                    <div class="feature-nav-group-title" id="featureNavGroupLabel">기능 살펴보기</div>
+                    <ul class="feature-nav feature-nav-group-items" aria-labelledby="featureNavGroupLabel">
+                        <li><button type="button" role="tab" data-panel="panel-timestamp">라이브 당시 시간 표시</button></li>
+                        <li><button type="button" role="tab" data-panel="panel-sync-vod">다시보기 동기화</button></li>
+                        <li><button type="button" role="tab" data-panel="panel-cross">타 플랫폼 동기화</button></li>
+                        <li><button type="button" role="tab" data-panel="panel-global">전역 동기화</button></li>
+                        <li><button type="button" role="tab" data-panel="panel-timeline">타임라인 댓글 동기화<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-editor">타임라인 편집기<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-insert">현재 시간 삽입<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-prevchat">이전 채팅 복원<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-rp">RP 닉네임 패널</button></li>
+                        <li><button type="button" role="tab" data-panel="panel-loop">반복 재생<span class="nav-label-soop">SOOP</span></button></li>
+                    </ul>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="feature-main">
+            <section id="panel-intro" class="feature-panel active" role="tabpanel">
+                <h2>소개</h2>
+                <p class="lead">SOOP·CHZZK 다시보기(VOD)를 볼 때, 다른 스트리머의 같은 시점 다시보기를 찾아주거나 채팅·타임라인을 다루는 편의 기능을 모은 확장 프로그램입니다.</p>
+                <ul>
+                    <li><span class="platform-tag both">SOOP · CHZZK</span> 라이브 당시 시간 표시, 플랫폼 간 동기화, RP 패널 등</li>
+                    <li><span class="platform-tag soop">SOOP</span> 댓글 타임라인 편집·삽입, 이전 채팅 복원, 반복 재생 등</li>
+                </ul>
+                <p class="note">설치: <a href="https://chromewebstore.google.com/detail/vod-synchronizer/fcgefghffdkgllcmgbckhiebjgcdppme" target="_blank" rel="noopener">Chrome 웹 스토어</a> · Tampermonkey(SOOP 동기화만)는 <a href="https://greasyfork.org/ko/scripts/541829-vod-synchronizer" target="_blank" rel="noopener">GreasyFork</a></p>
+            </section>
+
+            <section id="panel-timestamp" class="feature-panel" role="tabpanel">
+                <h2>라이브 당시 시간 표시</h2>
+                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 재생 바 근처에 방송 당시 시각이 표시됩니다.</p>
+                <ul>
+                    <li>표시된 시간을 더블 클릭하여 수정해 입력하고 Enter 키를 누르면 해당 시점으로 VOD가 <strong>재생</strong>됩니다.</li>
+                    <li>마우스를 올리면 도움말 툴팁이 뜹니다. 입력 중 방향키로 플레이어 앞/뒤 이동이 겹치지 않도록 처리되어 있습니다.</li>
+                    <li>복사 시에는 글자·배경 스타일 없이 텍스트만 복사됩니다.</li>
+                </ul>
+                <div class="img-row">
+                    <img src="../screenshots/new_timestamp_position_soop.png" alt="SOOP 라이브 당시 시간 표시 위치">
+                    <img src="../screenshots/new_timestamp_position_chzzk.png" alt="CHZZK 라이브 당시 시간 표시 위치">
+                </div>
+                <img src="../screenshots/editTimeStampDemo.gif" alt="라이브 당시 시간 수정·재생 데모">
+                <p class="note">CHZZK에서 라이브가 매우 길어 다시보기가 여러 개로 나뉜 경우, 표시 시각이 어긋날 수 있습니다.</p>
+            </section>
+
+            <section id="panel-sync-vod" class="feature-panel" role="tabpanel">
+                <h2>다시보기 동기화</h2>
+                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 사이트 기본 검색창에 스트리머를 검색하면 결과에 <strong>다시보기 동기화</strong> 버튼이 생깁니다.</p>
+                <ul>
+                    <li>버튼을 누르면 현재 보고 있는 VOD 시점과 맞는 상대 스트리머의 다시보기를 찾아 <strong>새 탭</strong>으로 엽니다.</li>
+                    <li>처음 사용 시 팝업 차단을 해제해야 할 수 있습니다.</li>
+                    <li>검색어 입력 후 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd>로 첫 번째 다시보기 동기화 버튼을 바로 누를 수 있습니다.</li>
+                    <li>동기화에 성공하면 검색 영역이 정리됩니다.</li>
+                </ul>
+                <div class="img-row">
+                    <img src="../screenshots/soop_soop_sync.png" alt="SOOP에서 SOOP 스트리머와 다시보기 동기화">
+                    <img src="../screenshots/chzzk_chzzk_sync.png" alt="CHZZK에서 CHZZK 스트리머와 다시보기 동기화">
+                </div>
+                <h3>데모 영상</h3>
+                <p class="video-embed-caption">다시보기 동기화 사용 예(SOOP 중심)입니다.</p>
+                <div class="video-embed-wrap">
+                    <iframe src="https://www.youtube.com/embed/mipj1jn488M" title="VOD Synchronizer 다시보기 동기화 데모" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                </div>
+                <p class="video-embed-caption"><a href="https://youtu.be/mipj1jn488M" target="_blank" rel="noopener noreferrer">YouTube에서 열기</a></p>
+            </section>
+
+            <section id="panel-cross" class="feature-panel" role="tabpanel">
+                <h2>타 플랫폼과 동기화</h2>
+                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 플레이어 옆 패널에서 다른 플랫폼 스트리머를 검색해 동기화합니다.</p>
+                <ul>
+                    <li>SOOP VOD에서는 CHZZK 스트리머와, CHZZK VOD에서는 SOOP 스트리머와 시점을 맞출 수 있습니다.</li>
+                    <li>패널 이름은 플랫폼에 맞게 통합되어 있습니다.</li>
+                </ul>
+                <div class="img-row">
+                    <img src="../screenshots/soop_chzzk_sync.png" alt="SOOP에서 CHZZK 스트리머와 동기화">
+                    <img src="../screenshots/chzzk_soop_sync.png" alt="CHZZK에서 SOOP 스트리머와 동기화">
+                </div>
+                <h3>데모 영상</h3>
+                <p class="video-embed-caption">CHZZK와 SOOP 다시보기를 서로 맞추는 타 플랫폼 동기화 사용 예입니다.</p>
+                <div class="video-embed-wrap">
+                    <iframe src="https://www.youtube.com/embed/ILtVKUIkyGg" title="VOD Synchronizer 타 플랫폼 동기화 데모" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                </div>
+                <p class="video-embed-caption"><a href="https://youtu.be/ILtVKUIkyGg" target="_blank" rel="noopener noreferrer">YouTube에서 열기</a></p>
+            </section>
+
+            <section id="panel-global" class="feature-panel" role="tabpanel">
+                <h2>전역 동기화</h2>
+                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 현재 탭의 VOD를 기준으로, <strong>다른 탭에 열려 있는 VOD</strong>들을 한 번에 맞춥니다.</p>
+                <ul>
+                    <li>재생 바 근처의 전역 동기화 버튼으로 실행합니다.</li>
+                    <li>VOD 페이지를 벗어나면 버튼은 사라집니다.</li>
+                </ul>
+                <img src="../screenshots/broadcastSync.png" alt="전역 동기화 버튼">
+                <h3>데모 영상</h3>
+                <p class="video-embed-caption">열어 둔 여러 다시보기 탭을 한 번에 같은 시점으로 맞추는 사용 예입니다.</p>
+                <div class="video-embed-wrap">
+                    <iframe src="https://www.youtube.com/embed/JrKeY2k1cCs" title="VOD Synchronizer 전역 동기화 데모" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                </div>
+                <p class="video-embed-caption"><a href="https://youtu.be/JrKeY2k1cCs" target="_blank" rel="noopener noreferrer">YouTube에서 열기</a></p>
+            </section>
+
+            <section id="panel-timeline" class="feature-panel" role="tabpanel">
+                <h2>타임라인 댓글 동기화</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> 타임라인이 들어간 댓글을 다른 스트리머 다시보기로 옮길 때, 시점에 맞게 <strong>변환</strong>할 수 있습니다.</p>
+                <ul>
+                    <li>댓글 우측 상단의 <strong>동기화할 때 이 타임라인을 변환</strong>을 켠 뒤 동기화하면, 열린 다시보기에서 변환된 타임라인을 확인·미세조정·복사할 수 있습니다.</li>
+                </ul>
+                <img src="../screenshots/soop_toggle_timelineCommentSync.png" alt="타임라인 댓글 동기화 토글">
+                <h3>데모 영상</h3>
+                <p class="video-embed-caption">타임라인 댓글을 변환·동기화하는 사용 예입니다.</p>
+                <div class="video-embed-wrap">
+                    <iframe src="https://www.youtube.com/embed/26NtReMy9ms" title="VOD Synchronizer 타임라인 댓글 동기화 데모" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                </div>
+                <p class="video-embed-caption"><a href="https://youtu.be/26NtReMy9ms" target="_blank" rel="noopener noreferrer">YouTube에서 열기</a></p>
+            </section>
+
+            <section id="panel-editor" class="feature-panel" role="tabpanel">
+                <h2>타임라인 편집기</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> 동기화 없이도 댓글 내용에서 타임라인을 꺼내 <strong>편집·복사</strong>할 수 있습니다.</p>
+                <ul>
+                    <li>타임라인이 있는 댓글의 더보기(⋮)에서 타임라인 편집을 선택합니다.</li>
+                    <li>미세조정 시 <kbd>Shift</kbd>를 누르면 10초 단위로 증감합니다.</li>
+                </ul>
+                <div class="img-row">
+                    <img src="../screenshots/soop_timeline_edit_option.png" alt="타임라인 편집 메뉴">
+                    <img src="../screenshots/timeline_editor.png" alt="타임라인 편집기">
+                </div>
+                <img src="../screenshots/timeline_editor_shiftKey.png" alt="쉬프트 미세조정">
+            </section>
+
+            <section id="panel-insert" class="feature-panel" role="tabpanel">
+                <h2>현재 시간 삽입</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> VOD 댓글 <strong>작성·수정</strong> 시, 재생 중인 시점을 타임라인 형식으로 넣을 수 있습니다.</p>
+                <img src="../screenshots/insertCurrentTime_demo.gif" alt="현재 시간 삽입 데모">
+            </section>
+
+            <section id="panel-prevchat" class="feature-panel" role="tabpanel">
+                <h2>이전 채팅 복원</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> 재생을 시작한 시점 <strong>이전</strong> 채팅을 일정 구간만큼 불러옵니다.</p>
+                <ul>
+                    <li>복원 구간(기본 30초 등)은 설정에서 조절합니다.</li>
+                    <li>이모티콘만 있는 채팅 제외 옵션이 있습니다.</li>
+                    <li><code>~초 전</code> 툴팁을 누르면 해당 채팅이 나온 시점으로 이동합니다.</li>
+                    <li>다음 복원 구간이 0초에 닿으면 복원 버튼이 비활성화됩니다.</li>
+                </ul>
+                <div class="img-row">
+                    <img src="../screenshots/prevChatViewer.png" alt="이전 채팅 복원 버튼">
+                    <img src="../screenshots/prevChatViewer-restored.png" alt="복원 후">
+                    <img src="../screenshots/prevChatViewer-setting.png" alt="설정">
+                </div>
+                <h3>데모</h3>
+                <img src="../screenshots/restorePreviousChatDemo.gif" alt="이전 채팅 복원 데모">
+                <p class="note">시그니처·기본·ogq 이모티콘 등은 표시를 맞추려 했으나, 스트리머 채팅 등은 아직 제한이 있을 수 있습니다.</p>
+            </section>
+
+            <section id="panel-rp" class="feature-panel" role="tabpanel">
+                <h2>RP 닉네임 패널</h2>
+                <p class="feature-suspended-notice"><strong>개발이 잠정 중단된 기능입니다.</strong> 재개 시기는 정해져 있지 않습니다.</p>
+                <p class="lead"><span class="platform-tag both">SOOP · CHZZK</span> 방송에서 쓰는 RP(롤플레이) 닉네임과 실제 스트리머 매핑을 패널로 보려는 기능이었습니다.</p>
+                <img src="../screenshots/rp_nickname_dictionary.png" alt="RP 닉네임 패널 예시">
+                <p class="note">데이터는 확장에 포함된 JSON을 기준으로 하며, 스트리머·캠페인별로 다를 수 있습니다.</p>
+            </section>
+
+            <section id="panel-loop" class="feature-panel" role="tabpanel">
+                <h2>반복 재생</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> VOD 플레이어 <strong>설정</strong> 메뉴에 반복 재생 항목이 추가됩니다.</p>
+                <img src="../screenshots/loop_playing.png" alt="반복 재생 설정">
+            </section>
+        </main>
+    </div>
+
+    <script>
+(function () {
+    var navButtons = document.querySelectorAll('#featureNavList button[data-panel]');
+    var panels = document.querySelectorAll('.feature-panel');
+    var sidebar = document.getElementById('featureSidebar');
+    var navToggle = document.getElementById('navToggle');
+    var navToggleIcon = document.getElementById('navToggleIcon');
+
+    function showPanel(panelId, opts) {
+        opts = opts || {};
+        panels.forEach(function (p) {
+            p.classList.toggle('active', p.id === panelId);
+        });
+        navButtons.forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-panel') === panelId);
+        });
+        if (opts.collapseOnMobile && window.innerWidth <= 768 && sidebar) {
+            sidebar.classList.add('collapsed');
+            if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+            if (navToggleIcon) navToggleIcon.textContent = '▶';
+        }
+        try {
+            var hashSlug = panelId.replace('panel-', '');
+            if (panelId === 'panel-timestamp') hashSlug = 'live-time';
+            history.replaceState(null, '', '#' + hashSlug);
+        } catch (e) {}
+    }
+
+    navButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            showPanel(btn.getAttribute('data-panel'), { collapseOnMobile: true });
+        });
+    });
+
+    if (navToggle && sidebar) {
+        navToggle.addEventListener('click', function () {
+            var open = sidebar.classList.toggle('collapsed');
+            open = !open;
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            navToggleIcon.textContent = open ? '▼' : '▶';
+        });
+    }
+
+    var hash = (location.hash || '').replace(/^#/, '');
+    var idMap = {
+        intro: 'panel-intro',
+        timestamp: 'panel-timestamp',
+        'live-time': 'panel-timestamp',
+        'sync-vod': 'panel-sync-vod',
+        'vod-sync': 'panel-sync-vod',
+        cross: 'panel-cross',
+        global: 'panel-global',
+        timeline: 'panel-timeline',
+        editor: 'panel-editor',
+        insert: 'panel-insert',
+        prevchat: 'panel-prevchat',
+        rp: 'panel-rp',
+        loop: 'panel-loop'
+    };
+    if (hash && idMap[hash]) {
+        showPanel(idMap[hash], {});
+    } else if (hash && document.getElementById('panel-' + hash)) {
+        showPanel('panel-' + hash, {});
+    }
+
+    window.addEventListener('hashchange', function () {
+        var h = (location.hash || '').replace(/^#/, '');
+        if (h && idMap[h]) showPanel(idMap[h], {});
+        else if (h && document.getElementById('panel-' + h)) showPanel('panel-' + h, {});
+    });
+})();
+    </script>
+</body>
+</html>

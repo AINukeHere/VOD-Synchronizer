@@ -1,0 +1,349 @@
+/* VOD Synchronizer — 기능 소개 페이지 */
+:root {
+    --bg: #0f1419;
+    --sidebar: #1a2332;
+    --sidebar-hover: #243044;
+    --accent: #3b82f6;
+    --accent-soft: rgba(59, 130, 246, 0.15);
+    --text: #e7ecf3;
+    --text-muted: #94a3b8;
+    --card: #1e293b;
+    --border: #334155;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+.features-layout {
+    display: flex;
+    min-height: 100vh;
+    align-items: stretch;
+}
+
+/* 좌측 목차 — 본문과 동일한 세로 높이(최소 100vh)로 채움 */
+.feature-sidebar {
+    width: 280px;
+    min-width: 280px;
+    flex-shrink: 0;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    padding: 1.25rem 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.feature-sidebar h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 1rem 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.feature-sidebar h1 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.feature-sidebar h1 a:hover {
+    color: var(--accent);
+}
+
+.feature-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.feature-nav li {
+    margin: 0;
+}
+
+.feature-nav button {
+    width: 100%;
+    text-align: left;
+    padding: 0.65rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    border-left: 3px solid transparent;
+}
+
+.feature-nav button:hover {
+    background: var(--sidebar-hover);
+    color: var(--text);
+}
+
+.feature-nav button.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-left-color: var(--accent);
+    font-weight: 600;
+}
+
+.feature-nav .nav-label-soop {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-left: 0.35rem;
+    font-weight: 400;
+}
+
+/* 소개와 분리된 그룹: 기능 살펴보기 + 하위 기능 목록 */
+.feature-nav-group-block {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--border);
+    margin-top: 0.35rem;
+    padding-top: 0.65rem;
+}
+
+.feature-nav-group-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #94a3b8;
+    padding: 0.35rem 1.25rem 0.5rem;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.feature-nav-group-items {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.25rem 0;
+    border-left: 2px solid rgba(59, 130, 246, 0.25);
+    margin-left: 1rem;
+}
+
+.feature-nav-group-items li {
+    margin: 0;
+}
+
+.feature-nav-group-items button {
+    padding-left: 1.35rem;
+}
+
+/* 본문 */
+.feature-main {
+    flex: 1;
+    padding: 2rem 2.5rem 4rem;
+    max-width: 900px;
+}
+
+.feature-panel {
+    display: none;
+    animation: fadeIn 0.2s ease;
+}
+
+.feature-panel.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.feature-panel h2 {
+    font-size: 1.75rem;
+    margin: 0 0 0.5rem;
+    color: #fff;
+}
+
+.feature-panel .lead {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    margin: 0 0 1.5rem;
+}
+
+.feature-panel h3 {
+    font-size: 1.1rem;
+    margin: 1.5rem 0 0.5rem;
+    color: #cbd5e1;
+}
+
+.feature-panel ul {
+    margin: 0.5rem 0 1rem;
+    padding-left: 1.25rem;
+}
+
+.feature-panel li {
+    margin: 0.35rem 0;
+}
+
+.feature-panel .platform-tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.platform-tag.soop {
+    background: #7c3aed33;
+    color: #c4b5fd;
+}
+
+.platform-tag.chzzk {
+    background: #0ea5e933;
+    color: #7dd3fc;
+}
+
+.platform-tag.both {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.feature-panel img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+}
+
+.feature-panel .img-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.feature-panel .img-row img {
+    flex: 1;
+    min-width: 200px;
+    margin: 0;
+}
+
+.feature-panel a {
+    color: var(--accent);
+}
+
+.video-embed-wrap {
+    width: 100%;
+    max-width: 720px;
+    margin: 1.25rem 0;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #000;
+}
+
+.video-embed-wrap iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.video-embed-caption {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: -0.5rem 0 1rem;
+}
+
+.feature-panel kbd {
+    display: inline-block;
+    padding: 0.1em 0.45em;
+    font-size: 0.85em;
+    font-family: ui-monospace, monospace;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.feature-panel .note {
+    background: var(--card);
+    border-left: 3px solid var(--accent);
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.feature-suspended-notice {
+    background: rgba(234, 179, 8, 0.12);
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin: 0 0 1.25rem;
+    font-size: 0.95rem;
+    color: #fcd34d;
+    line-height: 1.5;
+}
+
+.mobile-nav-toggle {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .features-layout {
+        flex-direction: column;
+    }
+
+    .mobile-nav-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 1rem 1.25rem;
+        background: var(--sidebar);
+        border: none;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .feature-sidebar {
+        position: relative;
+        min-height: 0;
+        width: 100%;
+        min-width: 0;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 0;
+        display: block;
+    }
+
+    .feature-sidebar.collapsed .feature-nav,
+    .feature-sidebar.collapsed h1 {
+        display: none;
+    }
+
+    .feature-sidebar h1 {
+        margin: 1rem 1.25rem;
+    }
+
+    .feature-nav {
+        padding-bottom: 0.5rem;
+    }
+
+    .feature-main {
+        padding: 1.5rem 1.25rem 3rem;
+    }
+}
