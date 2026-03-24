@@ -1,4 +1,4 @@
-# VOD Synchronizer 통신 흐름
+# VOD Master 통신 흐름
 
 ## 1. SOOP 다시보기 → SOOP 스트리머 동기화 흐름
 
