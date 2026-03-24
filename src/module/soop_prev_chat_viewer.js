@@ -163,13 +163,13 @@ export class SoopPrevChatViewer extends IVodSync {
 
         const tsManager = window.VODSync?.tsManager;
         if (!tsManager) {
-            this.error('SoopTimestampManager를 찾을 수 없습니다.');
+            this.warn('SoopTimestampManager를 찾을 수 없습니다.');
             return;
         }
 
         const currentPlaybackTime = tsManager.getCurPlaybackTime();
         if (currentPlaybackTime === null) {
-            this.error('재생 시간을 가져올 수 없습니다.');
+            this.warn('재생 시간을 가져올 수 없습니다.');
             return;
         }
 

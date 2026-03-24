@@ -43,7 +43,7 @@
                 justify-content: space-between;
                 align-items: center;
                 ">
-                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Synchronizer 업데이트 알림</h2>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Master 업데이트 알림</h2>
                 <span class="vod-sync-close" style="
                 color: white;
                 font-size: 28px;
@@ -145,7 +145,7 @@
         // 버전을 가져와서 iframe 설정
         getVersionFromManifest().then(version => {
             const iframe = document.getElementById('updateIframe');
-            // iframe.src = `https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v${version}.html`;
+            // iframe.src = `https://ainukehere.github.io/VOD-Master/doc/update_notification_v${version}.html`;
             iframe.src = `http://localhost:5500/doc/update_notification_v${version}.html`;
             
             // iframe 로드 완료 후 기본 크기 설정 (postMessage로 실제 크기가 조절됨)
