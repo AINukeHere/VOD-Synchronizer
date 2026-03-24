@@ -55,7 +55,7 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 
 
 ## 업데이트 내역
-### 1.5.6
+### 1.5.7
 - 본 프로그램의 이름이 VOD Synchronizer에서 VOD Master로 변경되었습니다.
 - 2026.3.24(화) SOOP 도메인 업데이트에 대응했습니다.
 - 버그 수정

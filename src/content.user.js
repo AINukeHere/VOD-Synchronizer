@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.5.6
+// @version      1.5.7
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -633,7 +633,7 @@ class SoopAPI extends IVodSync{
         }, 200);
     }
     createTooltip() {
-        if (!this.timeStampDiv) {
+        if (!this.tooltipContainer) {
             // 툴팁을 담는 컨테이너 생성
             this.tooltipContainer = document.createElement("div");
             this.tooltipContainer.style.position = "fixed";
@@ -750,8 +750,20 @@ class SoopAPI extends IVodSync{
         }
     }
     update(){
+        if (!this.tooltipContainer){
+            this.log('timestamp 컨테이너가 없어 재생성합니다');
+            this.createTooltip();
+        }
         this.updateTooltip();
         this.checkMouseState();
+        if (this.tooltipContainer.parentElement === document.body || !this.tooltipContainer.isConnected){
+            this.log('timestamp 컨테이너가 분리되어 재배치합니다');
+            if (this.moveTooltipToCtrlBox())
+                this.log('timestamp 컨테이너 재배치 성공');
+            else
+                this.log('timestamp 컨테이너 재배치 실패');
+        }
+        
     }
 
     // request_real_ts 가 null이면 request_vod_ts로 동기화하고 null이 아니면 동기화시도하는 시점과 request_real_ts와의 차이를 request_vod_ts와 더하여 동기화합니다.
@@ -898,34 +910,6 @@ class SoopAPI extends IVodSync{
             this.hideTooltip();
         }
     }
-
-    // 플랫폼별로 구현해야 하는 추상 메서드들
-    observeDOMChanges() {
-        throw new Error("observeDOMChanges must be implemented by subclass");
-    }
-
-    getCurDateTime() {
-        throw new Error("getCurDateTime must be implemented by subclass");
-    }
-
-    getStreamPeriod() {
-        throw new Error("getStreamPeriod must be implemented by subclass");
-    }
-
-    /**
-     * @description 재생 시점(초)을 전역 시각(global time)으로 변환. 파생 클래스에서 구현.
-     * @param {number} totalPlaybackSec VOD 재생 시점(초)
-     * @returns {Date|null} 전역 시각 또는 변환 불가 시 null
-     */
-    playbackTimeToGlobalTS(totalPlaybackSec) {
-        return null;
-    }
-
-    // 현재 재생 중인지 여부를 반환하는 추상 메서드
-    isPlaying() {
-        throw new Error("isPlaying must be implemented by subclass");
-    }
-
     // 활성화/비활성화 메서드
     enable() {
         this.isHideCompletly = false;
@@ -1005,22 +989,46 @@ class SoopAPI extends IVodSync{
         return this.moveToPlaybackTime(playbackTime, doAlert);
     }
 
+    // 플랫폼별로 구현해야 하는 추상 메서드들
+    observeDOMChanges() {
+        throw new Error("observeDOMChanges must be implemented by subclass");
+    }
+    getCurDateTime() {
+        throw new Error("getCurDateTime must be implemented by subclass");
+    }
+    getStreamPeriod() {
+        throw new Error("getStreamPeriod must be implemented by subclass");
+    }
+    /**
+     * @description 재생 시점(초)을 전역 시각(global time)으로 변환. 파생 클래스에서 구현.
+     * @param {number} totalPlaybackSec VOD 재생 시점(초)
+     * @returns {Date|null} 전역 시각 또는 변환 불가 시 null
+     */
+    playbackTimeToGlobalTS(totalPlaybackSec) {
+        throw new Error("playbackTimeToGlobalTS must be implemented by subclass");
+    }
+    // 현재 재생 중인지 여부를 반환하는 추상 메서드
+    isPlaying() {
+        throw new Error("isPlaying must be implemented by subclass");
+    }
     /**
      * 전역 타임스탬프(ms) → 재생 시각(초) 변환이 가능한지 여부.
      * 타임라인 동기화 미리보기 등에서 변환 준비가 됐을 때만 사용. 서브클래스에서 오버라이드.
      * @returns {boolean}
      */
     canConvertGlobalTSToPlaybackTime() {
-        return false;
+        throw new Error("canConvertGlobalTSToPlaybackTime must be implemented by subclass");
     }
-
     /**
      * @description 영상 시간을 설정
      * @param {number} playbackTime 
      * @param {boolean} doAlert 
      */
     moveToPlaybackTime(playbackTime, doAlert = true) {
-        throw new Error("applyPlaybackTime must be implemented by subclass");
+        throw new Error("moveToPlaybackTime must be implemented by subclass");
+    }
+    moveTooltipToCtrlBox(){
+        throw new Error("moveTooltipToCtrlBox must be implemented by subclass");
     }
 }
         // 탬퍼몽키: vodCore 페이지 브리지 없음. SoopTimestampManager._getVodCoreGhost() 가 IS_TAMPER_MONKEY_SCRIPT 일 때 ghost 를 쓰지 않음.
@@ -1039,7 +1047,6 @@ class SoopAPI extends IVodSync{
 
         this.reloadingAll = false; // 현재 VOD 정보와 태그를 업데이트 중인가
         this.loop_playing = false;
-        this.moveTooltipToCtrlBox();
     }
 
     /**
@@ -1064,7 +1071,7 @@ class SoopAPI extends IVodSync{
             this.reloadAll(curVideoId);
         }
     }
-
+    
     moveTooltipToCtrlBox(){
         const ctrlBox = document.querySelector('.ctrlBox');
         const rightCtrl = document.querySelector('.right_ctrl');
@@ -1073,12 +1080,9 @@ class SoopAPI extends IVodSync{
             this.tooltipContainer.style.position = '';
             this.tooltipContainer.style.bottom = '';
             this.tooltipContainer.style.right = '';
+            return true;
         }
-        else{
-            setTimeout(() => {
-                this.moveTooltipToCtrlBox();
-            }, 200);
-        }
+        return false;
     }
 
     simpleLoopSettingUpdate(){

@@ -9,7 +9,6 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
     }
     update(){
         super.update();
-        this.checkAndMoveTooltipToCtrlBox();
 
         // vod 보다가 치지직 로고를 누르면 pip모드로 변경되고 pip를 닫는 경우 이 조건으로 체크됨
         if (this.videoTag && this.videoTag.src == ''){
@@ -19,22 +18,18 @@ export class ChzzkTimestampManager extends TimestampManagerBase {
             this.reloadAll();
         }
     }
-    checkAndMoveTooltipToCtrlBox(){
-        if (this.tooltipContainer.parentElement === document.body ||
-            !this.tooltipContainer.isConnected){
-            const rightButtons = document.querySelector('.pzp-pc__bottom-buttons-right');
-            if (!rightButtons) return false;
-            const playBar = rightButtons.parentElement;
-            if (playBar && rightButtons) {
-                playBar.insertBefore(this.tooltipContainer, rightButtons);
-                this.tooltipContainer.style.position = '';
-                this.tooltipContainer.style.bottom = '';
-                this.tooltipContainer.style.right = '';
-                return true;
-            }
-            return false;
+    moveTooltipToCtrlBox(){
+        const rightButtons = document.querySelector('.pzp-pc__bottom-buttons-right');
+        if (!rightButtons) return false;
+        const playBar = rightButtons.parentElement;
+        if (playBar && rightButtons) {
+            playBar.insertBefore(this.tooltipContainer, rightButtons);
+            this.tooltipContainer.style.position = '';
+            this.tooltipContainer.style.bottom = '';
+            this.tooltipContainer.style.right = '';
+            return true;
         }
-        return true;
+        return false;
     }
 
     calculateTimestamp(videoInfo, currentTime) {

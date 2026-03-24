@@ -15,7 +15,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
 
         this.reloadingAll = false; // 현재 VOD 정보와 태그를 업데이트 중인가
         this.loop_playing = false;
-        this.moveTooltipToCtrlBox();
     }
 
     /**
@@ -40,7 +39,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
             this.reloadAll(curVideoId);
         }
     }
-
+    
     moveTooltipToCtrlBox(){
         const ctrlBox = document.querySelector('.ctrlBox');
         const rightCtrl = document.querySelector('.right_ctrl');
@@ -49,12 +48,9 @@ export class SoopTimestampManager extends TimestampManagerBase {
             this.tooltipContainer.style.position = '';
             this.tooltipContainer.style.bottom = '';
             this.tooltipContainer.style.right = '';
+            return true;
         }
-        else{
-            setTimeout(() => {
-                this.moveTooltipToCtrlBox();
-            }, 200);
-        }
+        return false;
     }
 
     simpleLoopSettingUpdate(){
