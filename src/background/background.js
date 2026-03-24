@@ -163,16 +163,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
     }
     else if (request.action === 'broadCastSync') {
-        // 모든 vod를 이 시간대로 동기화
-        const activatedTabs = settingsManager.activatedTabs;
-        for (const tabId of activatedTabs) {
-            if (tabId === sender.tab?.id) continue; // 자기 자신은 제외
-            chrome.tabs.sendMessage(tabId, {
-                action: 'broadCastSync',
-                request_vod_ts: request.request_vod_ts
+        // 콜백 목록은 유지하고, 현재 열려있는 VOD 탭에만 브로드캐스트
+        chrome.tabs.query({}, (tabs) => {
+            tabs.forEach((tab) => {
+                if (!tab?.id || tab.id === sender.tab?.id) return; // 자기 자신은 제외
+                const url = tab.url || '';
+                const isSoopVodPage = /^https:\/\/vod\.sooplive\.com\/player\/\d+/.test(url);
+                const isChzzkVodPage = /^https:\/\/chzzk\.naver\.com\/video\/\d+/.test(url);
+                if (!isSoopVodPage && !isChzzkVodPage) return;
+                chrome.tabs.sendMessage(tab.id, {
+                    action: 'broadCastSync',
+                    request_vod_ts: request.request_vod_ts
+                }, () => {
+                    // 수신 리스너가 없는 탭에서 발생하는 에러는 무시
+                    void chrome.runtime.lastError;
+                });
             });
-        }
-        sendResponse({ success: true });
+            sendResponse({ success: true });
+        });
     }
     return true;
 }); 
