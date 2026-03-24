@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         VOD Master (SOOP-SOOP 동기화)
+// @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
 // @version      1.5.6
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
@@ -137,107 +137,6 @@ class SoopAPI extends IVodSync{
      * @returns {Promise<{ result: number, message?: string, response?: object }|null>}
      */
     async GetSoopVeditorWebVodInfo(titleNo, opts = {}) {
-        /* 응답 예시
-        {
-            "result": 1,
-            "message": "success",
-            "response": {
-                "info": {
-                    "title_no": 187007483,
-                    "broad_no": 291659806,
-                    "title_name": "협전으로 대피",
-                    "user_nick": "EDAC천재일까",
-                    "user_id": "ainukehere",
-                    "grade": 0,
-                    "auth_no": 101,
-                    "thumb": "http:\/\/videoimg.sooplive.com\/php\/SnapshotLoad.php?rowKey=20260215_C73B7B22_291659806_1_r",
-                    "flag": "SUCCEED",
-                    "file_type": "REVIEW",
-                    "hashtags": "",
-                    "region_type": 0,
-                    "read_cnt": "110",
-                    "chat_url": "https:\/\/videoimg.sooplive.com\/php\/ChatLoadSplit.php",
-                    "snapshot_url": "https:\/\/videoimg.sooplive.com\/php\/SnapshotLoad.php?rowKey=",
-                    "subscription_personalcon": [],
-                    "total_duration": 7720,
-                    "total_duration_ms": 7720000,
-                    "login_id": "iii4625",
-                    "login_nick": "카사리온",
-                    "note_cnt": 0,
-                    "chat_duration": 300,
-                    "resolution": "1920x1080",
-                    "bbs": [
-                        {
-                            "bbs_no": 52486714,
-                            "name": "개발자의 방"
-                        },
-                        {
-                            "bbs_no": 121451153,
-                            "name": "VOD 실험실"
-                        },
-                        {
-                            "bbs_no": 121571257,
-                            "name": "private room"
-                        },
-                        {
-                            "bbs_no": 119202705,
-                            "name": "방셀"
-                        },
-                        {
-                            "bbs_no": 119202797,
-                            "name": "노래 기록 보관소"
-                        },
-                        {
-                            "bbs_no": 122691465,
-                            "name": "일기"
-                        },
-                        {
-                            "bbs_no": 122158147,
-                            "name": "초대받지않은 손님들이 글 싸는 곳"
-                        },
-                        {
-                            "bbs_no": 117678975,
-                            "name": "통제구역"
-                        }
-                    ],
-                    "langs": {
-                        "ko_KR": "한국어",
-                        "th_TH": "ไทย",
-                        "en_US": "English",
-                        "zh_CN": "中文",
-                        "es_ES": "Español",
-                        "pt_PT": "Português",
-                        "ja_JP": "日本語",
-                        "de_DE": "Deutsch",
-                        "hi_IN": "हिन्दी",
-                        "id_ID": "Bahasa Indonesia",
-                        "ms_MY": "Bahasa Melayu",
-                        "ru_RU": "Русский",
-                        "fr_FR": "Français",
-                        "ar_SA": "العربية",
-                        "tl_PH": "Filipino",
-                        "vi_VN": "Tiếng Việt",
-                        "etc": "Other"
-                    }
-                },
-                "files": [
-                    {
-                        "file_idx": 0,
-                        "grade": 0,
-                        "hide": "N",
-                        "file_start": "2026-02-15 23:22:02",
-                        "duration": 7720,
-                        "duration_ms": 7720000,
-                        "file_path": "\/vod\/20260215\/806\/291659806\/REGL_C73B7B22_291659806_1.mp4",
-                        "file_size": 6727825379,
-                        "file_order": 1,
-                        "file_info_key": "20260215_C73B7B22_291659806_1",
-                        "vod_url": "https:\/\/vod-archive-kr-cdn-z01.sooplive.com\/spkt\/vod\/20260215\/806\/291659806\/REGL_C73B7B22_291659806_1.mp4\/manifest.m3u8?rp=p02"
-                    }
-                ]
-            }
-        }
-        */
         const tn = String(titleNo);
         const referer =
             typeof opts.referer === 'string' && opts.referer.length > 0
@@ -3598,14 +3497,14 @@ class TimelineCommentProcessorBase extends IVodSync {
         this.settingsPopup = popup;
     }
 }
-        {{SoopVeditorReplacement}}
+        // {{SoopVeditorReplacement}}
 
         new SoopAPI();
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
         if (/\/player\/\d+/.test(window.location.pathname)) {
             new SoopTimelineCommentProcessor();
-            new SoopVeditorReplacement();
+            // new SoopVeditorReplacement();
         }
         new SoopPrevChatViewer();
         
