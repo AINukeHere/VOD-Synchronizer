@@ -39,7 +39,7 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 6. "압축해제된 확장 프로그램을 로드합니다" 버튼을 클릭하고, 압축을 푼 폴더를 선택합니다.
 
 ### 방법 3: TamperMonkey를 사용하는 경우 (SOOP 동기화만 지원)
-1. [https://greasyfork.org/ko/scripts/541829-vod-synchronizer](https://greasyfork.org/ko/scripts/541829-vod-synchronizer)에서 스크립트를 설치하세요.
+1. [https://greasyfork.org/ko/scripts/541829-vod-master-soop](https://greasyfork.org/ko/scripts/541829-vod-master-soop)에서 스크립트를 설치하세요.
 
 
 ## QnA
