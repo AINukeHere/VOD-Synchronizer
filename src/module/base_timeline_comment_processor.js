@@ -60,9 +60,10 @@ export class TimelineCommentProcessorBase extends IVodSync {
         this.checkboxInputStyle = { position: 'absolute', inset: 0, width: '100%', height: '100%', margin: 0, opacity: 0, cursor: 'pointer' };
         this.checkboxWrapCheckedStyle = { backgroundColor: '#a8d8ea', color: '#1a1a1a' };
         this.checkboxWrapUncheckedStyle = { backgroundColor: 'rgba(0,0,0,0.06)', color: '#888' };
+        const GITHUB_RAW_URL = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main";
         /** 현재 시간 삽입 버튼 스타일. backgroundImage는 런타임 URL 사용 */
         this.insertCurrentTimeButtonStyle = {
-            backgroundImage: `url(${chrome.runtime.getURL('res/img/AddCurrentTime.png')})`,
+            backgroundImage: window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true ? `url(${chrome.runtime.getURL('res/img/AddCurrentTime.png')})` : `${GITHUB_RAW_URL}/res/img/AddCurrentTime.png`,
             backgroundSize: '100% 100%',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',

@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         VOD Synchronizer (SOOP-SOOP 동기화)
+// @name         VOD Master (SOOP-SOOP 동기화)
 // @namespace    http://tampermonkey.net/
-// @version      1.5.2
+// @version      1.5.6
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
-// @match        https://vod.sooplive.co.kr/*
-// @match        https://www.sooplive.co.kr/*
+// @match        https://vod.sooplive.com/*
+// @match        https://www.sooplive.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
 // @grant        GM_getValue
@@ -36,9 +36,10 @@
     // 환경 구분용 전역 변수 (탬퍼몽키 환경)
     window.VODSync = window.VODSync || {};
     window.VODSync.IS_TAMPER_MONKEY_SCRIPT = true;
+    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main";
 
-    // 메인 페이지에서 실행되는 경우 (vod.sooplive.co.kr)
-    if (window.location.hostname === 'vod.sooplive.co.kr') {
+    // 메인 페이지에서 실행되는 경우 (vod.sooplive.com)
+    if (window.location.hostname === 'vod.sooplive.com') {
         class IVodSync {
     constructor(){
         this.vodSyncClassName = this.constructor.name;
@@ -59,6 +60,11 @@
 }
         /** 요청 캐시 TTL (밀리초). 동일 요청은 이 시간 동안 캐시된 결과 반환 */
 const REQUEST_CACHE_TTL_MS = 60 * 1000;
+
+/** Phase2 저장 API — true로 바꾸기 전까지 SetWebEditorJob 호출은 무시됨 */
+const ENABLE_SET_WEB_EDITOR_JOB = false;
+
+const SET_WEB_EDITOR_JOB_URL = 'https://stbbs.sooplive.com/vodeditor/api/setWebEditorJob.php';
 
 class SoopAPI extends IVodSync{
     constructor(){
@@ -93,22 +99,28 @@ class SoopAPI extends IVodSync{
 
     /**
      * @description Get Soop VOD Period
-     * @param {number | string} videoId 
-     * @returns {string} period or null
+     * @param {number | string} videoId
+     * @param {{ referer?: string }} [opts] — `referer` 생략 시 `https://vod.sooplive.com/player/{videoId}`
+     * @returns {Promise<object|null>}
      */
-    async GetSoopVodInfo(videoId) {
+    async GetSoopVodInfo(videoId, opts = {}) {
+        const referer =
+            typeof opts.referer === 'string' && opts.referer.length > 0
+                ? opts.referer
+                : `https://vod.sooplive.com/player/${videoId}`;
         const cacheKey = `GetSoopVodInfo:${videoId}`;
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const a = await fetch("https://api.m.sooplive.co.kr/station/video/a/view", {
+        const a = await fetch("https://api.m.sooplive.com/station/video/a/view", {
             "headers": {
                 "accept": "application/json, text/plain, */*",
                 "content-type": "application/x-www-form-urlencoded",
-                "Referer": `https://vod.sooplive.co.kr/player/${videoId}`
+                "Referer": referer
             },
             "body": `nTitleNo=${videoId}&nApiLevel=11&nPlaylistIdx=0`,
-            "method": "POST"
+            "method": "POST",
+            "credentials": "include"
         });
         if (a.status !== 200){
             return null;
@@ -117,9 +129,148 @@ class SoopAPI extends IVodSync{
         this._setCache(cacheKey, b);
         return b;
     }
+
+    /**
+     * stbbs `vodInfo.php?mode=web` VOD 메타 (다중 파일·총 길이 등). 타임라인 UI용.
+     * @param {number | string} titleNo — 플레이어 `/player/{titleNo}` 과 동일
+     * @param {{ referer?: string }} [opts] — 생략 시 `https://vod.sooplive.com/player/{titleNo}` (공식 veditor Referer가 필요하면 명시)
+     * @returns {Promise<{ result: number, message?: string, response?: object }|null>}
+     */
+    async GetSoopVeditorWebVodInfo(titleNo, opts = {}) {
+        /* 응답 예시
+        {
+            "result": 1,
+            "message": "success",
+            "response": {
+                "info": {
+                    "title_no": 187007483,
+                    "broad_no": 291659806,
+                    "title_name": "협전으로 대피",
+                    "user_nick": "EDAC천재일까",
+                    "user_id": "ainukehere",
+                    "grade": 0,
+                    "auth_no": 101,
+                    "thumb": "http:\/\/videoimg.sooplive.com\/php\/SnapshotLoad.php?rowKey=20260215_C73B7B22_291659806_1_r",
+                    "flag": "SUCCEED",
+                    "file_type": "REVIEW",
+                    "hashtags": "",
+                    "region_type": 0,
+                    "read_cnt": "110",
+                    "chat_url": "https:\/\/videoimg.sooplive.com\/php\/ChatLoadSplit.php",
+                    "snapshot_url": "https:\/\/videoimg.sooplive.com\/php\/SnapshotLoad.php?rowKey=",
+                    "subscription_personalcon": [],
+                    "total_duration": 7720,
+                    "total_duration_ms": 7720000,
+                    "login_id": "iii4625",
+                    "login_nick": "카사리온",
+                    "note_cnt": 0,
+                    "chat_duration": 300,
+                    "resolution": "1920x1080",
+                    "bbs": [
+                        {
+                            "bbs_no": 52486714,
+                            "name": "개발자의 방"
+                        },
+                        {
+                            "bbs_no": 121451153,
+                            "name": "VOD 실험실"
+                        },
+                        {
+                            "bbs_no": 121571257,
+                            "name": "private room"
+                        },
+                        {
+                            "bbs_no": 119202705,
+                            "name": "방셀"
+                        },
+                        {
+                            "bbs_no": 119202797,
+                            "name": "노래 기록 보관소"
+                        },
+                        {
+                            "bbs_no": 122691465,
+                            "name": "일기"
+                        },
+                        {
+                            "bbs_no": 122158147,
+                            "name": "초대받지않은 손님들이 글 싸는 곳"
+                        },
+                        {
+                            "bbs_no": 117678975,
+                            "name": "통제구역"
+                        }
+                    ],
+                    "langs": {
+                        "ko_KR": "한국어",
+                        "th_TH": "ไทย",
+                        "en_US": "English",
+                        "zh_CN": "中文",
+                        "es_ES": "Español",
+                        "pt_PT": "Português",
+                        "ja_JP": "日本語",
+                        "de_DE": "Deutsch",
+                        "hi_IN": "हिन्दी",
+                        "id_ID": "Bahasa Indonesia",
+                        "ms_MY": "Bahasa Melayu",
+                        "ru_RU": "Русский",
+                        "fr_FR": "Français",
+                        "ar_SA": "العربية",
+                        "tl_PH": "Filipino",
+                        "vi_VN": "Tiếng Việt",
+                        "etc": "Other"
+                    }
+                },
+                "files": [
+                    {
+                        "file_idx": 0,
+                        "grade": 0,
+                        "hide": "N",
+                        "file_start": "2026-02-15 23:22:02",
+                        "duration": 7720,
+                        "duration_ms": 7720000,
+                        "file_path": "\/vod\/20260215\/806\/291659806\/REGL_C73B7B22_291659806_1.mp4",
+                        "file_size": 6727825379,
+                        "file_order": 1,
+                        "file_info_key": "20260215_C73B7B22_291659806_1",
+                        "vod_url": "https:\/\/vod-archive-kr-cdn-z01.sooplive.com\/spkt\/vod\/20260215\/806\/291659806\/REGL_C73B7B22_291659806_1.mp4\/manifest.m3u8?rp=p02"
+                    }
+                ]
+            }
+        }
+        */
+        const tn = String(titleNo);
+        const referer =
+            typeof opts.referer === 'string' && opts.referer.length > 0
+                ? opts.referer
+                : `https://vod.sooplive.com/player/${tn}`;
+        const cacheKey = `GetSoopVeditorWebVodInfo:${tn}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
+        const url = new URL('https://stbbs.sooplive.com/vodeditor/api/vodInfo.php');
+        url.searchParams.set('titleNo', tn);
+        url.searchParams.set('mode', 'web');
+
+        const res = await fetch(url.toString(), {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            method: 'GET',
+            credentials: 'include',
+            mode: 'cors',
+        });
+        if (res.status !== 200) {
+            return null;
+        }
+        const b = await res.json();
+        this._setCache(cacheKey, b);
+        return b;
+    }
+
     async GetStreamerID(nickname){
         const encodedNickname = encodeURI(nickname);
-        const url = new URL('https://sch.sooplive.co.kr/api.php');
+        const url = new URL('https://sch.sooplive.com/api.php');
         url.searchParams.set('m', 'bjSearch');
         url.searchParams.set('v', '3.0');
         url.searchParams.set('szOrder', 'score');
@@ -149,7 +300,7 @@ class SoopAPI extends IVodSync{
         const start_date_str = start_date.toISOString().slice(0, 10).replace(/-/g, '');
         const end_date_str = end_date.toISOString().slice(0, 10).replace(/-/g, '');
         this.log(`start_date: ${start_date_str}, end_date: ${end_date_str}`);
-        const url = new URL(`https://chapi.sooplive.co.kr/api/${streamerId}/vods/review`);
+        const url = new URL(`https://chapi.sooplive.com/api/${streamerId}/vods/review`);
         url.searchParams.set("keyword", "");
         url.searchParams.set("orderby", "reg_date");
         url.searchParams.set("page", "1");
@@ -447,11 +598,11 @@ class SoopAPI extends IVodSync{
     }
 
     async GetEmoticon(){
-        const cacheKey = 'GetEmoticon:https://st.sooplive.co.kr/api/emoticons.php';
+        const cacheKey = 'GetEmoticon:https://st.sooplive.com/api/emoticons.php';
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const res = await fetch("https://st.sooplive.co.kr/api/emoticons.php");
+        const res = await fetch("https://st.sooplive.com/api/emoticons.php");
         if (res.status !== 200){
             return null;
         }
@@ -464,7 +615,7 @@ class SoopAPI extends IVodSync{
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const res = await fetch("https://live.sooplive.co.kr/api/signature_emoticon_api.php", {
+        const res = await fetch("https://live.sooplive.com/api/signature_emoticon_api.php", {
             "headers": {
                 "accept": "*/*",
                 "content-type": "application/x-www-form-urlencoded"
@@ -478,6 +629,80 @@ class SoopAPI extends IVodSync{
         const b = await res.json();
         this._setCache(cacheKey, b);
         return b;
+    }
+
+    /**
+     * 다시보기 편집 VOD 생성 (setWebEditorJob). Phase2 — ENABLE_SET_WEB_EDITOR_JOB 가 true일 때만 동작.
+     * @param {object} [opts]
+     * @param {string} [opts.titleNo]
+     * @param {string} [opts.broadNo]
+     * @param {string} [opts.bbsNo]
+     * @param {string} [opts.category]
+     * @param {string} [opts.vodCategory]
+     * @param {string} [opts.title]
+     * @param {string} [opts.contents]
+     * @param {string} [opts.hotissue]
+     * @param {string} [opts.strmLangType]
+     * @param {string|number} [opts.editType]
+     * @param {Array} [opts.editJobInfo] edit_job_info 배열
+     * @param {string} [opts.referer] HTTP Referer (생략 시 VOD 플레이어 페이지)
+     * @returns {Promise<object|null>}
+     */
+    async SetWebEditorJob(opts = {}) {
+        if (!ENABLE_SET_WEB_EDITOR_JOB) {
+            this.warn('SetWebEditorJob: Phase2 비활성 (ENABLE_SET_WEB_EDITOR_JOB)');
+            return null;
+        }
+        const {
+            titleNo,
+            broadNo,
+            bbsNo,
+            referer: refererOpt,
+            category = '00210000',
+            vodCategory = '00820000',
+            title = '',
+            contents = '',
+            hotissue = 'N',
+            strmLangType = 'ko_KR',
+            editType = '1',
+            editJobInfo = [],
+        } = opts;
+        const referer =
+            typeof refererOpt === 'string' && refererOpt.length > 0
+                ? refererOpt
+                : `https://vod.sooplive.com/player/${String(titleNo)}`;
+        if (!titleNo || !broadNo || !bbsNo) {
+            this.error('SetWebEditorJob: titleNo, broadNo, bbsNo 필수');
+            return null;
+        }
+
+        const form = new FormData();
+        form.append('edit_job_info', JSON.stringify(editJobInfo));
+        form.append('edit_type', String(editType));
+        form.append('title_no', String(titleNo));
+        form.append('broad_no', String(broadNo));
+        form.append('bbsNo', String(bbsNo));
+        form.append('category', category);
+        form.append('vod_category', vodCategory);
+        form.append('title', title);
+        form.append('contents', contents);
+        form.append('hotissue', hotissue);
+        form.append('strmLangType', strmLangType);
+
+        const res = await fetch(SET_WEB_EDITOR_JOB_URL, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            body: form,
+        });
+        if (res.status !== 200) {
+            this.error('SetWebEditorJob HTTP', res.status);
+            return null;
+        }
+        return res.json();
     }
 }
         class TimestampManagerBase extends IVodSync {
@@ -539,7 +764,7 @@ class SoopAPI extends IVodSync{
                 iconImage.src = chrome.runtime.getURL("res/img/broadcastSync.png");
             }
             else{
-                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/img/broadcastSync.png";
+                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/res/img/broadcastSync.png";
             }
             iconImage.style.width = "100%";
             iconImage.style.height = "100%";
@@ -652,7 +877,7 @@ class SoopAPI extends IVodSync{
             });
         }
         else{
-            this.channel = new BroadcastChannel('vod-synchronizer');
+            this.channel = new BroadcastChannel('vod-master');
             this.channel.onmessage = (event) => {
                 if (event.data.action === 'broadCastSync') {
                     this.moveToGlobalTS(event.data.request_vod_ts, false);
@@ -711,7 +936,7 @@ class SoopAPI extends IVodSync{
             try{
                 chrome.runtime.sendMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
             } catch (error) {
-                console.warn('[VOD Synchronizer] 전역 동기화 요청 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
+                console.warn('[VOD Master] 전역 동기화 요청 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
             }
         }
         else{
@@ -899,6 +1124,7 @@ class SoopAPI extends IVodSync{
         throw new Error("applyPlaybackTime must be implemented by subclass");
     }
 }
+        // 탬퍼몽키: vodCore 페이지 브리지 없음. SoopTimestampManager._getVodCoreGhost() 가 IS_TAMPER_MONKEY_SCRIPT 일 때 ghost 를 쓰지 않음.
         const MAX_DURATION_DIFF = 30*1000;
         class SoopTimestampManager extends TimestampManagerBase {
     constructor() {
@@ -908,11 +1134,22 @@ class SoopAPI extends IVodSync{
         this.isEditedVod = false; // 다시보기의 일부분이 편집된 상태인가
         
         this.timeLink = null;
+        /** @type {ReturnType<typeof setInterval>|null} ghost 없을 때 time_link 폴백용 */
+        this._timeLinkJumpIntervalId = null;
         this.debug('loaded');
 
         this.reloadingAll = false; // 현재 VOD 정보와 태그를 업데이트 중인가
         this.loop_playing = false;
         this.moveTooltipToCtrlBox();
+    }
+
+    /**
+     * vodCore ghost. `window.VODSync.IS_TAMPER_MONKEY_SCRIPT === true` 이면 null (`.time-current`·time_link 등 기존 경로).
+     * @returns {HTMLElement|null}
+     */
+    _getVodCoreGhost() {
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) return null;
+        return window.VODSync?.vodCoreBridge?.getGhost?.() ?? null;
     }
 
     update(){
@@ -1006,15 +1243,17 @@ class SoopAPI extends IVodSync{
     async loadVodInfo(videoId){
         const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(videoId);
         if (!vodInfo || !vodInfo.data) return;
-        const splitres = vodInfo.data.write_tm.split(' ~ ');
         this.vodInfo = {
             id: videoId,
             type: vodInfo.data.file_type,
-            startDate: new Date(splitres[0]),
-            endDate: splitres[1] ? new Date(splitres[1]) : null,
             files: vodInfo.data.files,
             total_file_duration: vodInfo.data.total_file_duration,
             originVodInfo: null, // 원본 다시보기의 정보
+        }
+        if (vodInfo.data.write_tm){
+            const splitres = vodInfo.data.write_tm.split(' ~ ');
+            this.vodInfo.startDate = new Date(splitres[0]);
+            this.vodInfo.endDate = splitres[1] ? new Date(splitres[1]) : null;
         }
         // 클립은 라이브나 다시보기에서 생성될 수 있고 캐치는 클립에서도 생성될 수 있음.
         // 현재 페이지가 클립이거나 캐치인 경우 원본 VOD의 정보를 읽음
@@ -1069,7 +1308,7 @@ class SoopAPI extends IVodSync{
                                 }
                             }
                             else{
-                                this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+                                this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
                             }
                         }
                     }
@@ -1081,6 +1320,12 @@ class SoopAPI extends IVodSync{
                 this.log('원본 다시보기와 연결되어 있지 않은 VOD입니다.');
                 return;
             }
+        }
+        else if (this.vodInfo.type === 'EDITOR'){
+            this.vodInfo.startDate = null;
+            this.vodInfo.endDate = null;
+            this.log('편집된 VOD입니다.');
+            return;
         }
         const calcedTotalDuration = this.vodInfo.endDate.getTime() - this.vodInfo.startDate.getTime();
         const durationDiff = Math.abs(calcedTotalDuration - this.vodInfo.total_file_duration);
@@ -1153,7 +1398,7 @@ class SoopAPI extends IVodSync{
         }
 
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
         }
         
@@ -1187,7 +1432,7 @@ class SoopAPI extends IVodSync{
             return Math.floor(temp2) - deltaTimeSec;
         }
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
         }
 
@@ -1217,10 +1462,14 @@ class SoopAPI extends IVodSync{
      * @returns {string} 당시 시간을 계산하지 못한 오류 메시지.
      */
     getCurDateTime(){
+        if (this.vodInfo == null) return null;
         const totalPlaybackSec = this.getCurPlaybackTime();
         if (totalPlaybackSec === null) return null;
 
-        if (this.vodInfo.type === 'NORMAL' || this.vodInfo.type === "EDITOR") return '업로드 VOD는 지원하지 않습니다.';
+        if (this.vodInfo.type === 'NORMAL')
+            return '업로드 VOD는 지원하지 않습니다.';
+        else if (this.vodInfo.type === "EDITOR")
+            return '편집된 VOD는 지원하지 않습니다.';
         if (this.vodInfo.startDate === null && 
             this.vodInfo.endDate === null && 
             this.vodInfo.originVodInfo === null) {
@@ -1231,11 +1480,16 @@ class SoopAPI extends IVodSync{
         return globalTS;
     }
     /**
-     * @description 현재 재생 시간을 초 단위로 반환
+     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). vodCore → `#__vs_vodcore_ghost` `playingTime` 우선.
      * @returns {number} 현재 재생 시간(초)
      * @returns {null} 재생 시간을 계산할 수 없음. 의도치않은 상황 발생
      */
     getCurPlaybackTime(){
+        const ghost = this._getVodCoreGhost();
+        if (ghost && ghost.dataset.playingTime !== '') {
+            const pt = parseFloat(ghost.dataset.playingTime);
+            if (Number.isFinite(pt)) return Math.floor(Math.max(0, pt));
+        }
         if (!this.playTimeTag) return null;
         const totalPlaybackTimeStr = this.playTimeTag.innerText.trim();
         const splitres = totalPlaybackTimeStr.split(':');
@@ -1247,7 +1501,7 @@ class SoopAPI extends IVodSync{
             totalPlaybackSec = (parseInt(splitres[0]) * 60 + parseInt(splitres[1]));
         }
         else{
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
         }
         return totalPlaybackSec;
@@ -1273,18 +1527,32 @@ class SoopAPI extends IVodSync{
         return this.moveToPlaybackTime(playbackTime, doAlert);
     }
     moveToPlaybackTime(playbackTime, doAlert = true) {
+        if (this._timeLinkJumpIntervalId != null) {
+            clearInterval(this._timeLinkJumpIntervalId);
+            this._timeLinkJumpIntervalId = null;
+        }
+
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
-        /// 페이지를 새로고침 하는 방식
-        // window.location.replace(url.toString());
-        // return true;
-
-        /// soop 댓글 타임라인 기능을 사용하는 방식
-        // URL에 change_second 파라미터 추가
         window.history.replaceState({}, '', url.toString());
-        const jumpInterval = setInterval(()=>{
-            if (this.getCurPlaybackTime() === playbackTime){
-                clearInterval(jumpInterval);
+
+        // vodCore bridge에 seek요청
+        const ghost = this._getVodCoreGhost();
+        if (ghost) {
+            const sec = Math.max(0, Number(playbackTime));
+            ghost.setAttribute('data-vs-seek', String(Number.isFinite(sec) ? sec : 0));
+            this.debug('vodCore seek via ghost', sec);
+            return true;
+        }
+
+        /// soop 댓글 타임라인 기능 (ghost·vodCore 없을 때 폴백)
+        const targetSec = playbackTime;
+        this._timeLinkJumpIntervalId = setInterval(() => {
+            if (this.getCurPlaybackTime() === targetSec) {
+                if (this._timeLinkJumpIntervalId != null) {
+                    clearInterval(this._timeLinkJumpIntervalId);
+                    this._timeLinkJumpIntervalId = null;
+                }
                 return;
             }
             if (this.timeLink === null) {
@@ -1292,7 +1560,7 @@ class SoopAPI extends IVodSync{
                 document.body.appendChild(this.timeLink);
             }
             this.timeLink.className = 'time_link';
-            this.timeLink.setAttribute('data-time', playbackTime.toString());
+            this.timeLink.setAttribute('data-time', targetSec.toString());
             this.timeLink.click();
             this.debug('timeLink 클릭됨');
         }, 500);
@@ -1633,7 +1901,7 @@ class SoopAPI extends IVodSync{
             const endDate = new Date(splitres[1]);
             if (startDate <= requestDate && requestDate <= endDate){
                 return{
-                    vodLink: `https://vod.sooplive.co.kr/player/${vod.title_no}`,
+                    vodLink: `https://vod.sooplive.com/player/${vod.title_no}`,
                     startDate: startDate,
                     endDate: endDate
                 };
@@ -1712,9 +1980,10 @@ class TimelineCommentProcessorBase extends IVodSync {
         this.checkboxInputStyle = { position: 'absolute', inset: 0, width: '100%', height: '100%', margin: 0, opacity: 0, cursor: 'pointer' };
         this.checkboxWrapCheckedStyle = { backgroundColor: '#a8d8ea', color: '#1a1a1a' };
         this.checkboxWrapUncheckedStyle = { backgroundColor: 'rgba(0,0,0,0.06)', color: '#888' };
+        const GITHUB_RAW_URL = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main";
         /** 현재 시간 삽입 버튼 스타일. backgroundImage는 런타임 URL 사용 */
         this.insertCurrentTimeButtonStyle = {
-            backgroundImage: `url(${chrome.runtime.getURL('res/img/AddCurrentTime.png')})`,
+            backgroundImage: window.VODSync?.IS_TAMPER_MONKEY_SCRIPT !== true ? `url(${chrome.runtime.getURL('res/img/AddCurrentTime.png')})` : `${GITHUB_RAW_URL}/res/img/AddCurrentTime.png`,
             backgroundSize: '100% 100%',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -2766,11 +3035,11 @@ class TimelineCommentProcessorBase extends IVodSync {
                 let ogqImageUrl = null;
                 if (isOgq && ogqGid && ogqSid) {
                     const fileExtension = (ogqAnm === '1') ? 'webp' : 'png';
-                    ogqImageUrl = `https://ogq-sticker-global-cdn-z01.sooplive.co.kr/sticker/${ogqGid}/${ogqSid}_80.${fileExtension}?ver=${ogqVersion || '1'}`;
+                    ogqImageUrl = `https://ogq-sticker-global-cdn-z01.sooplive.com/sticker/${ogqGid}/${ogqSid}_80.${fileExtension}?ver=${ogqVersion || '1'}`;
                 }
 
                 const ogqPurchaseUrl = isOgq && ogqGid 
-                    ? `https://ogqmarket.sooplive.co.kr?m=detail&productId=${ogqGid}`
+                    ? `https://ogqmarket.sooplive.com?m=detail&productId=${ogqGid}`
                     : null;
 
                 messages.push({
@@ -2834,14 +3103,14 @@ class TimelineCommentProcessorBase extends IVodSync {
                 img.setAttribute('user_nick', userNick || '');
                 img.setAttribute('grade', gradeValue.toString());
                 const personalconUrl = this.getPersonalconUrl(subscriptionMonths, subscriptionTier || 1);
-                img.src = personalconUrl || 'https://res.sooplive.co.kr/images/chatting/signature-default.svg';
+                img.src = personalconUrl || 'https://res.sooplive.com/images/chatting/signature-default.svg';
             } else {
                 img.setAttribute('user_nick', userNick || '');
                 img.setAttribute('grade', gradeValue.toString());
-                img.src = 'https://res.sooplive.co.kr/images/chatting/signature-default.svg';
+                img.src = 'https://res.sooplive.com/images/chatting/signature-default.svg';
             }
             img.onerror = function() {
-                this.src = 'https://res.sooplive.co.kr/images/chatting/signature-default.svg';
+                this.src = 'https://res.sooplive.com/images/chatting/signature-default.svg';
             };
             thumb.appendChild(img);
             button.appendChild(thumb);
@@ -2908,7 +3177,7 @@ class TimelineCommentProcessorBase extends IVodSync {
             ogqImg.style.cursor = 'pointer';
             ogqImg.src = ogqImageUrl;
             ogqImg.onerror = function() {
-                this.src = 'https://res.sooplive.co.kr/images/chat/ogq_default.png';
+                this.src = 'https://res.sooplive.com/images/chat/ogq_default.png';
             };
             imgBox.appendChild(ogqImg);
             emoticonBox.appendChild(imgBox);
@@ -3329,12 +3598,14 @@ class TimelineCommentProcessorBase extends IVodSync {
         this.settingsPopup = popup;
     }
 }
+        {{SoopVeditorReplacement}}
 
         new SoopAPI();
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
         if (/\/player\/\d+/.test(window.location.pathname)) {
             new SoopTimelineCommentProcessor();
+            new SoopVeditorReplacement();
         }
         new SoopPrevChatViewer();
         
@@ -3442,7 +3713,7 @@ class TimelineCommentProcessorBase extends IVodSync {
                 justify-content: space-between;
                 align-items: center;
                 ">
-                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Synchronizer 업데이트 알림</h2>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Master 업데이트 알림</h2>
                 <span class="vod-sync-close" style="
                 color: white;
                 font-size: 28px;
@@ -3477,7 +3748,7 @@ class TimelineCommentProcessorBase extends IVodSync {
             const iframe = document.getElementById('updateIframe');
             if (modal && iframe) {
                 modal.style.display = 'flex';
-                iframe.src = 'https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v' + version + '.html';
+                iframe.src = 'https://ainukehere.github.io/VOD-Master/doc/update_notification_v' + version + '.html';
                 const closeModal = () => modal.remove();
                 modal.querySelector('.vod-sync-close').onclick = closeModal;
                 modal.onclick = function(e) { if (e.target === modal) closeModal(); };

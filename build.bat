@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo VOD Synchronizer Build Script
+echo VOD Master Build Script
 echo ========================================
 echo.
 

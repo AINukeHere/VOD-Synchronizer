@@ -58,7 +58,7 @@ export class TimestampManagerBase extends IVodSync {
                 iconImage.src = chrome.runtime.getURL("res/img/broadcastSync.png");
             }
             else{
-                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/res/img/broadcastSync.png";
+                iconImage.src = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/res/img/broadcastSync.png";
             }
             iconImage.style.width = "100%";
             iconImage.style.height = "100%";
@@ -171,7 +171,7 @@ export class TimestampManagerBase extends IVodSync {
             });
         }
         else{
-            this.channel = new BroadcastChannel('vod-synchronizer');
+            this.channel = new BroadcastChannel('vod-master');
             this.channel.onmessage = (event) => {
                 if (event.data.action === 'broadCastSync') {
                     this.moveToGlobalTS(event.data.request_vod_ts, false);
@@ -231,7 +231,7 @@ export class TimestampManagerBase extends IVodSync {
             try{
                 chrome.runtime.sendMessage({action: 'broadCastSync', request_vod_ts: request_vod_ts.getTime()});
             } catch (error) {
-                console.warn('[VOD Synchronizer] 전역 동기화 요청 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
+                console.warn('[VOD Master] 전역 동기화 요청 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
             }
         }
         else{

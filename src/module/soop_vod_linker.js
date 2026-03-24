@@ -104,7 +104,7 @@ export class SoopVODLinker extends VODLinkerBase{
             const endDate = new Date(splitres[1]);
             if (startDate <= requestDate && requestDate <= endDate){
                 return{
-                    vodLink: `https://vod.sooplive.co.kr/player/${vod.title_no}`,
+                    vodLink: `https://vod.sooplive.com/player/${vod.title_no}`,
                     startDate: startDate,
                     endDate: endDate
                 };

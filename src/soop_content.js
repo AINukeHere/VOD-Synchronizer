@@ -1,5 +1,4 @@
-// SOOP 플랫폼에서 실행되는 경우
-if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
+if (window == top && window.location.origin.includes('vod.sooplive.com')) {
     let tsManager = null;
     let syncPanel = null;
     let rpPanel = null;
@@ -10,6 +9,45 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
     }
     log('loaded');
 
+    /**
+     * vodCore ghost: 페이지 MAIN 에 `soop_vodcore_page_bridge.js` 를 ES 모듈로 주입한다.
+     * 해당 파일이 `export class VodCorePageBridge` + `mountVodCorePageBridge()` 로 스스로 기동한다.
+     */
+    function initVodCorePageBridgeHost() {
+        window.VODSync = window.VODSync || {};
+        window.VODSync.IS_TAMPER_MONKEY_SCRIPT = false;
+        const GHOST_ID = '__vs_vodcore_ghost';
+        const PAGE_SCRIPT_PATH = 'src/module/soop_vodcore_page_bridge.js';
+        let scriptInjected = false;
+        let injectUnavailable = false;
+        function installPageScript() {
+            if (scriptInjected || injectUnavailable) return;
+            if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
+                injectUnavailable = true;
+                return;
+            }
+            scriptInjected = true;
+            const url = chrome.runtime.getURL(PAGE_SCRIPT_PATH);
+            const s = document.createElement('script');
+            s.type = 'module';
+            s.src = url;
+            s.onload = () => s.remove();
+            s.onerror = () => {
+                scriptInjected = false;
+                console.error(
+                    '[VOD-Master] vodCore page bridge failed to load (check manifest web_accessible_resources):',
+                    url
+                );
+            };
+            (document.documentElement || document.head || document.body).appendChild(s);
+        }
+        window.VODSync.vodCoreBridge = {
+            GHOST_ID,
+            installPageScript,
+            getGhost: () => document.getElementById(GHOST_ID),
+        };
+        installPageScript();
+    }
 
     // 설정 관련 함수들
     async function getAllSettings() {
@@ -33,7 +71,8 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
             'SoopTimelineCommentProcessor': 'src/module/soop_timeline_comment_processor.js',
             'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
-            'SoopPrevChatViewer': 'src/module/soop_prev_chat_viewer.js'
+            'SoopPrevChatViewer': 'src/module/soop_prev_chat_viewer.js',
+            // 'SoopVeditorReplacement': 'src/module/soop_veditor_replacement.js',
         };
         
         // 클래스 로더를 통해 필요한 클래스들 로드
@@ -45,11 +84,13 @@ if (window == top && window.location.origin.includes('vod.sooplive.co.kr')) {
         new classes.SoopVODLinker(false);
         if (/\/player\/\d+/.test(window.location.pathname)) {
             new classes.SoopTimelineCommentProcessor();
+            // new classes.SoopVeditorReplacement();
         }
         syncPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
         new classes.SoopPrevChatViewer();
 
+        // initVodCorePageBridgeHost();
 
         // 동기화 요청이 있는 경우 타임스탬프 매니저에게 요청
         const params = new URLSearchParams(window.location.search);

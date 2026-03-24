@@ -14,6 +14,10 @@ class ClassLoader {
             'ChzzkVODLinker': ['VODLinkerBase'],
             'SoopAPI': ['IVodSync'],
             'ChzzkAPI': ['IVodSync'],
+            'SoopPrevChatViewer': ['IVodSync'],
+            'SoopTimelineCommentProcessor': ['TimelineCommentProcessorBase'],
+            'ChzzkTimelineCommentProcessor': ['TimelineCommentProcessorBase'],
+            // 'SoopVeditorReplacement': ['IVodSync'],
         };
     }
 
@@ -59,6 +63,7 @@ class ClassLoader {
             'IVodSync': 'src/module/interface4log.js',
             'VODLinkerBase': 'src/module/base_vod_linker.js',
             'TimestampManagerBase': 'src/module/base_timestamp_manager.js',
+            'TimelineCommentProcessorBase': 'src/module/base_timeline_comment_processor.js',
         };
 
         const filePath = parentClassPaths[parentClassName];

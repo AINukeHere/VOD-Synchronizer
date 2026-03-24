@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VOD Synchronizer Chrome Extension Build Script
+VOD Master Chrome Extension Build Script
 배포용 ZIP 파일과 테스트용 폴더를 생성하는 통합 스크립트입니다.
 """
 
@@ -72,6 +72,7 @@ def build_tampermonkey_script():
             '{{SoopTimelineCommentProcessor}}': ('src/module/soop_timeline_comment_processor.js', 'SoopTimelineCommentProcessor'),
             '{{ChzzkTimelineCommentProcessor}}': ('src/module/chzzk_timeline_comment_processor.js', 'ChzzkTimelineCommentProcessor'),
             '{{SoopPrevChatViewer}}': ('src/module/soop_prev_chat_viewer.js', 'SoopPrevChatViewer'),
+            # '{{SoopVeditorReplacement}}': ('src/module/soop_veditor_replacement.js', 'SoopVeditorReplacement'),
         }
         
         # 각 플레이스홀더를 실제 클래스 정의로 교체
@@ -100,7 +101,7 @@ def create_test_extension():
     """로컬 테스트용 확장 프로그램 폴더 생성"""
     
     # 테스트용 폴더명
-    test_folder = "VOD-Synchronizer-Test"
+    test_folder = "VOD-Master-Test"
     
     # 배포에 포함할 파일들
     include_files = [
@@ -142,7 +143,8 @@ def create_test_extension():
         'src/module/base_timeline_comment_processor.js',
         'src/module/soop_timeline_comment_processor.js',
         'src/module/chzzk_timeline_comment_processor.js',
-        
+        # 'src/module/soop_veditor_replacement.js',
+        # 'src/module/soop_vodcore_page_bridge.js',
         
         # 리소스 파일
         'res/data/rp_nicknames.json',
@@ -155,12 +157,12 @@ def create_test_extension():
         with open('manifest.json', 'r', encoding='utf-8') as f:
             manifest = json.load(f)
             version = manifest.get('version', '1.0.0')
-            name = manifest.get('name', 'VOD-Synchronizer')
+            name = manifest.get('name', 'VOD-Master')
     except Exception as e:
         print(f"❌ manifest.json 읽기 실패: {e}")
         return False
     
-    print(f"🧪 VOD Synchronizer 로컬 테스트용 폴더 생성 시작...")
+    print(f"🧪 VOD Master 로컬 테스트용 폴더 생성 시작...")
     print(f"📁 폴더명: {test_folder}")
     print(f"📋 버전: {version}")
     print()
@@ -206,7 +208,7 @@ def create_test_extension():
 def create_build_zip():
     """테스트 폴더를 기반으로 배포용 ZIP 파일을 생성하는 스크립트"""
     
-    test_folder = "VOD-Synchronizer-Test"
+    test_folder = "VOD-Master-Test"
     
     if not os.path.exists(test_folder):
         print(f"❌ 테스트 폴더를 찾을 수 없습니다: {test_folder}")
@@ -218,7 +220,7 @@ def create_build_zip():
         with open(os.path.join(test_folder, 'manifest.json'), 'r', encoding='utf-8') as f:
             manifest = json.load(f)
             version = manifest.get('version', '1.0.0')
-            name = manifest.get('name', 'VOD-Synchronizer')
+            name = manifest.get('name', 'VOD-Master')
     except Exception as e:
         print(f"❌ manifest.json 읽기 실패: {e}")
         return False
@@ -227,7 +229,7 @@ def create_build_zip():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     zip_filename = f"{name.replace(' ', '-')}_v{version}_{timestamp}.zip"
     
-    print(f"🚀 VOD Synchronizer 배포용 ZIP 생성 시작...")
+    print(f"🚀 VOD Master 배포용 ZIP 생성 시작...")
     print(f"📦 파일명: {zip_filename}")
     print(f"📋 버전: {version}")
     print(f"📁 소스 폴더: {test_folder}")
@@ -267,7 +269,7 @@ def create_build_zip():
 def create_test_zip():
     """테스트용 폴더를 ZIP으로 압축"""
     
-    test_folder = "VOD-Synchronizer-Test"
+    test_folder = "VOD-Master-Test"
     
     if not os.path.exists(test_folder):
         print(f"❌ 테스트 폴더를 찾을 수 없습니다: {test_folder}")
@@ -279,7 +281,7 @@ def create_test_zip():
         with open(os.path.join(test_folder, 'manifest.json'), 'r', encoding='utf-8') as f:
             manifest = json.load(f)
             version = manifest.get('version', '1.0.0')
-            name = manifest.get('name', 'VOD-Synchronizer-Test')
+            name = manifest.get('name', 'VOD-Master-Test')
     except Exception as e:
         print(f"❌ 테스트용 manifest.json 읽기 실패: {e}")
         return False
@@ -288,7 +290,7 @@ def create_test_zip():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     zip_filename = f"{name.replace(' ', '-')}_v{version}_{timestamp}.zip"
     
-    print(f"🧪 VOD Synchronizer 테스트용 ZIP 생성 시작...")
+    print(f"🧪 VOD Master 테스트용 ZIP 생성 시작...")
     print(f"📦 파일명: {zip_filename}")
     print(f"📋 버전: {version}")
     print(f"📁 소스 폴더: {test_folder}")
@@ -328,7 +330,7 @@ def create_test_zip():
 def show_help():
     """도움말 표시"""
     print("=" * 60)
-    print("VOD Synchronizer Chrome Extension Build Script")
+    print("VOD Master Chrome Extension Build Script")
     print("=" * 60)
     print()
     print("사용법:")
@@ -370,7 +372,7 @@ def main():
         return
     
     print("=" * 60)
-    print("VOD Synchronizer Chrome Extension Build Script")
+    print("VOD Master Chrome Extension Build Script")
     print("=" * 60)
     print(f"실행 모드: {command.upper()}")
     print()
@@ -409,7 +411,7 @@ def main():
             print("1. Chrome 브라우저에서 chrome://extensions/ 접속")
             print("2. 우측 상단의 '개발자 모드' 활성화")
             print("3. '압축해제된 확장 프로그램을 로드합니다' 클릭")
-            print("4. 'VOD-Synchronizer-Test' 폴더 선택")
+            print("4. 'VOD-Master-Test' 폴더 선택")
             print("5. 확장 프로그램이 로드되면 테스트 시작!")
         
         if command in ["zip", "all"]:

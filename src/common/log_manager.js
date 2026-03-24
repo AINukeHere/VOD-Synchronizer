@@ -243,7 +243,7 @@ const MODAL_HTML_TEMPLATE = `
                 justify-content: space-between;
                 align-items: center;
                 ">
-                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Synchronizer 업데이트 알림</h2>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Master 업데이트 알림</h2>
                 <span class="vod-sync-close" style="
                 color: white;
                 font-size: 28px;
@@ -298,7 +298,7 @@ function createAndShowUpdateModal(version) {
         modal.style.display = 'flex';
         
         // URL 파라미터로 업데이트 정보 전달
-        const iframeUrl = `https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v${version}.html`;
+        const iframeUrl = `https://ainukehere.github.io/VOD-Master/doc/update_notification_v${version}.html`;
         
         iframe.src = iframeUrl;
         
@@ -432,6 +432,6 @@ setInterval(()=>{
     try{
         chrome.runtime.sendMessage({ action: 'addChangeCallback' });
     } catch (error) {
-        console.warn('[VOD Synchronizer] 설정 변경 콜백 등록 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
+        console.warn('[VOD Master] 설정 변경 콜백 등록 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
     }
 }, 25000);

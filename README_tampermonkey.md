@@ -1,6 +1,6 @@
-# VOD Synchronizer
+# VOD Master
 
-VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스트리머의 시점이나 채팅이 궁금할때 다른 스트리머의 VOD를 찾아서 볼 수 있게 해주는 크롬 확장 프로그램입니다. **다른 스트리머의 시점을 빠르게 찾고싶으신 분들에게 제격입니다.**
+VOD Master는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스트리머의 시점이나 채팅이 궁금할때 다른 스트리머의 VOD를 찾아서 볼 수 있게 해주는 크롬 확장 프로그램입니다. **다른 스트리머의 시점을 빠르게 찾고싶으신 분들에게 제격입니다.**
 
 ## 주요 기능
 
@@ -14,7 +14,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 ## 설치 방법
 
 ### 방법 1: Chrome Web Store에서 설치 (개별 확장프로그램으로 설치)
-1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-synchronizer/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Synchronizer를 설치하세요.
+1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-master/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Master를 설치하세요.
 2. "Chrome에 추가" 버튼을 클릭하여 설치를 완료하세요.
 
 ### 방법 2: TamperMonkey를 사용하는 경우
@@ -48,17 +48,17 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 ### 1.5.3
 - 타임라인 편집기
   - 쉬프트를 누른채로 미세조정 시 10초씩 증감됩니다.
-  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/timeline_editor_shiftKey.png)
+  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/timeline_editor_shiftKey.png)
 - 새 기능: 현재 시간 삽입
   - VOD 댓글 작성 및 수정 시 VOD의 현재 시점을 댓글 내용에 타임라인 형식으로 삽입합니다.
-  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/insertCurrentTime_demo.gif)
+  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/insertCurrentTime_demo.gif)
 
 ### 1.5.2
 - 새 기능: 타임라인 편집
   - 기존 기능인 타임라인 댓글 동기화 시 타임라인을 수정하고 복사하는 기능을 동기화하지 않고도 일반 댓글의 내용으로부터 가져올 수 있게 타임라인 편집 기능을 추가했습니다.
   - 타임라인이 포함된 댓글의 더보기 옵션(점 세개)을 누르면 타임라인 편집 버튼이 나타납니다. 
   
-![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/soop_timeline_edit_option.png)  |  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/timeline_editor.png)
+![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/soop_timeline_edit_option.png)  |  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/timeline_editor.png)
 :-------------------------:|:-------------------------:
 타임라인 편집 옵션 버튼            |  타임라인 편집기
 
@@ -71,7 +71,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - 새 기능: 타임라인 댓글 동기화
   - 타임라인 댓글을 다른 스트리머 다시보기와 동기화할 때 변환할 수 있는 기능이 추가되었습니다.
   - 타임라인이 포함된 댓글의 우측상단에 표시된 `동기화할 때 이 타임라인을 변환`을 클릭하여 활성화하고 동기화를 진행하면 동기화된 다시보기 페이지에서 변환된 타임라인 댓글을 확인하고 미세조정, 복사를 할 수 있습니다. 아직은 SOOP에서만 가능합니다.
-  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/soop_toggle_timelineCommentSync.png)
+  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/soop_toggle_timelineCommentSync.png)
 - 이전 채팅 복원
   - 설정에서 이모티콘만으로 구성된 채팅은 제외할 수 있는 기능이 추가되었습니다.
   - 이제 복원된 채팅에 마우스를 올리면 표시되는 `~초 전` 툴팁을 클릭하여 해당 채팅이 발생한 시점으로 이동할 수 있습니다.
@@ -87,13 +87,13 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
   - 채팅 내 시그니처 이모티콘과 기본 이모티콘, ogq가 지원됩니다.
   - 최대한 데이터를 분석하여 구독 이모티콘, 팬클럽 열혈팬 서포터 매니저 뱃지가 알맞게 표시되도록 했지만 제 나름대로 분석한거라 사실과 다를 수 있습니다. 스트리머 채팅은 아직 분석하지 않아서 정상적으로 표시되지 않을 것입니다.(닉네임과 채팅은 올바르게 표시됩니다)<br/>
 
-  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer.png)  |  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer-restored.png) | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/prevChatViewer-setting.png)
+  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/prevChatViewer.png)  |  ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/prevChatViewer-restored.png) | ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/prevChatViewer-setting.png)
 :-------------------------:|:-------------------------:|:-------------------------:
 이전 채팅 복원 버튼            |  이전 채팅 복원 후 | 이전 채팅 복원 설정
 
 - 타임스탬프와 전역 동기화 버튼의 위치가 우 하단 고정에서 vod 플레이어 재생 바 중간으로 변경되었으며 입력이 없을 때 완전히 투명해집니다.
 
-![](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/new_timestamp_position_soop.png)
+![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/new_timestamp_position_soop.png)
 
 - 이제 동기화 성공 시 검색창을 깔끔하게 정리합니다.
 
@@ -115,7 +115,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 ### 0.4.0
 - 전역 동기화 버튼이 추가되었습니다. 해당 VOD를 기준으로 나머지 열려있는 VOD들을 동기화합니다.
 
-![전역 동기화 버튼](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/broadcastSync.png)
+![전역 동기화 버튼](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/broadcastSync.png)
 
 - SOOP의 타임스탬프를 방송시간 외의 시간으로 설정할 수 있던 문제를 수정했습니다.
 
@@ -129,7 +129,7 @@ VOD Synchronizer는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른
 - SOOP의 파생된 VOD(클립, 캐치)에서 타임스탬프를 수정하여 특정시간대로 이동하는 기능이 제대로 동작하지 않던 문제를 수정했습니다.
 - 간단한 반복 재생 설정 기능을 추가했습니다. VOD 플레이어의 설정을 누르면 반복 재생 메뉴가 추가됩니다.
 
-![반복 재생 기능](https://raw.githubusercontent.com/AINukeHere/VOD-Synchronizer/main/screenshots/loop_playing.png)
+![반복 재생 기능](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/loop_playing.png)
 
 ### 0.3.1
 - 동기화된 SOOP 다시보기가 열리고 재생되는 시간이 조?금 단축되었을 수도 있습니다.

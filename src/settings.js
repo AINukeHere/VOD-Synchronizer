@@ -147,7 +147,7 @@ class settingPageManager {
         
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'vod-synchronizer-settings.json';
+        link.download = 'vod-master-settings.json';
         link.click();
         
         URL.revokeObjectURL(url);

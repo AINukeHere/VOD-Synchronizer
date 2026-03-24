@@ -1,9 +1,10 @@
-# VOD Synchronizer
+# VOD Master
+VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.24)
 
 <table align="center">
   <tr>
     <td style="">
-      <img src="icons/icon_512.png" alt="VOD Synchronizer Icon" width="128" height="128">
+      <img src="icons/icon_512.png" alt="VOD Master Icon" width="128" height="128">
     </td>
     <td style="">
       <p style="margin: 0; white-space: nowrap;">SOOP 혹은 CHZZK VOD(다시보기) 시청 시 생방송 보듯이 다른 스트리머의 시점이나 채팅이 궁금할때 다른 스트리머의 VOD를 찾아서 볼 수 있게 해주는 크롬 확장 프로그램입니다.</p>
@@ -21,17 +22,17 @@
 - 상단 기본 검색창에 스트리머를 검색하면 검색결과에 Sync VOD 버튼이 생기고 버튼을 누르면 해당 스트리머의 VOD에서 현재 재생 시점과 동일한 시점의 VOD를 찾아 새 탭에서 열어줍니다. (최초 실행 시 팝업 허용이 필요할 수 있습니다.)
 - 우측 '타 플랫폼과 동기화' 버튼을 클릭하면 SOOP 스트리머를 검색하여 동기화할 수 있습니다.
 
-#### 그 외 기능과 설명은 [여기](https://ainukehere.github.io/VOD-Synchronizer/doc/index.html)서 확인하세요.
+#### 그 외 기능과 설명은 [여기](https://ainukehere.github.io/VOD-Master/doc/index.html)서 확인하세요.
 
 ## 설치 방법
 
 ### 방법 1: Chrome Web Store에서 설치 (권장)
-1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-synchronizer/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Synchronizer를 설치하세요.
+1. [Chrome Web Store](https://chromewebstore.google.com/detail/vod-master/fcgefghffdkgllcmgbckhiebjgcdppme)에서 VOD Master를 설치하세요.
 2. "Chrome에 추가" 버튼을 클릭하여 설치를 완료하세요.
 
 ### 방법 2: GitHub Releases에서 다운로드 (개발자용 혹은 스토어에 게시되기전에 미리 체험용)
-1. [이 저장소](https://github.com/AINukeHere/VOD-Synchronizer)의 우측에 있는 [Releases](https://github.com/AINukeHere/VOD-Synchronizer/releases)를 클릭합니다.
-2. 원하는 버전의 릴리즈 Assets에서 VOD-Synchronizer_로 시작하는 zip파일을 다운로드합니다.
+1. [이 저장소](https://github.com/AINukeHere/VOD-Master)의 우측에 있는 [Releases](https://github.com/AINukeHere/VOD-Master/releases)를 클릭합니다.
+2. 원하는 버전의 릴리즈 Assets에서 VOD-Master_로 시작하는 zip파일을 다운로드합니다.
 3. 다운로드한 ZIP 파일을 원하는 위치에 압축을 풉니다.
 4. 크롬 브라우저에서 확장 프로그램 관리(chrome://extensions)로 이동합니다.
 5. 우측 상단의 "개발자 모드"를 활성화합니다.
@@ -54,6 +55,13 @@
 
 
 ## 업데이트 내역
+### 1.5.6
+- 본 프로그램의 이름이 VOD Master로 변경되었습니다.
+- 2026.3.24(화) SOOP 도메인 업데이트에 대응했습니다.
+- 버그 수정
+  - [SOOP] 편집VOD로 제작된 VOD에 대해 이전 채팅 복원 기능이 동작하지 않는 문제를 수정했습니다.
+  - [SOOP] VOD가 전체 공개가 아닌 경우 오류가 발생하는 문제를 수정했습니다.
+
 ### 1.5.5
 - 핫픽스: 치지직에서 동기화를 시도할 때 오류가 발생하는 문제를 수정했습니다.
 

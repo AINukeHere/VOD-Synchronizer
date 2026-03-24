@@ -3,6 +3,11 @@ import { IVodSync } from './interface4log.js';
 /** 요청 캐시 TTL (밀리초). 동일 요청은 이 시간 동안 캐시된 결과 반환 */
 const REQUEST_CACHE_TTL_MS = 60 * 1000;
 
+/** Phase2 저장 API — true로 바꾸기 전까지 SetWebEditorJob 호출은 무시됨 */
+const ENABLE_SET_WEB_EDITOR_JOB = false;
+
+const SET_WEB_EDITOR_JOB_URL = 'https://stbbs.sooplive.com/vodeditor/api/setWebEditorJob.php';
+
 export class SoopAPI extends IVodSync{
     constructor(){
         super();
@@ -36,22 +41,28 @@ export class SoopAPI extends IVodSync{
 
     /**
      * @description Get Soop VOD Period
-     * @param {number | string} videoId 
-     * @returns {string} period or null
+     * @param {number | string} videoId
+     * @param {{ referer?: string }} [opts] — `referer` 생략 시 `https://vod.sooplive.com/player/{videoId}`
+     * @returns {Promise<object|null>}
      */
-    async GetSoopVodInfo(videoId) {
+    async GetSoopVodInfo(videoId, opts = {}) {
+        const referer =
+            typeof opts.referer === 'string' && opts.referer.length > 0
+                ? opts.referer
+                : `https://vod.sooplive.com/player/${videoId}`;
         const cacheKey = `GetSoopVodInfo:${videoId}`;
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const a = await fetch("https://api.m.sooplive.co.kr/station/video/a/view", {
+        const a = await fetch("https://api.m.sooplive.com/station/video/a/view", {
             "headers": {
                 "accept": "application/json, text/plain, */*",
                 "content-type": "application/x-www-form-urlencoded",
-                "Referer": `https://vod.sooplive.co.kr/player/${videoId}`
+                "Referer": referer
             },
             "body": `nTitleNo=${videoId}&nApiLevel=11&nPlaylistIdx=0`,
-            "method": "POST"
+            "method": "POST",
+            "credentials": "include"
         });
         if (a.status !== 200){
             return null;
@@ -60,9 +71,47 @@ export class SoopAPI extends IVodSync{
         this._setCache(cacheKey, b);
         return b;
     }
+
+    /**
+     * stbbs `vodInfo.php?mode=web` VOD 메타 (다중 파일·총 길이 등). 타임라인 UI용.
+     * @param {number | string} titleNo — 플레이어 `/player/{titleNo}` 과 동일
+     * @param {{ referer?: string }} [opts] — 생략 시 `https://vod.sooplive.com/player/{titleNo}` (공식 veditor Referer가 필요하면 명시)
+     * @returns {Promise<{ result: number, message?: string, response?: object }|null>}
+     */
+    async GetSoopVeditorWebVodInfo(titleNo, opts = {}) {
+        const tn = String(titleNo);
+        const referer =
+            typeof opts.referer === 'string' && opts.referer.length > 0
+                ? opts.referer
+                : `https://vod.sooplive.com/player/${tn}`;
+        const cacheKey = `GetSoopVeditorWebVodInfo:${tn}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+
+        const url = new URL('https://stbbs.sooplive.com/vodeditor/api/vodInfo.php');
+        url.searchParams.set('titleNo', tn);
+        url.searchParams.set('mode', 'web');
+
+        const res = await fetch(url.toString(), {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            method: 'GET',
+            credentials: 'include',
+            mode: 'cors',
+        });
+        if (res.status !== 200) {
+            return null;
+        }
+        const b = await res.json();
+        this._setCache(cacheKey, b);
+        return b;
+    }
+
     async GetStreamerID(nickname){
         const encodedNickname = encodeURI(nickname);
-        const url = new URL('https://sch.sooplive.co.kr/api.php');
+        const url = new URL('https://sch.sooplive.com/api.php');
         url.searchParams.set('m', 'bjSearch');
         url.searchParams.set('v', '3.0');
         url.searchParams.set('szOrder', 'score');
@@ -92,7 +141,7 @@ export class SoopAPI extends IVodSync{
         const start_date_str = start_date.toISOString().slice(0, 10).replace(/-/g, '');
         const end_date_str = end_date.toISOString().slice(0, 10).replace(/-/g, '');
         this.log(`start_date: ${start_date_str}, end_date: ${end_date_str}`);
-        const url = new URL(`https://chapi.sooplive.co.kr/api/${streamerId}/vods/review`);
+        const url = new URL(`https://chapi.sooplive.com/api/${streamerId}/vods/review`);
         url.searchParams.set("keyword", "");
         url.searchParams.set("orderby", "reg_date");
         url.searchParams.set("page", "1");
@@ -390,11 +439,11 @@ export class SoopAPI extends IVodSync{
     }
 
     async GetEmoticon(){
-        const cacheKey = 'GetEmoticon:https://st.sooplive.co.kr/api/emoticons.php';
+        const cacheKey = 'GetEmoticon:https://st.sooplive.com/api/emoticons.php';
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const res = await fetch("https://st.sooplive.co.kr/api/emoticons.php");
+        const res = await fetch("https://st.sooplive.com/api/emoticons.php");
         if (res.status !== 200){
             return null;
         }
@@ -407,7 +456,7 @@ export class SoopAPI extends IVodSync{
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const res = await fetch("https://live.sooplive.co.kr/api/signature_emoticon_api.php", {
+        const res = await fetch("https://live.sooplive.com/api/signature_emoticon_api.php", {
             "headers": {
                 "accept": "*/*",
                 "content-type": "application/x-www-form-urlencoded"
@@ -421,5 +470,79 @@ export class SoopAPI extends IVodSync{
         const b = await res.json();
         this._setCache(cacheKey, b);
         return b;
+    }
+
+    /**
+     * 다시보기 편집 VOD 생성 (setWebEditorJob). Phase2 — ENABLE_SET_WEB_EDITOR_JOB 가 true일 때만 동작.
+     * @param {object} [opts]
+     * @param {string} [opts.titleNo]
+     * @param {string} [opts.broadNo]
+     * @param {string} [opts.bbsNo]
+     * @param {string} [opts.category]
+     * @param {string} [opts.vodCategory]
+     * @param {string} [opts.title]
+     * @param {string} [opts.contents]
+     * @param {string} [opts.hotissue]
+     * @param {string} [opts.strmLangType]
+     * @param {string|number} [opts.editType]
+     * @param {Array} [opts.editJobInfo] edit_job_info 배열
+     * @param {string} [opts.referer] HTTP Referer (생략 시 VOD 플레이어 페이지)
+     * @returns {Promise<object|null>}
+     */
+    async SetWebEditorJob(opts = {}) {
+        if (!ENABLE_SET_WEB_EDITOR_JOB) {
+            this.warn('SetWebEditorJob: Phase2 비활성 (ENABLE_SET_WEB_EDITOR_JOB)');
+            return null;
+        }
+        const {
+            titleNo,
+            broadNo,
+            bbsNo,
+            referer: refererOpt,
+            category = '00210000',
+            vodCategory = '00820000',
+            title = '',
+            contents = '',
+            hotissue = 'N',
+            strmLangType = 'ko_KR',
+            editType = '1',
+            editJobInfo = [],
+        } = opts;
+        const referer =
+            typeof refererOpt === 'string' && refererOpt.length > 0
+                ? refererOpt
+                : `https://vod.sooplive.com/player/${String(titleNo)}`;
+        if (!titleNo || !broadNo || !bbsNo) {
+            this.error('SetWebEditorJob: titleNo, broadNo, bbsNo 필수');
+            return null;
+        }
+
+        const form = new FormData();
+        form.append('edit_job_info', JSON.stringify(editJobInfo));
+        form.append('edit_type', String(editType));
+        form.append('title_no', String(titleNo));
+        form.append('broad_no', String(broadNo));
+        form.append('bbsNo', String(bbsNo));
+        form.append('category', category);
+        form.append('vod_category', vodCategory);
+        form.append('title', title);
+        form.append('contents', contents);
+        form.append('hotissue', hotissue);
+        form.append('strmLangType', strmLangType);
+
+        const res = await fetch(SET_WEB_EDITOR_JOB_URL, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            body: form,
+        });
+        if (res.status !== 200) {
+            this.error('SetWebEditorJob HTTP', res.status);
+            return null;
+        }
+        return res.json();
     }
 }

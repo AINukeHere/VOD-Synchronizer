@@ -9,11 +9,22 @@ export class SoopTimestampManager extends TimestampManagerBase {
         this.isEditedVod = false; // 다시보기의 일부분이 편집된 상태인가
         
         this.timeLink = null;
+        /** @type {ReturnType<typeof setInterval>|null} ghost 없을 때 time_link 폴백용 */
+        this._timeLinkJumpIntervalId = null;
         this.debug('loaded');
 
         this.reloadingAll = false; // 현재 VOD 정보와 태그를 업데이트 중인가
         this.loop_playing = false;
         this.moveTooltipToCtrlBox();
+    }
+
+    /**
+     * vodCore ghost. `window.VODSync.IS_TAMPER_MONKEY_SCRIPT === true` 이면 null (`.time-current`·time_link 등 기존 경로).
+     * @returns {HTMLElement|null}
+     */
+    _getVodCoreGhost() {
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) return null;
+        return window.VODSync?.vodCoreBridge?.getGhost?.() ?? null;
     }
 
     update(){
@@ -107,15 +118,17 @@ export class SoopTimestampManager extends TimestampManagerBase {
     async loadVodInfo(videoId){
         const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(videoId);
         if (!vodInfo || !vodInfo.data) return;
-        const splitres = vodInfo.data.write_tm.split(' ~ ');
         this.vodInfo = {
             id: videoId,
             type: vodInfo.data.file_type,
-            startDate: new Date(splitres[0]),
-            endDate: splitres[1] ? new Date(splitres[1]) : null,
             files: vodInfo.data.files,
             total_file_duration: vodInfo.data.total_file_duration,
             originVodInfo: null, // 원본 다시보기의 정보
+        }
+        if (vodInfo.data.write_tm){
+            const splitres = vodInfo.data.write_tm.split(' ~ ');
+            this.vodInfo.startDate = new Date(splitres[0]);
+            this.vodInfo.endDate = splitres[1] ? new Date(splitres[1]) : null;
         }
         // 클립은 라이브나 다시보기에서 생성될 수 있고 캐치는 클립에서도 생성될 수 있음.
         // 현재 페이지가 클립이거나 캐치인 경우 원본 VOD의 정보를 읽음
@@ -170,7 +183,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                                 }
                             }
                             else{
-                                this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+                                this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
                             }
                         }
                     }
@@ -182,6 +195,12 @@ export class SoopTimestampManager extends TimestampManagerBase {
                 this.log('원본 다시보기와 연결되어 있지 않은 VOD입니다.');
                 return;
             }
+        }
+        else if (this.vodInfo.type === 'EDITOR'){
+            this.vodInfo.startDate = null;
+            this.vodInfo.endDate = null;
+            this.log('편집된 VOD입니다.');
+            return;
         }
         const calcedTotalDuration = this.vodInfo.endDate.getTime() - this.vodInfo.startDate.getTime();
         const durationDiff = Math.abs(calcedTotalDuration - this.vodInfo.total_file_duration);
@@ -255,7 +274,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
 
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
         }
         
@@ -289,7 +308,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
             return Math.floor(temp2) - deltaTimeSec;
         }
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
         }
 
@@ -319,10 +338,14 @@ export class SoopTimestampManager extends TimestampManagerBase {
      * @returns {string} 당시 시간을 계산하지 못한 오류 메시지.
      */
     getCurDateTime(){
+        if (this.vodInfo == null) return null;
         const totalPlaybackSec = this.getCurPlaybackTime();
         if (totalPlaybackSec === null) return null;
 
-        if (this.vodInfo.type === 'NORMAL' || this.vodInfo.type === "EDITOR") return '업로드 VOD는 지원하지 않습니다.';
+        if (this.vodInfo.type === 'NORMAL')
+            return '업로드 VOD는 지원하지 않습니다.';
+        else if (this.vodInfo.type === "EDITOR")
+            return '편집된 VOD는 지원하지 않습니다.';
         if (this.vodInfo.startDate === null && 
             this.vodInfo.endDate === null && 
             this.vodInfo.originVodInfo === null) {
@@ -333,11 +356,16 @@ export class SoopTimestampManager extends TimestampManagerBase {
         return globalTS;
     }
     /**
-     * @description 현재 재생 시간을 초 단위로 반환
+     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). vodCore → `#__vs_vodcore_ghost` `playingTime` 우선.
      * @returns {number} 현재 재생 시간(초)
      * @returns {null} 재생 시간을 계산할 수 없음. 의도치않은 상황 발생
      */
     getCurPlaybackTime(){
+        const ghost = this._getVodCoreGhost();
+        if (ghost && ghost.dataset.playingTime !== '') {
+            const pt = parseFloat(ghost.dataset.playingTime);
+            if (Number.isFinite(pt)) return Math.floor(Math.max(0, pt));
+        }
         if (!this.playTimeTag) return null;
         const totalPlaybackTimeStr = this.playTimeTag.innerText.trim();
         const splitres = totalPlaybackTimeStr.split(':');
@@ -349,7 +377,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
             totalPlaybackSec = (parseInt(splitres[0]) * 60 + parseInt(splitres[1]));
         }
         else{
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Synchronizer 설정] > [문의하기]`);
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
         }
         return totalPlaybackSec;
@@ -375,18 +403,32 @@ export class SoopTimestampManager extends TimestampManagerBase {
         return this.moveToPlaybackTime(playbackTime, doAlert);
     }
     moveToPlaybackTime(playbackTime, doAlert = true) {
+        if (this._timeLinkJumpIntervalId != null) {
+            clearInterval(this._timeLinkJumpIntervalId);
+            this._timeLinkJumpIntervalId = null;
+        }
+
         const url = new URL(window.location.href);
         url.searchParams.set('change_second', playbackTime);
-        /// 페이지를 새로고침 하는 방식
-        // window.location.replace(url.toString());
-        // return true;
-
-        /// soop 댓글 타임라인 기능을 사용하는 방식
-        // URL에 change_second 파라미터 추가
         window.history.replaceState({}, '', url.toString());
-        const jumpInterval = setInterval(()=>{
-            if (this.getCurPlaybackTime() === playbackTime){
-                clearInterval(jumpInterval);
+
+        // vodCore bridge에 seek요청
+        const ghost = this._getVodCoreGhost();
+        if (ghost) {
+            const sec = Math.max(0, Number(playbackTime));
+            ghost.setAttribute('data-vs-seek', String(Number.isFinite(sec) ? sec : 0));
+            this.debug('vodCore seek via ghost', sec);
+            return true;
+        }
+
+        /// soop 댓글 타임라인 기능 (ghost·vodCore 없을 때 폴백)
+        const targetSec = playbackTime;
+        this._timeLinkJumpIntervalId = setInterval(() => {
+            if (this.getCurPlaybackTime() === targetSec) {
+                if (this._timeLinkJumpIntervalId != null) {
+                    clearInterval(this._timeLinkJumpIntervalId);
+                    this._timeLinkJumpIntervalId = null;
+                }
                 return;
             }
             if (this.timeLink === null) {
@@ -394,7 +436,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                 document.body.appendChild(this.timeLink);
             }
             this.timeLink.className = 'time_link';
-            this.timeLink.setAttribute('data-time', playbackTime.toString());
+            this.timeLink.setAttribute('data-time', targetSec.toString());
             this.timeLink.click();
             this.debug('timeLink 클릭됨');
         }, 500);

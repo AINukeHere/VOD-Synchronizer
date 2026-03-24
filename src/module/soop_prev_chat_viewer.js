@@ -439,11 +439,11 @@ export class SoopPrevChatViewer extends IVodSync {
                 let ogqImageUrl = null;
                 if (isOgq && ogqGid && ogqSid) {
                     const fileExtension = (ogqAnm === '1') ? 'webp' : 'png';
-                    ogqImageUrl = `https://ogq-sticker-global-cdn-z01.sooplive.co.kr/sticker/${ogqGid}/${ogqSid}_80.${fileExtension}?ver=${ogqVersion || '1'}`;
+                    ogqImageUrl = `https://ogq-sticker-global-cdn-z01.sooplive.com/sticker/${ogqGid}/${ogqSid}_80.${fileExtension}?ver=${ogqVersion || '1'}`;
                 }
 
                 const ogqPurchaseUrl = isOgq && ogqGid 
-                    ? `https://ogqmarket.sooplive.co.kr?m=detail&productId=${ogqGid}`
+                    ? `https://ogqmarket.sooplive.com?m=detail&productId=${ogqGid}`
                     : null;
 
                 messages.push({
@@ -507,14 +507,14 @@ export class SoopPrevChatViewer extends IVodSync {
                 img.setAttribute('user_nick', userNick || '');
                 img.setAttribute('grade', gradeValue.toString());
                 const personalconUrl = this.getPersonalconUrl(subscriptionMonths, subscriptionTier || 1);
-                img.src = personalconUrl || 'https://res.sooplive.co.kr/images/chatting/signature-default.svg';
+                img.src = personalconUrl || 'https://res.sooplive.com/images/chatting/signature-default.svg';
             } else {
                 img.setAttribute('user_nick', userNick || '');
                 img.setAttribute('grade', gradeValue.toString());
-                img.src = 'https://res.sooplive.co.kr/images/chatting/signature-default.svg';
+                img.src = 'https://res.sooplive.com/images/chatting/signature-default.svg';
             }
             img.onerror = function() {
-                this.src = 'https://res.sooplive.co.kr/images/chatting/signature-default.svg';
+                this.src = 'https://res.sooplive.com/images/chatting/signature-default.svg';
             };
             thumb.appendChild(img);
             button.appendChild(thumb);
@@ -581,7 +581,7 @@ export class SoopPrevChatViewer extends IVodSync {
             ogqImg.style.cursor = 'pointer';
             ogqImg.src = ogqImageUrl;
             ogqImg.onerror = function() {
-                this.src = 'https://res.sooplive.co.kr/images/chat/ogq_default.png';
+                this.src = 'https://res.sooplive.com/images/chat/ogq_default.png';
             };
             imgBox.appendChild(ogqImg);
             emoticonBox.appendChild(imgBox);

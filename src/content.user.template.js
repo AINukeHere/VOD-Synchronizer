@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         VOD Synchronizer (SOOP-SOOP 동기화)
+// @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.5.2
+// @version      1.5.6
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
-// @match        https://vod.sooplive.co.kr/*
-// @match        https://www.sooplive.co.kr/*
+// @match        https://vod.sooplive.com/*
+// @match        https://www.sooplive.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_openInTab
 // @grant        GM_getValue
@@ -36,12 +36,14 @@
     // 환경 구분용 전역 변수 (탬퍼몽키 환경)
     window.VODSync = window.VODSync || {};
     window.VODSync.IS_TAMPER_MONKEY_SCRIPT = true;
+    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main";
 
-    // 메인 페이지에서 실행되는 경우 (vod.sooplive.co.kr)
-    if (window.location.hostname === 'vod.sooplive.co.kr') {
+    // 메인 페이지에서 실행되는 경우 (vod.sooplive.com)
+    if (window.location.hostname === 'vod.sooplive.com') {
         {{IVodSync}}
         {{SoopAPI}}
         {{TimestampManagerBase}}
+        // 탬퍼몽키: vodCore 페이지 브리지 없음. SoopTimestampManager._getVodCoreGhost() 가 IS_TAMPER_MONKEY_SCRIPT 일 때 ghost 를 쓰지 않음.
         const MAX_DURATION_DIFF = 30*1000;
         {{SoopTimestampManager}}
         {{VODLinkerBase}}
@@ -49,12 +51,14 @@
         {{TimelineCommentProcessorBase}}
         {{SoopTimelineCommentProcessor}}
         {{SoopPrevChatViewer}}
+        // {{SoopVeditorReplacement}}
 
         new SoopAPI();
         const tsManager = new SoopTimestampManager();
         new SoopVODLinker();
         if (/\/player\/\d+/.test(window.location.pathname)) {
             new SoopTimelineCommentProcessor();
+            // new SoopVeditorReplacement();
         }
         new SoopPrevChatViewer();
         
@@ -162,7 +166,7 @@
                 justify-content: space-between;
                 align-items: center;
                 ">
-                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Synchronizer 업데이트 알림</h2>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600;"> VOD Master 업데이트 알림</h2>
                 <span class="vod-sync-close" style="
                 color: white;
                 font-size: 28px;
@@ -197,7 +201,7 @@
             const iframe = document.getElementById('updateIframe');
             if (modal && iframe) {
                 modal.style.display = 'flex';
-                iframe.src = 'https://ainukehere.github.io/VOD-Synchronizer/doc/update_notification_v' + version + '.html';
+                iframe.src = 'https://ainukehere.github.io/VOD-Master/doc/update_notification_v' + version + '.html';
                 const closeModal = () => modal.remove();
                 modal.querySelector('.vod-sync-close').onclick = closeModal;
                 modal.onclick = function(e) { if (e.target === modal) closeModal(); };

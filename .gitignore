@@ -18,6 +18,8 @@ ENV/
 # Build, Test Build artifacts
 VOD-Synchronizer_*.zip
 VOD-Synchronizer-Test
+VOD-Master_*.zip
+VOD-Master-Test
 
 # Development files
 res/data/.singleLine.md
@@ -32,8 +34,13 @@ res/img/.*.png
 *.tmp
 .DS_Store
 Thumbs.db
+src/module/soop_veditor_replacement.js
+src/module/soop_vodcore_page_bridge.js
+manifest.backup.json
 
 # private file
 src/module/youtube_api.js
-
 TODO.txt
+
+# cursor rules
+.cursor/
