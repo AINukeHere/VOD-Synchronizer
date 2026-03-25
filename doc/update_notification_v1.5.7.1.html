@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업데이트 알림</title>
+    <link rel="stylesheet" href="update_notification_common.css">
+</head>
+<body>
+    <div class="update-container">
+        <div class="version-number" id="versionNumber">v1.5.7.1 주요 변경사항</div>
+        <div class="bug-fix-section" id="bugFixSection">
+            <div class="bug-fix-toggle" onclick="toggleBugFix()">
+                <span class="bug-fix-icon">▶</span>
+                <span>버그 수정 내역 보기</span>
+            </div>
+            <div class="bug-fix-content">
+                <ul class="bug-fix-list">
+                    <li>복원된 이전 채팅이 발생한 시점으로 이동하는 기능이 채팅 전체 범위에 적용되던 문제를 수정했습니다.</li>
+                </ul>
+            </div>
+        </div>
+        <p style="margin-top: 16px; font-size: 14px; color: #555;">처음 설치하셨나요? 어떤 기능이 있는지 <a href="https://ainukehere.github.io/VOD-Master/doc/index.html" target="_blank" rel="noopener noreferrer">알아보세요</a>.</p>
+    </div>
+
+    <!-- 이미지 모달 -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal()">
+        <img id="modalImage" src="" alt="확대 이미지">
+    </div>
+
+    <script src="update_notification_common.js"></script>
+</body>
+</html>
