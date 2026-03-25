@@ -99,6 +99,7 @@ function addLog(level, args, tabId = null) {
 
 chrome.tabs.onRemoved.addListener(function(tabid, removed) {
     settingsManager.removeChangeCallback(tabid);
+    settingsManager.unregisterBroadcastSyncTab(tabid);
 })
 // 메시지 리스너
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -162,25 +163,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         settingsManager.removeChangeCallback(sender.tab?.id);
         sendResponse({ success: true });
     }
+    else if (request.action === 'registerBroadcastSyncTab') {
+        settingsManager.registerBroadcastSyncTab(sender.tab?.id);
+        sendResponse({ success: true });
+    }
+    else if (request.action === 'unregisterBroadcastSyncTab') {
+        settingsManager.unregisterBroadcastSyncTab(sender.tab?.id);
+        sendResponse({ success: true });
+    }
     else if (request.action === 'broadCastSync') {
-        // 콜백 목록은 유지하고, 현재 열려있는 VOD 탭에만 브로드캐스트
-        chrome.tabs.query({}, (tabs) => {
-            tabs.forEach((tab) => {
-                if (!tab?.id || tab.id === sender.tab?.id) return; // 자기 자신은 제외
-                const url = tab.url || '';
-                const isSoopVodPage = /^https:\/\/vod\.sooplive\.com\/player\/\d+/.test(url);
-                const isChzzkVodPage = /^https:\/\/chzzk\.naver\.com\/video\/\d+/.test(url);
-                if (!isSoopVodPage && !isChzzkVodPage) return;
-                chrome.tabs.sendMessage(tab.id, {
-                    action: 'broadCastSync',
-                    request_vod_ts: request.request_vod_ts
-                }, () => {
-                    // 수신 리스너가 없는 탭에서 발생하는 에러는 무시
-                    void chrome.runtime.lastError;
-                });
-            });
-            sendResponse({ success: true });
-        });
+        settingsManager.sendBroadcastSyncToRegistered(sender.tab?.id, request.request_vod_ts);
+        sendResponse({ success: true });
     }
     return true;
 }); 

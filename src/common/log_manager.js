@@ -193,15 +193,17 @@ function compareVersions(version1, version2) {
     return 0;
 }
 
-// 패치(세 번째 자릿수)만 바뀐 경우 false. 메이저/마이너가 바뀌면 true.
+// 네 번째 자릿수만 바뀐 경우 false(빌드/리비전만 갱신). 그 앞 메이저·마이너·패치가 바뀌면 true.
 function shouldShowUpdateNotification(oldVersion, newVersion) {
     const oldParts = (oldVersion || '').split('.').map(Number);
     const newParts = (newVersion || '').split('.').map(Number);
     const oldMajor = oldParts[0] || 0;
     const oldMinor = oldParts[1] || 0;
+    const oldPatch = oldParts[2] || 0;
     const newMajor = newParts[0] || 0;
     const newMinor = newParts[1] || 0;
-    return oldMajor !== newMajor || oldMinor !== newMinor;
+    const newPatch = newParts[2] || 0;
+    return oldMajor !== newMajor || oldMinor !== newMinor || oldPatch !== newPatch;
 }
 
 // 간단한 iframe 모달 템플릿
@@ -383,7 +385,7 @@ async function checkForUpdates() {
         // 처음 설치하거나 버전이 다른 경우
         if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
             logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
-            // 패치(세 번째 자릿수)만 바뀐 경우 알림 표시 안 함 (예: 1.3.4 → 1.3.5)
+            // 네 번째 자릿수만 바뀐 경우 알림 표시 안 함 (예: 1.5.7.0 → 1.5.7.1)
             const showNotification = !lastCheckedVersion || shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
             if (showNotification) {
                 const settings = await getSettings();
@@ -393,7 +395,7 @@ async function checkForUpdates() {
                     logToExtension(`업데이트 알림이 비활성화되어 있습니다.`);
                 }
             } else {
-                logToExtension(`패치 업데이트(v${currentVersion})라 알림을 표시하지 않습니다.`);
+                logToExtension(`네 번째 세그먼트만 변경된 업데이트(v${currentVersion})라 알림을 표시하지 않습니다.`);
             }
             // 현재 버전을 마지막 확인 버전으로 저장
             await setLastCheckedVersion(currentVersion);
@@ -428,10 +430,20 @@ setTimeout(() => {
     checkForUpdates();
 }, 2000);
 
-setInterval(()=>{
+const registerTab = () => {
     try{
+        if (window !== top) return;
         chrome.runtime.sendMessage({ action: 'addChangeCallback' });
+        const isSoopVodPage = /^https:\/\/vod\.sooplive\.com\/player\/\d+/.test(window.location.href);
+        const isChzzkVodPage = /^https:\/\/chzzk\.naver\.com\/video\/\d+/.test(window.location.href);
+        if (isSoopVodPage || isChzzkVodPage) {
+            chrome.runtime.sendMessage({action: 'registerBroadcastSyncTab',});
+        } else {
+            chrome.runtime.sendMessage({action: 'unregisterBroadcastSyncTab',});
+        }
     } catch (error) {
         console.warn('[VOD Master] 설정 변경 콜백 등록 실패. 확장프로그램이 리로드되었거나 비활성화된 것 같습니다. 페이지를 새로고침하십시오.', error);
     }
-}, 25000);
+}
+registerTab();
+setInterval(registerTab, 25000);

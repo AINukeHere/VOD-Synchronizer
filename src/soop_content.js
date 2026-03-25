@@ -1,4 +1,11 @@
-if (window == top && window.location.origin.includes('vod.sooplive.com')) {
+window.VODSync = window.VODSync || {};
+window.VODSync.SoopUrls = {
+    VOD_ORIGIN: 'https://vod.sooplive.com',
+    WWW_ORIGIN: 'https://www.sooplive.com',
+    ...(window.VODSync.SoopUrls || {}),
+};
+
+if (window == top && window.location.origin.includes(new URL(window.VODSync.SoopUrls.VOD_ORIGIN).host)) {
     let tsManager = null;
     let syncPanel = null;
     let rpPanel = null;
@@ -138,8 +145,6 @@ if (window == top && window.location.origin.includes('vod.sooplive.com')) {
         
         updateFeaturesState();
         
-        // 설정 변경 감지
-        await chrome.runtime.sendMessage({ action: 'addChangeCallback'});
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             if (message.action === 'notifyChangeCallbacks') {
                 log('설정 변경 감지, 기능 업데이트 중...');

@@ -23,6 +23,7 @@ export class SoopPrevChatViewer extends IVodSync {
         this.initialRestoreEndTime = null; // statVBox 재생성 시점의 복구 끝지점 (playbackTime, 초 단위)
         this.sharedTooltip = null; // 재사용할 공통 툴팁 요소
         this._tooltipHideTimeout = null; // 툴팁 mouseleave 시 지연 숨김용
+        this._soopUrls = window.VODSync?.SoopUrls || {};
         this.log('loaded');
         this.loadRestoreInterval();
         this.init();
@@ -439,11 +440,12 @@ export class SoopPrevChatViewer extends IVodSync {
                 let ogqImageUrl = null;
                 if (isOgq && ogqGid && ogqSid) {
                     const fileExtension = (ogqAnm === '1') ? 'webp' : 'png';
-                    ogqImageUrl = `https://ogq-sticker-global-cdn-z01.sooplive.com/sticker/${ogqGid}/${ogqSid}_80.${fileExtension}?ver=${ogqVersion || '1'}`;
+                    const ogqCdn = this._soopUrls.OGQ_STICKER_CDN_ORIGIN || 'https://ogq-sticker-global-cdn-z01.sooplive.com';
+                    ogqImageUrl = `${ogqCdn}/sticker/${ogqGid}/${ogqSid}_80.${fileExtension}?ver=${ogqVersion || '1'}`;
                 }
 
                 const ogqPurchaseUrl = isOgq && ogqGid 
-                    ? `https://ogqmarket.sooplive.com?m=detail&productId=${ogqGid}`
+                    ? `${this._soopUrls.OGQ_MARKET_ORIGIN || 'https://ogqmarket.sooplive.com'}?m=detail&productId=${ogqGid}`
                     : null;
 
                 messages.push({
@@ -507,14 +509,14 @@ export class SoopPrevChatViewer extends IVodSync {
                 img.setAttribute('user_nick', userNick || '');
                 img.setAttribute('grade', gradeValue.toString());
                 const personalconUrl = this.getPersonalconUrl(subscriptionMonths, subscriptionTier || 1);
-                img.src = personalconUrl || 'https://res.sooplive.com/images/chatting/signature-default.svg';
+                img.src = personalconUrl || `${this._soopUrls.RES_ORIGIN || 'https://res.sooplive.com'}/images/chatting/signature-default.svg`;
             } else {
                 img.setAttribute('user_nick', userNick || '');
                 img.setAttribute('grade', gradeValue.toString());
-                img.src = 'https://res.sooplive.com/images/chatting/signature-default.svg';
+                img.src = `${this._soopUrls.RES_ORIGIN || 'https://res.sooplive.com'}/images/chatting/signature-default.svg`;
             }
             img.onerror = function() {
-                this.src = 'https://res.sooplive.com/images/chatting/signature-default.svg';
+                this.src = `${window.VODSync?.SoopUrls?.RES_ORIGIN || 'https://res.sooplive.com'}/images/chatting/signature-default.svg`;
             };
             thumb.appendChild(img);
             button.appendChild(thumb);
@@ -581,7 +583,7 @@ export class SoopPrevChatViewer extends IVodSync {
             ogqImg.style.cursor = 'pointer';
             ogqImg.src = ogqImageUrl;
             ogqImg.onerror = function() {
-                this.src = 'https://res.sooplive.com/images/chat/ogq_default.png';
+                this.src = `${window.VODSync?.SoopUrls?.RES_ORIGIN || 'https://res.sooplive.com'}/images/chat/ogq_default.png`;
             };
             imgBox.appendChild(ogqImg);
             emoticonBox.appendChild(imgBox);

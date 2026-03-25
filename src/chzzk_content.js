@@ -110,8 +110,7 @@ if (window == top) {
         updateFeaturesState();
         
         // 설정 변경 감지
-        const tabInfo = await chrome.runtime.sendMessage({ action: 'getTabId' });
-        await chrome.runtime.sendMessage({ action: 'addChangeCallback', tabId: tabInfo.tabId});
+        await chrome.runtime.sendMessage({ action: 'addChangeCallback'});
         chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             if (message.action === 'notifyChangeCallbacks') {
                 log('설정 변경 감지, 기능 업데이트 중...');

@@ -14,6 +14,8 @@ export class SettingsManager {
         this.isLoaded = false;
         this.loadPromise = null;
         this.activatedTabs = new Set();
+        /** @type {Set<number>} VOD 플레이어 탭(tabId). 전역 동기화 시 sender 제외하고 메시지 전달. */
+        this.broadcastSyncTabIds = new Set();
         this.init();
     }
 
@@ -160,6 +162,30 @@ export class SettingsManager {
             this.activatedTabs.delete(tabId);
             this.log('설정 변경 콜백 해제됨', this.activatedTabs);
         }
+    }
+
+    registerBroadcastSyncTab(tabId) {
+        if (tabId == null) return;
+        this.broadcastSyncTabIds.add(tabId);
+        this.log('전역 동기화 대상 탭 등록', tabId, this.broadcastSyncTabIds);
+    }
+
+    unregisterBroadcastSyncTab(tabId) {
+        if (this.broadcastSyncTabIds.delete(tabId)) {
+            this.log('전역 동기화 대상 탭 해제', tabId, this.broadcastSyncTabIds);
+        }
+    }
+
+    sendBroadcastSyncToRegistered(excludeTabId, requestVodTs) {
+        this.broadcastSyncTabIds.forEach((tabId) => {
+            if (tabId === excludeTabId) return;
+            chrome.tabs.sendMessage(tabId, {
+                action: 'broadCastSync',
+                request_vod_ts: requestVodTs
+            }, () => {
+                void chrome.runtime.lastError;
+            });
+        });
     }
 
     // 등록된 모든 콜백에 설정 변경 알림

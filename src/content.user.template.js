@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.5.7
+// @version      1.5.7.1
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -119,13 +119,13 @@
             }
             return 0;
         }
-        // 패치(세 번째 자릿수)만 바뀐 경우 false. 메이저/마이너가 바뀌면 true.
+        // 네 번째 자릿수만 바뀐 경우 false. 메이저·마이너·패치가 바뀌면 true.
         function shouldShowUpdateNotification(oldVersion, newVersion) {
             const oldParts = (oldVersion || '').split('.').map(Number);
             const newParts = (newVersion || '').split('.').map(Number);
-            const oldMajor = oldParts[0] || 0, oldMinor = oldParts[1] || 0;
-            const newMajor = newParts[0] || 0, newMinor = newParts[1] || 0;
-            return oldMajor !== newMajor || oldMinor !== newMinor;
+            const oldMajor = oldParts[0] || 0, oldMinor = oldParts[1] || 0, oldPatch = oldParts[2] || 0;
+            const newMajor = newParts[0] || 0, newMinor = newParts[1] || 0, newPatch = newParts[2] || 0;
+            return oldMajor !== newMajor || oldMinor !== newMinor || oldPatch !== newPatch;
         }
 
         const MODAL_HTML_TEMPLATE = `

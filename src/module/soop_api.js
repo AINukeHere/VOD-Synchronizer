@@ -3,17 +3,30 @@ import { IVodSync } from './interface4log.js';
 /** 요청 캐시 TTL (밀리초). 동일 요청은 이 시간 동안 캐시된 결과 반환 */
 const REQUEST_CACHE_TTL_MS = 60 * 1000;
 
-/** Phase2 저장 API — true로 바꾸기 전까지 SetWebEditorJob 호출은 무시됨 */
-const ENABLE_SET_WEB_EDITOR_JOB = false;
-
-const SET_WEB_EDITOR_JOB_URL = 'https://stbbs.sooplive.com/vodeditor/api/setWebEditorJob.php';
+const DEFAULT_SOOP_URLS = {
+    VOD_ORIGIN: 'https://vod.sooplive.com',
+    WWW_ORIGIN: 'https://www.sooplive.com',
+    STBBS_ORIGIN: 'https://stbbs.sooplive.com',
+    AFEVENT2_ORIGIN: 'https://afevent2.sooplive.com',
+    LIVE_ORIGIN: 'https://live.sooplive.com',
+    API_M_ORIGIN: 'https://api.m.sooplive.com',
+    API_CHANNEL_ORIGIN: 'https://api-channel.sooplive.co.kr',
+    SCH_ORIGIN: 'https://sch.sooplive.com',
+    CHAPI_ORIGIN: 'https://chapi.sooplive.com',
+    ST_ORIGIN: 'https://st.sooplive.com',
+    RES_ORIGIN: 'https://res.sooplive.com',
+    OGQ_STICKER_CDN_ORIGIN: 'https://ogq-sticker-global-cdn-z01.sooplive.com',
+    OGQ_MARKET_ORIGIN: 'https://ogqmarket.sooplive.com',
+};
 
 export class SoopAPI extends IVodSync{
     constructor(){
         super();
+        this.SoopUrls = { ...DEFAULT_SOOP_URLS, ...(window.VODSync?.SoopUrls || {}) };
         /** @type {Map<string, { data: any, expiresAt: number }>} */
         this._requestCache = new Map();
         window.VODSync = window.VODSync || {};
+        window.VODSync.SoopUrls = this.SoopUrls;
         if (window.VODSync.soopAPI) {
             this.warn('[VODSync] SoopAPI가 이미 존재합니다. 기존 인스턴스를 덮어씁니다.');
         }
@@ -40,6 +53,90 @@ export class SoopAPI extends IVodSync{
     }
 
     /**
+     * 로그인 사용자 정보 조회(탬퍼몽키 환경에서 loginId 획득용).
+     * @returns {Promise<object|null>}
+     */
+    async GetPrivateInfo() {
+        const url = `${this.SoopUrls.AFEVENT2_ORIGIN}/api/get_private_info.php?_=${Date.now()}`;
+        const cacheKey = 'GetPrivateInfo';
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+        const res = await fetch(url, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) return null;
+        const b = await res.json();
+        this._setCache(cacheKey, b);
+        return b;
+    }
+
+    /**
+     * 채널 게시판 메뉴 조회.
+     * @param {string} loginId
+     * @returns {Promise<object|null>}
+     */
+    async GetStationMenu(loginId) {
+        if (!loginId) return null;
+        const lid = String(loginId);
+        const cacheKey = `GetStationMenu:${lid}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+        const url = `${this.SoopUrls.API_CHANNEL_ORIGIN}/v1.1/channel/${encodeURIComponent(lid)}/menu`;
+        const res = await fetch(url, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) return null;
+        const b = await res.json();
+        this._setCache(cacheKey, b);
+        return b;
+    }
+
+    _parseVodEditorCategoryScript(scriptText) {
+        if (typeof scriptText !== 'string' || scriptText.length === 0) return null;
+        const m = scriptText.match(/var\s+szVodCategory\s*=\s*(\{[\s\S]*\});?/);
+        if (!m?.[1]) return null;
+        try {
+            return JSON.parse(m[1]);
+        } catch (_e) {
+            return null;
+        }
+    }
+
+    /**
+     * VOD 게시 카테고리 트리 조회(`vod_editor_category.js` 파싱).
+     * @returns {Promise<object|null>}
+     */
+    async GetVodEditorCategory() {
+        const cacheKey = 'GetVodEditorCategory:ko_KR';
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+        const res = await fetch(`${this.SoopUrls.LIVE_ORIGIN}/script/locale/ko_KR/vod_editor_category.js`, {
+            headers: {
+                accept: '*/*',
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) return null;
+        const txt = await res.text();
+        const parsed = this._parseVodEditorCategoryScript(txt);
+        if (!parsed) return null;
+        this._setCache(cacheKey, parsed);
+        return parsed;
+    }
+
+    /**
      * @description Get Soop VOD Period
      * @param {number | string} videoId
      * @param {{ referer?: string }} [opts] — `referer` 생략 시 `https://vod.sooplive.com/player/{videoId}`
@@ -49,12 +146,12 @@ export class SoopAPI extends IVodSync{
         const referer =
             typeof opts.referer === 'string' && opts.referer.length > 0
                 ? opts.referer
-                : `https://vod.sooplive.com/player/${videoId}`;
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${videoId}`;
         const cacheKey = `GetSoopVodInfo:${videoId}`;
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const a = await fetch("https://api.m.sooplive.com/station/video/a/view", {
+        const a = await fetch(`${this.SoopUrls.API_M_ORIGIN}/station/video/a/view`, {
             "headers": {
                 "accept": "application/json, text/plain, */*",
                 "content-type": "application/x-www-form-urlencoded",
@@ -83,12 +180,12 @@ export class SoopAPI extends IVodSync{
         const referer =
             typeof opts.referer === 'string' && opts.referer.length > 0
                 ? opts.referer
-                : `https://vod.sooplive.com/player/${tn}`;
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
         const cacheKey = `GetSoopVeditorWebVodInfo:${tn}`;
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const url = new URL('https://stbbs.sooplive.com/vodeditor/api/vodInfo.php');
+        const url = new URL(`${this.SoopUrls.STBBS_ORIGIN}/vodeditor/api/vodInfo.php`);
         url.searchParams.set('titleNo', tn);
         url.searchParams.set('mode', 'web');
 
@@ -111,7 +208,7 @@ export class SoopAPI extends IVodSync{
 
     async GetStreamerID(nickname){
         const encodedNickname = encodeURI(nickname);
-        const url = new URL('https://sch.sooplive.com/api.php');
+        const url = new URL(`${this.SoopUrls.SCH_ORIGIN}/api.php`);
         url.searchParams.set('m', 'bjSearch');
         url.searchParams.set('v', '3.0');
         url.searchParams.set('szOrder', 'score');
@@ -141,7 +238,7 @@ export class SoopAPI extends IVodSync{
         const start_date_str = start_date.toISOString().slice(0, 10).replace(/-/g, '');
         const end_date_str = end_date.toISOString().slice(0, 10).replace(/-/g, '');
         this.log(`start_date: ${start_date_str}, end_date: ${end_date_str}`);
-        const url = new URL(`https://chapi.sooplive.com/api/${streamerId}/vods/review`);
+        const url = new URL(`${this.SoopUrls.CHAPI_ORIGIN}/api/${streamerId}/vods/review`);
         url.searchParams.set("keyword", "");
         url.searchParams.set("orderby", "reg_date");
         url.searchParams.set("page", "1");
@@ -439,11 +536,11 @@ export class SoopAPI extends IVodSync{
     }
 
     async GetEmoticon(){
-        const cacheKey = 'GetEmoticon:https://st.sooplive.com/api/emoticons.php';
+        const cacheKey = `GetEmoticon:${this.SoopUrls.ST_ORIGIN}/api/emoticons.php`;
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const res = await fetch("https://st.sooplive.com/api/emoticons.php");
+        const res = await fetch(`${this.SoopUrls.ST_ORIGIN}/api/emoticons.php`);
         if (res.status !== 200){
             return null;
         }
@@ -456,7 +553,7 @@ export class SoopAPI extends IVodSync{
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
 
-        const res = await fetch("https://live.sooplive.com/api/signature_emoticon_api.php", {
+        const res = await fetch(`${this.SoopUrls.LIVE_ORIGIN}/api/signature_emoticon_api.php`, {
             "headers": {
                 "accept": "*/*",
                 "content-type": "application/x-www-form-urlencoded"
@@ -473,7 +570,7 @@ export class SoopAPI extends IVodSync{
     }
 
     /**
-     * 다시보기 편집 VOD 생성 (setWebEditorJob). Phase2 — ENABLE_SET_WEB_EDITOR_JOB 가 true일 때만 동작.
+     * 다시보기 편집 VOD 생성 (setWebEditorJob).
      * @param {object} [opts]
      * @param {string} [opts.titleNo]
      * @param {string} [opts.broadNo]
@@ -490,10 +587,6 @@ export class SoopAPI extends IVodSync{
      * @returns {Promise<object|null>}
      */
     async SetWebEditorJob(opts = {}) {
-        if (!ENABLE_SET_WEB_EDITOR_JOB) {
-            this.warn('SetWebEditorJob: Phase2 비활성 (ENABLE_SET_WEB_EDITOR_JOB)');
-            return null;
-        }
         const {
             titleNo,
             broadNo,
@@ -511,7 +604,7 @@ export class SoopAPI extends IVodSync{
         const referer =
             typeof refererOpt === 'string' && refererOpt.length > 0
                 ? refererOpt
-                : `https://vod.sooplive.com/player/${String(titleNo)}`;
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${String(titleNo)}`;
         if (!titleNo || !broadNo || !bbsNo) {
             this.error('SetWebEditorJob: titleNo, broadNo, bbsNo 필수');
             return null;
@@ -530,7 +623,30 @@ export class SoopAPI extends IVodSync{
         form.append('hotissue', hotissue);
         form.append('strmLangType', strmLangType);
 
-        const res = await fetch(SET_WEB_EDITOR_JOB_URL, {
+        const debugFormEntries = [];
+        for (const [k, v] of form.entries()) {
+            debugFormEntries.push([k, typeof v === 'string' ? v : '[binary]']);
+        }
+        const debugPayload = {
+            url: `${this.SoopUrls.STBBS_ORIGIN}/vodeditor/api/setWebEditorJob.php`,
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            formData: debugFormEntries,
+        };
+        console.debug('[VODSync][SetWebEditorJob] request preview', debugPayload);
+        if (false) {
+            this.warn('SetWebEditorJob: debug-only 모드로 실제 전송하지 않았습니다.');
+            return {
+                debugOnly: true,
+                ...debugPayload,
+            };
+        }
+
+        const res = await fetch(`${this.SoopUrls.STBBS_ORIGIN}/vodeditor/api/setWebEditorJob.php`, {
             method: 'POST',
             credentials: 'include',
             headers: {

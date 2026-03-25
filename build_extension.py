@@ -45,9 +45,61 @@ def extract_class_definition(file_path, class_name):
         print(f"❌ 클래스 정의 추출 실패 ({file_path}): {e}")
         return None
 
+def sync_content_user_template_version_from_manifest(
+    template_path='src/content.user.template.js',
+    manifest_path='manifest.json',
+):
+    """
+    content.user.template.js UserScript 헤더의 @version을 manifest.json의 version과 맞춥니다.
+    값이 다를 때만 템플릿 파일을 덮어씁니다.
+    """
+    if not os.path.exists(manifest_path):
+        print(f"❌ manifest.json을 찾을 수 없습니다: {manifest_path}")
+        return False
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+        version = manifest.get('version')
+        if not version or not str(version).strip():
+            print("❌ manifest.json에 유효한 version이 없습니다.")
+            return False
+        version = str(version).strip()
+    except Exception as e:
+        print(f"❌ manifest.json 읽기 실패: {e}")
+        return False
+
+    if not os.path.exists(template_path):
+        print(f"⚠️  템플릿 파일을 찾을 수 없습니다: {template_path}")
+        return False
+
+    try:
+        with open(template_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        new_content, n_subs = re.subn(
+            r'^// @version\s+\S+.*$',
+            f'// @version      {version}',
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        if n_subs == 0:
+            print(f"❌ {template_path}에서 // @version 줄을 찾을 수 없습니다.")
+            return False
+        if new_content != content:
+            with open(template_path, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(new_content)
+            abs_tpl = os.path.abspath(template_path)
+            print(f"✅ 템플릿 @version을 manifest와 동기화: {version}")
+            print(f"   (저장됨: {abs_tpl})")
+        return True
+    except Exception as e:
+        print(f"❌ 템플릿 버전 동기화 실패: {e}")
+        return False
+
 def build_tampermonkey_script():
     """
-    content.user.template.js를 읽어서 클래스 정의를 삽입하여 content.user.js를 생성합니다.
+    manifest 버전으로 content.user.template.js의 @version을 맞춘 뒤,
+    클래스 정의를 삽입하여 content.user.js를 생성합니다.
     """
     template_path = 'src/content.user.template.js'
     output_path = 'src/content.user.js'
@@ -57,6 +109,9 @@ def build_tampermonkey_script():
         return False
     
     try:
+        if not sync_content_user_template_version_from_manifest(template_path):
+            return False
+
         with open(template_path, 'r', encoding='utf-8') as f:
             template = f.read()
         

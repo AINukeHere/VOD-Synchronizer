@@ -24,7 +24,7 @@ export class OtherPlatformSyncPanel extends IVodSync {
                 name: 'SOOP 검색',
                 color: '#007bff',
                 textColor: 'white',
-                searchUrl: 'https://www.sooplive.com/search'
+                searchUrl: `${window.VODSync?.SoopUrls?.WWW_ORIGIN || 'https://www.sooplive.com'}/search`
             }
         };
         

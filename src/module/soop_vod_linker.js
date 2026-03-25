@@ -103,8 +103,9 @@ export class SoopVODLinker extends VODLinkerBase{
             const startDate = new Date(splitres[0]);
             const endDate = new Date(splitres[1]);
             if (startDate <= requestDate && requestDate <= endDate){
+                const vodOrigin = window.VODSync?.SoopUrls?.VOD_ORIGIN || 'https://vod.sooplive.com';
                 return{
-                    vodLink: `https://vod.sooplive.com/player/${vod.title_no}`,
+                    vodLink: `${vodOrigin}/player/${vod.title_no}`,
                     startDate: startDate,
                     endDate: endDate
                 };
