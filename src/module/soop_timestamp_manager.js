@@ -18,11 +18,10 @@ export class SoopTimestampManager extends TimestampManagerBase {
     }
 
     /**
-     * vodCore ghost. `window.VODSync.IS_TAMPER_MONKEY_SCRIPT === true` 이면 null (`.time-current`·time_link 등 기존 경로).
+     * vodCore 페이지 브리지 ghost (`#__vs_vodcore_ghost`). 브리지 미주입 시 null.
      * @returns {HTMLElement|null}
      */
     _getVodCoreGhost() {
-        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) return null;
         return window.VODSync?.vodCoreBridge?.getGhost?.() ?? null;
     }
 
@@ -55,7 +54,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
 
     simpleLoopSettingUpdate(){
         const LABEL_TEXT = '반복 재생';
-        const EM_TEXT_IDLE = '(added by VODSync)';
+        const EM_TEXT_IDLE = '(added by VOD Master)';
 
         // 반복재생 설정이 켜져있고 비디오 태그를 찾은 경우
         if (this.videoTag !== null && this.loop_playing){
@@ -360,7 +359,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const ghost = this._getVodCoreGhost();
         if (ghost && ghost.dataset.playingTime !== '') {
             const pt = parseFloat(ghost.dataset.playingTime);
-            if (Number.isFinite(pt)) return Math.floor(Math.max(0, pt));
+            if (Number.isFinite(pt)) return Math.max(0, pt);
         }
         if (!this.playTimeTag) return null;
         const totalPlaybackTimeStr = this.playTimeTag.innerText.trim();
@@ -405,7 +404,9 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
 
         const url = new URL(window.location.href);
-        url.searchParams.set('change_second', playbackTime);
+        const secNum = Math.max(0, Number(playbackTime));
+        const changeSec = Number.isFinite(secNum) ? Math.floor(secNum * 100) / 100 : 0;
+        url.searchParams.set('change_second', String(changeSec));
         window.history.replaceState({}, '', url.toString());
 
         // vodCore bridge에 seek요청
@@ -420,7 +421,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         /// soop 댓글 타임라인 기능 (ghost·vodCore 없을 때 폴백)
         const targetSec = playbackTime;
         this._timeLinkJumpIntervalId = setInterval(() => {
-            if (this.getCurPlaybackTime() === targetSec) {
+            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
                 if (this._timeLinkJumpIntervalId != null) {
                     clearInterval(this._timeLinkJumpIntervalId);
                     this._timeLinkJumpIntervalId = null;

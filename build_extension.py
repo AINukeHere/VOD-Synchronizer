@@ -127,7 +127,7 @@ def build_tampermonkey_script():
             '{{SoopTimelineCommentProcessor}}': ('src/module/soop_timeline_comment_processor.js', 'SoopTimelineCommentProcessor'),
             '{{ChzzkTimelineCommentProcessor}}': ('src/module/chzzk_timeline_comment_processor.js', 'ChzzkTimelineCommentProcessor'),
             '{{SoopPrevChatViewer}}': ('src/module/soop_prev_chat_viewer.js', 'SoopPrevChatViewer'),
-            # '{{SoopVeditorReplacement}}': ('src/module/soop_veditor_replacement.js', 'SoopVeditorReplacement'),
+            '{{SoopVeditorReplacement}}': ('src/module/soop_veditor_replacement.js', 'SoopVeditorReplacement'),
         }
         
         # 각 플레이스홀더를 실제 클래스 정의로 교체
@@ -198,8 +198,8 @@ def create_test_extension():
         'src/module/base_timeline_comment_processor.js',
         'src/module/soop_timeline_comment_processor.js',
         'src/module/chzzk_timeline_comment_processor.js',
-        # 'src/module/soop_veditor_replacement.js',
-        # 'src/module/soop_vodcore_page_bridge.js',
+        'src/module/soop_veditor_replacement.js',
+        'src/module/soop_vodcore_page_bridge.js',
         
         # 리소스 파일
         'res/data/rp_nicknames.json',

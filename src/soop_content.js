@@ -79,7 +79,7 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
             'OtherPlatformSyncPanel': 'src/module/other_platform_sync_panel.js',
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
             'SoopPrevChatViewer': 'src/module/soop_prev_chat_viewer.js',
-            // 'SoopVeditorReplacement': 'src/module/soop_veditor_replacement.js',
+            'SoopVeditorReplacement': 'src/module/soop_veditor_replacement.js',
         };
         
         // 클래스 로더를 통해 필요한 클래스들 로드
@@ -91,13 +91,13 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
         new classes.SoopVODLinker(false);
         if (/\/player\/\d+/.test(window.location.pathname)) {
             new classes.SoopTimelineCommentProcessor();
-            // new classes.SoopVeditorReplacement();
+            new classes.SoopVeditorReplacement();
         }
         syncPanel = new classes.OtherPlatformSyncPanel('soop');
         rpPanel = new classes.RPNicknamePanel();
         new classes.SoopPrevChatViewer();
 
-        // initVodCorePageBridgeHost();
+        initVodCorePageBridgeHost();
 
         // 동기화 요청이 있는 경우 타임스탬프 매니저에게 요청
         const params = new URLSearchParams(window.location.search);

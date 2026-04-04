@@ -199,29 +199,36 @@ export class TimelineCommentProcessorBase extends IVodSync {
         return true;
     }
 
-    // 댓글 더보기 레이어(._moreDot_layer)가 보일 때, 타임라인 댓글인 경우에만 그 안에 '타임라인 댓글 편집하기' 버튼을 넣음.
+    // 댓글 더보기 레이어(._moreDot_layer)가 보일 때, 타임라인 댓글인 경우에만 편집 버튼을 넣음. SOOP 전용 등은 `_injectClipImportButtonIntoMoreLayer` 오버라이드.
     _injectEditButtonIntoMoreLayers(container) {
         if (!container?.isConnected) return;
         const layers = container.querySelectorAll('._moreDot_layer');
         for (const layer of layers) {
-            if (layer.querySelector(`.${this.constructor.EDIT_IN_MORE_CLASS}`)) continue;
             const rowEl = layer.closest(this.commentRowSelector);
             if (!rowEl || !rowEl.querySelector(`.${this.constructor.CHECKBOX_CLASS}`)) continue;
-            const editBtn = document.createElement('button');
-            editBtn.type = 'button';
-            editBtn.className = this.constructor.EDIT_IN_MORE_CLASS;
-            editBtn.textContent = this.constructor.BTN_EDIT_IN_MORE;
-            editBtn.title = this.constructor.BTN_EDIT_IN_MORE_TOOLTIP;
-            // editBtn.style.cssText = 'display:block;width:100%;margin-top:4px;padding:4px 8px;font-size:12px;cursor:pointer;text-align:left;';
-            editBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.openPreviewWithCurrentPageTimelineComments(rowEl);
-                if (layer.parentNode.parentNode.childNodes[0]) layer.parentNode.parentNode.childNodes[0].click(); // 더보기 버튼 한번 더 눌러 닫기
-            });
-            layer.appendChild(editBtn);
+            const closeMore = () => {
+                if (layer.parentNode?.parentNode?.childNodes[0]) layer.parentNode.parentNode.childNodes[0].click();
+            };
+            if (!layer.querySelector(`.${this.constructor.EDIT_IN_MORE_CLASS}`)) {
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = this.constructor.EDIT_IN_MORE_CLASS;
+                editBtn.textContent = this.constructor.BTN_EDIT_IN_MORE;
+                editBtn.title = this.constructor.BTN_EDIT_IN_MORE_TOOLTIP;
+                editBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.openPreviewWithCurrentPageTimelineComments(rowEl);
+                    closeMore();
+                });
+                layer.appendChild(editBtn);
+            }
+            this._injectClipImportButtonIntoMoreLayer(layer, rowEl, closeMore);
         }
     }
+
+    /** 플랫폼별: 더보기 레이어에 편집 구간 가져오기 등 추가 버튼 (기본 없음). */
+    _injectClipImportButtonIntoMoreLayer(layer, rowEl, closeMore) {}
 
     /** selector로 체크박스를 넣을 슬롯 반환 (없으면 rowEl) */
     _getCheckboxInsertSlot(rowEl) {
