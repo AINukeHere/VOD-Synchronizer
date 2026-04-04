@@ -3778,6 +3778,8 @@ class SoopVeditorReplacement extends IVodSync {
     static CLIP_MIN_DURATION = 0.05;
     /** 편집 패널 배속 드롭다운 값 (표시는 n×). */
     static PLAYBACK_SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+    /** 타임라인 복사 `<select>` 안내 항목 — 복사 후 이 값으로 되돌려 같은 형식을 연속 선택할 수 있게 함. */
+    static TIMELINE_COPY_PROMPT_VALUE = '_vs_timeline_copy_prompt';
     /** 시크 후 stale 시각이 end 뒤로 남아 있을 때 종료·다음 편집 구간 오판 방지 — 이 여유 안으로 들어와야 ‘현재 편집 구간 재생 중’으로 본다. */
     static PLAYBACK_CLIP_ENTRY_BEGIN_EPS = 0.15;
     static PLAYBACK_CLIP_ENTRY_END_SLACK = 0.4;
@@ -5451,14 +5453,26 @@ class SoopVeditorReplacement extends IVodSync {
         this._timelineCopyActionSel.className = 'vs-veditor-playback-speed vs-veditor-timeline-copy-action';
         this._timelineCopyActionSel.title = '모든 편집 구간을 댓글 타임라인 형식으로 복사 (옵션을 선택하면 즉시 복사됩니다.)';
         this._timelineCopyActionSel.setAttribute('aria-label', '모든 편집 구간을 댓글 타임라인 형식으로 복사 (옵션을 선택하면 즉시 복사됩니다.)');
+        const promptVal = SoopVeditorReplacement.TIMELINE_COPY_PROMPT_VALUE;
         this._timelineCopyActionSel.innerHTML =
-            '<option value="none">타임라인 복사(이름 제외)</option>' +
-            '<option value="prefix">타임라인 복사(이름을 앞에)</option>' +
-            '<option value="suffix">타임라인 복사(이름을 뒤에)</option>';
-        this._timelineCopyActionSel.value = 'prefix';
-        this._timelineCopyActionSel.addEventListener('change', () => {
-            this._copyClipsAsTimelineComment();
-            this._timelineCopyActionSel?.blur();
+            `<option value="${promptVal}">타임라인 복사(선택하세요)</option>` +
+            '<option value="none">이름을 제외하여 복사</option>' +
+            '<option value="prefix">이름을 앞에 붙여 복사</option>' +
+            '<option value="suffix">이름을 뒤에 붙여 복사</option>';
+        this._timelineCopyActionSel.value = promptVal;
+        this._timelineCopyActionSel.addEventListener('change', async () => {
+            const sel = this._timelineCopyActionSel;
+            if (!sel) return;
+            if (sel.value === SoopVeditorReplacement.TIMELINE_COPY_PROMPT_VALUE) {
+                sel.blur();
+                return;
+            }
+            try {
+                await this._copyClipsAsTimelineComment();
+            } finally {
+                sel.value = SoopVeditorReplacement.TIMELINE_COPY_PROMPT_VALUE;
+                sel.blur();
+            }
         });
         clipPanelHeadActions.appendChild(this._timelineCopyActionSel);
         this._clipPanelToggleBtn = this._btn('접기', () => this._toggleClipPanelCollapsed());
