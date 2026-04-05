@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.0.0
+// @version      1.6.0.1
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -1147,7 +1147,26 @@ class SoopAPI extends IVodSync{
         throw new Error("moveTooltipToCtrlBox must be implemented by subclass");
     }
 }
-        // 탬퍼몽키: vodCore 페이지 브리지 없음. SoopTimestampManager._getVodCoreGhost() 가 IS_TAMPER_MONKEY_SCRIPT 일 때 ghost 를 쓰지 않음.
+        // 페이지 vodCore 와 동일한 필드 형태(playingTime·seek). SoopTimestampManager 는 확장과 같은 코드로 여기만 참조한다.
+        window.VODSync.pageVodCore = {
+            playerController: {
+                get playingTime() {
+                    if (typeof unsafeWindow === 'undefined') return NaN;
+                    const vc = unsafeWindow.vodCore;
+                    if (!vc || typeof vc !== 'object') return NaN;
+                    const pt = vc.playerController && vc.playerController.playingTime;
+                    return typeof pt === 'number' && Number.isFinite(pt) ? Math.max(0, pt) : NaN;
+                },
+            },
+            seek(sec) {
+                if (typeof unsafeWindow === 'undefined') return false;
+                const vc = unsafeWindow.vodCore;
+                if (!vc || typeof vc.seek !== 'function') return false;
+                const s = Math.max(0, Number(sec));
+                vc.seek(Number.isFinite(s) ? s : 0);
+                return true;
+            },
+        };
         const MAX_DURATION_DIFF = 30*1000;
         class SoopTimestampManager extends TimestampManagerBase {
     constructor() {
@@ -1524,17 +1543,17 @@ class SoopAPI extends IVodSync{
     }
 
     /**
-     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). vodCore ghost `playingTime` 우선.
+     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). `VODSync.pageVodCore.playerController.playingTime` 우선 (확장=ghost 동기화, 탬퍼몽키=페이지 vodCore).
      * `files[].duration`(ms)는 앞선 파일 길이만 ms로 누적 후 초로 바꾸고, **현재 파일 안**의 재생 위치는 항상 `videoTag.currentTime`만 쓴다.
      * 재생 표시 태그(`playTimeTag`)는 **몇 번째 파일인지** 고를 때만 쓰고, 재생 초의 소수·누적에는 섞지 않는다. 비디오를 읽을 수 없을 때만 태그 정수 초를 쓴다.
      * @returns {number} 현재 재생 시간(초)
      * @returns {null} 재생 시간을 계산할 수 없음. 의도치않은 상황 발생
      */
     getCurPlaybackTime() {
-        const ghost = this._getVodCoreGhost();
-        if (ghost && ghost.dataset.playingTime !== '') {
-            const pt = parseFloat(ghost.dataset.playingTime);
-            if (Number.isFinite(pt)) return Math.max(0, pt);
+        const pvc = window.VODSync?.pageVodCore;
+        if (pvc?.playerController) {
+            const pt = pvc.playerController.playingTime;
+            if (typeof pt === 'number' && Number.isFinite(pt)) return Math.max(0, pt);
         }
 
         const v = this.videoTag;
@@ -1624,18 +1643,25 @@ class SoopAPI extends IVodSync{
         url.searchParams.set('change_second', String(changeSec));
         window.history.replaceState({}, '', url.toString());
 
-        // vodCore bridge에 seek요청
-        const ghost = this._getVodCoreGhost();
-        if (ghost) {
+        const pvc = window.VODSync?.pageVodCore;
+        if (pvc && typeof pvc.seek === 'function') {
             const sec = Math.max(0, Number(playbackTime));
-            ghost.setAttribute('data-vs-seek', String(Number.isFinite(sec) ? sec : 0));
-            this.debug('vodCore seek via ghost', sec);
-            return true;
+            if (pvc.seek(Number.isFinite(sec) ? sec : 0)) {
+                this.debug('vodCore seek via pageVodCore', sec);
+                return true;
+            }
         }
 
-        /// soop 댓글 타임라인 기능 (ghost·vodCore 없을 때 폴백)
+        /// soop 댓글 타임라인 기능 (pageVodCore·시크 불가 시 폴백)
         const targetSec = playbackTime;
         this._timeLinkJumpIntervalId = setInterval(() => {
+            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
+                if (this._timeLinkJumpIntervalId != null) {
+                    clearInterval(this._timeLinkJumpIntervalId);
+                    this._timeLinkJumpIntervalId = null;
+                }
+                return;
+            }
             if (this.timeLink === null) {
                 this.timeLink = document.createElement('a');
                 document.body.appendChild(this.timeLink);
@@ -1644,14 +1670,6 @@ class SoopAPI extends IVodSync{
             this.timeLink.setAttribute('data-time', targetSec.toString());
             this.timeLink.click();
             this.debug('timeLink 클릭됨');
-            
-            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
-                if (this._timeLinkJumpIntervalId != null) {
-                    clearInterval(this._timeLinkJumpIntervalId);
-                    this._timeLinkJumpIntervalId = null;
-                }
-                return;
-            }
         }, 500);
         return true;
     }

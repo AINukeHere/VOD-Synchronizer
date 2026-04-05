@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.0.0
+// @version      1.6.0.1
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -43,7 +43,26 @@
         {{IVodSync}}
         {{SoopAPI}}
         {{TimestampManagerBase}}
-        // 탬퍼몽키: vodCore 페이지 브리지 없음. SoopTimestampManager._getVodCoreGhost() 가 IS_TAMPER_MONKEY_SCRIPT 일 때 ghost 를 쓰지 않음.
+        // 페이지 vodCore 와 동일한 필드 형태(playingTime·seek). SoopTimestampManager 는 확장과 같은 코드로 여기만 참조한다.
+        window.VODSync.pageVodCore = {
+            playerController: {
+                get playingTime() {
+                    if (typeof unsafeWindow === 'undefined') return NaN;
+                    const vc = unsafeWindow.vodCore;
+                    if (!vc || typeof vc !== 'object') return NaN;
+                    const pt = vc.playerController && vc.playerController.playingTime;
+                    return typeof pt === 'number' && Number.isFinite(pt) ? Math.max(0, pt) : NaN;
+                },
+            },
+            seek(sec) {
+                if (typeof unsafeWindow === 'undefined') return false;
+                const vc = unsafeWindow.vodCore;
+                if (!vc || typeof vc.seek !== 'function') return false;
+                const s = Math.max(0, Number(sec));
+                vc.seek(Number.isFinite(s) ? s : 0);
+                return true;
+            },
+        };
         const MAX_DURATION_DIFF = 30*1000;
         {{SoopTimestampManager}}
         {{VODLinkerBase}}

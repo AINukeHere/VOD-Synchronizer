@@ -53,6 +53,24 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
             installPageScript,
             getGhost: () => document.getElementById(GHOST_ID),
         };
+        // 격리 월드에서는 페이지 vodCore 를 직접 못 읽으므로, 페이지와 같은 접근 형태만 맞춘 퍼사드(실제는 ghost dataset·시크 속성).
+        window.VODSync.pageVodCore = {
+            playerController: {
+                get playingTime() {
+                    const g = document.getElementById(GHOST_ID);
+                    if (!g || g.dataset.playingTime === '') return NaN;
+                    const pt = parseFloat(g.dataset.playingTime);
+                    return Number.isFinite(pt) ? Math.max(0, pt) : NaN;
+                },
+            },
+            seek(sec) {
+                const g = document.getElementById(GHOST_ID);
+                if (!g) return false;
+                const s = Math.max(0, Number(sec));
+                g.setAttribute('data-vs-seek', String(Number.isFinite(s) ? s : 0));
+                return true;
+            },
+        };
         installPageScript();
     }
 
