@@ -350,33 +350,101 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const globalTS = this.playbackTimeToGlobalTS(totalPlaybackSec);
         return globalTS;
     }
+
+    /** 다시보기·클립 등 API `files` 출처 (playbackTimeToGlobalTS와 동일). */
+    _reviewDataFilesForPlayback() {
+        if (!this.vodInfo) return null;
+        const files = this.vodInfo.originVodInfo === null ? this.vodInfo.files : this.vodInfo.originVodInfo.files;
+        if (!Array.isArray(files) || files.length === 0) return null;
+        return files;
+    }
+
+    /** 재생 표시 태그 정수 초 (HH:MM:SS / MM:SS). 다중 파일일 때 어느 file인지 골 때·비디오 없을 때 폴백. */
+    _parsePlayTimeTagToIntegerSec() {
+        if (!this.playTimeTag) return null;
+        const totalPlaybackTimeStr = this.playTimeTag.innerText.trim();
+        const splitres = totalPlaybackTimeStr.split(':');
+        let totalPlaybackSec = 0;
+        if (splitres.length === 3) {
+            totalPlaybackSec = parseInt(splitres[0], 10) * 3600 + parseInt(splitres[1], 10) * 60 + parseInt(splitres[2], 10);
+        } else if (splitres.length === 2) {
+            totalPlaybackSec = parseInt(splitres[0], 10) * 60 + parseInt(splitres[1], 10);
+        } else {
+            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
+            return null;
+        }
+        return Number.isFinite(totalPlaybackSec) ? totalPlaybackSec : null;
+    }
+
     /**
-     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). vodCore → `#__vs_vodcore_ghost` `playingTime` 우선.
+     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). vodCore ghost `playingTime` 우선.
+     * `files[].duration`(ms)는 앞선 파일 길이만 ms로 누적 후 초로 바꾸고, **현재 파일 안**의 재생 위치는 항상 `videoTag.currentTime`만 쓴다.
+     * 재생 표시 태그(`playTimeTag`)는 **몇 번째 파일인지** 고를 때만 쓰고, 재생 초의 소수·누적에는 섞지 않는다. 비디오를 읽을 수 없을 때만 태그 정수 초를 쓴다.
      * @returns {number} 현재 재생 시간(초)
      * @returns {null} 재생 시간을 계산할 수 없음. 의도치않은 상황 발생
      */
-    getCurPlaybackTime(){
+    getCurPlaybackTime() {
         const ghost = this._getVodCoreGhost();
         if (ghost && ghost.dataset.playingTime !== '') {
             const pt = parseFloat(ghost.dataset.playingTime);
             if (Number.isFinite(pt)) return Math.max(0, pt);
         }
-        if (!this.playTimeTag) return null;
-        const totalPlaybackTimeStr = this.playTimeTag.innerText.trim();
-        const splitres = totalPlaybackTimeStr.split(':');
-        let totalPlaybackSec = 0;
-        if (splitres.length === 3){
-            totalPlaybackSec = (parseInt(splitres[0]) * 3600 + parseInt(splitres[1]) * 60 + parseInt(splitres[2]));
+
+        const v = this.videoTag;
+        const ct = v && Number.isFinite(v.currentTime) ? Math.max(0, v.currentTime) : null;
+        const files = this._reviewDataFilesForPlayback();
+
+        if (files && files.length > 0 && ct != null) {
+            if (files.length === 1) {
+                const maxSec = this.getTotalFileDurationSec();
+                if (maxSec != null) return Math.min(maxSec, ct);
+                return ct;
+            }
+            const T = this._parsePlayTimeTagToIntegerSec();
+            if (T === null) return null;
+            const tagMs = T * 1000;
+            let cumMs = 0;
+            for (let i = 0; i < files.length; i++) {
+                const durMs = files[i].duration;
+                const endMs = cumMs + durMs;
+                const isLast = i === files.length - 1;
+                if (tagMs < endMs - 1e-6 || isLast) {
+                    let total = Math.floor(cumMs / 1000) + ct;
+                    const maxSec = this.getTotalFileDurationSec();
+                    if (maxSec != null) total = Math.max(0, Math.min(maxSec, total));
+                    else total = Math.max(0, total);
+                    return total;
+                }
+                cumMs = endMs;
+            }
         }
-        else if (splitres.length === 2){
-            totalPlaybackSec = (parseInt(splitres[0]) * 60 + parseInt(splitres[1]));
+
+        if (ct != null) {
+            const maxSec = this.getTotalFileDurationSec();
+            let total = ct;
+            if (maxSec != null) total = Math.min(maxSec, total);
+            return Math.max(0, total);
         }
-        else{
-            this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
-            return null;
-        }
+
+        const tagSec = this._parsePlayTimeTagToIntegerSec();
+        if (tagSec === null) return null;
+        let totalPlaybackSec = tagSec;
+        const maxSec = this.getTotalFileDurationSec();
+        if (maxSec != null) totalPlaybackSec = Math.max(0, Math.min(maxSec, totalPlaybackSec));
         return totalPlaybackSec;
     }
+
+    /**
+     * GetSoopVodInfo 기반 전체 재생 길이(초). vodCore ghost·편집 패널 타임라인 스케일에 쓸 때 TamperMonkey 등에서 `<video>.duration` 대신 사용.
+     * @returns {number|null} 로드 전·비정상이면 null
+     */
+    getTotalFileDurationSec() {
+        if (!this.vodInfo || !Number.isFinite(this.vodInfo.total_file_duration)) return null;
+        const ms = this.vodInfo.total_file_duration;
+        if (ms <= 0) return null;
+        return ms / 1000;
+    }
+
     /**
      * @override
      * @description 영상 시간을 설정

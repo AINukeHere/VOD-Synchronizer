@@ -872,11 +872,16 @@ export class SoopVeditorReplacement extends IVodSync {
     }
 
     /**
-     * 타임라인·시크 클램프에 쓰는 총 길이. vodCore(ghost) 메타 우선; 브리지 없을 때만 `<video>.duration`.
+     * 타임라인·시크 클램프에 쓰는 총 길이. ghost 메타 → `tsManager.getTotalFileDurationSec`(SOOP API)·`<video>.duration` 순.
      */
     _getTotalDurationSec() {
         const meta = this._getMetaTotalDurationSec();
         if (meta > 0) return meta;
+        const ts = window.VODSync?.tsManager;
+        if (ts && typeof ts.getTotalFileDurationSec === 'function') {
+            const apiSec = ts.getTotalFileDurationSec();
+            if (apiSec !== null && Number.isFinite(apiSec) && apiSec > 0) return apiSec;
+        }
         const v = this._getVideo();
         const vd =
             v && Number.isFinite(v.duration) && v.duration > 0 && v.duration !== Number.POSITIVE_INFINITY
