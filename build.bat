@@ -13,12 +13,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 명령행 인수 처리
+REM 인자 없음: 테스트 폴더 복사 + ZIP 1개 / 인자 test: 폴더만
 if "%1"=="" (
-    set MODE=all
+    python build_extension.py
 ) else (
-    set MODE=%1
+    python build_extension.py %1
 )
-
-REM 빌드 스크립트 실행
-python build_extension.py %MODE%
