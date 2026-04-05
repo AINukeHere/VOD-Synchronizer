@@ -489,6 +489,13 @@ export class SoopTimestampManager extends TimestampManagerBase {
         /// soop 댓글 타임라인 기능 (ghost·vodCore 없을 때 폴백)
         const targetSec = playbackTime;
         this._timeLinkJumpIntervalId = setInterval(() => {
+            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
+                if (this._timeLinkJumpIntervalId != null) {
+                    clearInterval(this._timeLinkJumpIntervalId);
+                    this._timeLinkJumpIntervalId = null;
+                }
+                return;
+            }
             if (this.timeLink === null) {
                 this.timeLink = document.createElement('a');
                 document.body.appendChild(this.timeLink);
@@ -497,14 +504,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
             this.timeLink.setAttribute('data-time', targetSec.toString());
             this.timeLink.click();
             this.debug('timeLink 클릭됨');
-            
-            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
-                if (this._timeLinkJumpIntervalId != null) {
-                    clearInterval(this._timeLinkJumpIntervalId);
-                    this._timeLinkJumpIntervalId = null;
-                }
-                return;
-            }
         }, 500);
         return true;
     }
