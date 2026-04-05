@@ -391,6 +391,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
 
         const v = this.videoTag;
+        const maxSec = this.getTotalFileDurationSec();
         const ct = v && Number.isFinite(v.currentTime) ? Math.max(0, v.currentTime) : null;
         const files = this._reviewDataFilesForPlayback();
 
@@ -400,6 +401,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                 if (maxSec != null) return Math.min(maxSec, ct);
                 return ct;
             }
+            // playTimeTag를 사용하여 몇 번째 파일인지 판별, 이전 파일들의 duration을 누적
             const T = this._parsePlayTimeTagToIntegerSec();
             if (T === null) return null;
             const tagMs = T * 1000;
@@ -409,7 +411,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                 const endMs = cumMs + durMs;
                 const isLast = i === files.length - 1;
                 if (tagMs < endMs - 1e-6 || isLast) {
-                    let total = Math.floor(cumMs / 1000) + ct;
+                    let total = Math.floor(cumMs / 1000) + ct; // 무슨 이유에선지 SOOP의 플레이어에선 앞의 파일들의 합에서 소수점을 버림
                     const maxSec = this.getTotalFileDurationSec();
                     if (maxSec != null) total = Math.max(0, Math.min(maxSec, total));
                     else total = Math.max(0, total);
@@ -420,7 +422,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         }
 
         if (ct != null) {
-            const maxSec = this.getTotalFileDurationSec();
             let total = ct;
             if (maxSec != null) total = Math.min(maxSec, total);
             return Math.max(0, total);
@@ -429,7 +430,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const tagSec = this._parsePlayTimeTagToIntegerSec();
         if (tagSec === null) return null;
         let totalPlaybackSec = tagSec;
-        const maxSec = this.getTotalFileDurationSec();
         if (maxSec != null) totalPlaybackSec = Math.max(0, Math.min(maxSec, totalPlaybackSec));
         return totalPlaybackSec;
     }
@@ -489,13 +489,6 @@ export class SoopTimestampManager extends TimestampManagerBase {
         /// soop 댓글 타임라인 기능 (ghost·vodCore 없을 때 폴백)
         const targetSec = playbackTime;
         this._timeLinkJumpIntervalId = setInterval(() => {
-            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
-                if (this._timeLinkJumpIntervalId != null) {
-                    clearInterval(this._timeLinkJumpIntervalId);
-                    this._timeLinkJumpIntervalId = null;
-                }
-                return;
-            }
             if (this.timeLink === null) {
                 this.timeLink = document.createElement('a');
                 document.body.appendChild(this.timeLink);
@@ -504,6 +497,14 @@ export class SoopTimestampManager extends TimestampManagerBase {
             this.timeLink.setAttribute('data-time', targetSec.toString());
             this.timeLink.click();
             this.debug('timeLink 클릭됨');
+            
+            if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {
+                if (this._timeLinkJumpIntervalId != null) {
+                    clearInterval(this._timeLinkJumpIntervalId);
+                    this._timeLinkJumpIntervalId = null;
+                }
+                return;
+            }
         }, 500);
         return true;
     }
