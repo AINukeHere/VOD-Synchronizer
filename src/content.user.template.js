@@ -43,25 +43,11 @@
         {{IVodSync}}
         {{SoopAPI}}
         {{TimestampManagerBase}}
-        // 페이지 vodCore 와 동일한 필드 형태(playingTime·seek). SoopTimestampManager 는 확장과 같은 코드로 여기만 참조한다.
-        window.VODSync.pageVodCore = {
-            playerController: {
-                get playingTime() {
-                    if (typeof unsafeWindow === 'undefined') return NaN;
-                    const vc = unsafeWindow.vodCore;
-                    if (!vc || typeof vc !== 'object') return NaN;
-                    const pt = vc.playerController && vc.playerController.playingTime;
-                    return typeof pt === 'number' && Number.isFinite(pt) ? Math.max(0, pt) : NaN;
-                },
-            },
-            seek(sec) {
-                if (typeof unsafeWindow === 'undefined') return false;
-                const vc = unsafeWindow.vodCore;
-                if (!vc || typeof vc.seek !== 'function') return false;
-                const s = Math.max(0, Number(sec));
-                vc.seek(Number.isFinite(s) ? s : 0);
-                return true;
-            },
+        // TamperMonkey 환경은 페이지와 같은 월드이므로 실제 vodCore를 그대로 반환한다.
+        window.VODSync.getVodCore = () => {
+            if (typeof unsafeWindow === 'undefined') return null;
+            const vc = unsafeWindow.vodCore;
+            return vc && typeof vc === 'object' ? vc : null;
         };
         const MAX_DURATION_DIFF = 30*1000;
         {{SoopTimestampManager}}

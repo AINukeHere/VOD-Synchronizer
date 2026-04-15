@@ -377,18 +377,16 @@ export class SoopTimestampManager extends TimestampManagerBase {
     }
 
     /**
-     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). `VODSync.pageVodCore.playerController.playingTime` 우선 (확장=ghost 동기화, 탬퍼몽키=페이지 vodCore).
+     * @description 현재 재생 시간을 초 단위로 반환 (전역 타임라인). `VODSync.getVodCore().playerController.playingTime` 우선.
      * `files[].duration`(ms)는 앞선 파일 길이만 ms로 누적 후 초로 바꾸고, **현재 파일 안**의 재생 위치는 항상 `videoTag.currentTime`만 쓴다.
      * 재생 표시 태그(`playTimeTag`)는 **몇 번째 파일인지** 고를 때만 쓰고, 재생 초의 소수·누적에는 섞지 않는다. 비디오를 읽을 수 없을 때만 태그 정수 초를 쓴다.
      * @returns {number} 현재 재생 시간(초)
      * @returns {null} 재생 시간을 계산할 수 없음. 의도치않은 상황 발생
      */
     getCurPlaybackTime() {
-        const pvc = window.VODSync?.pageVodCore;
-        if (pvc?.playerController) {
-            const pt = pvc.playerController.playingTime;
-            if (typeof pt === 'number' && Number.isFinite(pt)) return Math.max(0, pt);
-        }
+        const pa = window.VODSync?.getVodCore?.();
+        const pt = pa?.playerController?.playingTime;
+        if (typeof pt === 'number' && Number.isFinite(pt)) return Math.max(0, pt);
 
         const v = this.videoTag;
         const maxSec = this.getTotalFileDurationSec();
@@ -477,16 +475,19 @@ export class SoopTimestampManager extends TimestampManagerBase {
         url.searchParams.set('change_second', String(changeSec));
         window.history.replaceState({}, '', url.toString());
 
-        const pvc = window.VODSync?.pageVodCore;
-        if (pvc && typeof pvc.seek === 'function') {
+        const pa = window.VODSync?.getVodCore?.();
+        if (pa && typeof pa.seek === 'function') {
             const sec = Math.max(0, Number(playbackTime));
-            if (pvc.seek(Number.isFinite(sec) ? sec : 0)) {
-                this.debug('vodCore seek via pageVodCore', sec);
+            try {
+                pa.seek(Number.isFinite(sec) ? sec : 0);
+                this.debug('playback seek via adapter', sec);
                 return true;
+            } catch (e) {
+                /* ignore */
             }
         }
 
-        /// soop 댓글 타임라인 기능 (pageVodCore·시크 불가 시 폴백)
+        /// soop 댓글 타임라인 기능 (adapter·시크 불가 시 폴백)
         const targetSec = playbackTime;
         this._timeLinkJumpIntervalId = setInterval(() => {
             if (Math.abs(this.getCurPlaybackTime() - targetSec) <= 1) {

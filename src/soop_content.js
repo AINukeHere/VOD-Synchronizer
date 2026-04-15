@@ -53,23 +53,53 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
             installPageScript,
             getGhost: () => document.getElementById(GHOST_ID),
         };
-        // 격리 월드에서는 페이지 vodCore 를 직접 못 읽으므로, 페이지와 같은 접근 형태만 맞춘 퍼사드(실제는 ghost dataset·시크 속성).
-        window.VODSync.pageVodCore = {
-            playerController: {
-                get playingTime() {
-                    const g = document.getElementById(GHOST_ID);
-                    if (!g || g.dataset.playingTime === '') return NaN;
-                    const pt = parseFloat(g.dataset.playingTime);
-                    return Number.isFinite(pt) ? Math.max(0, pt) : NaN;
+        // 격리 월드에서 페이지 vodCore 대신 쓰는 파사드(형태는 vodCore와 유사).
+        window.VODSync.getVodCore = () => {
+            const getNode = () => document.getElementById(GHOST_ID);
+            if (!getNode()) return null;
+            const readDataset = (key) => {
+                const node = getNode();
+                if (!node || !node.dataset) return '';
+                const raw = node.dataset[key];
+                return raw == null ? '' : String(raw);
+            };
+            return {
+                playerController: {
+                    get playingTime() {
+                        const pt = parseFloat(readDataset('playingTime'));
+                        return Number.isFinite(pt) ? Math.max(0, pt) : NaN;
+                    },
                 },
-            },
-            seek(sec) {
-                const g = document.getElementById(GHOST_ID);
-                if (!g) return false;
-                const s = Math.max(0, Number(sec));
-                g.setAttribute('data-vs-seek', String(Number.isFinite(s) ? s : 0));
-                return true;
-            },
+                config: new Proxy(
+                    {},
+                    {
+                        get(_target, prop) {
+                            if (typeof prop !== 'string') return undefined;
+                            const raw = readDataset(prop);
+                            return raw === '' ? undefined : raw;
+                        },
+                    }
+                ),
+                seek(sec) {
+                    const node = getNode();
+                    if (!node) return false;
+                    const s = Math.max(0, Number(sec));
+                    node.setAttribute('data-vs-seek', String(Number.isFinite(s) ? s : 0));
+                    return true;
+                },
+                get speed() {
+                    const v = document.querySelector('video');
+                    if (!(v instanceof HTMLVideoElement)) return 1;
+                    return Number.isFinite(v.playbackRate) && v.playbackRate > 0 ? v.playbackRate : 1;
+                },
+                set speed(rate) {
+                    const node = getNode();
+                    if (!node) return;
+                    const r = Number(rate);
+                    if (!Number.isFinite(r) || r <= 0) return;
+                    node.setAttribute('data-vs-playback-rate', String(r));
+                },
+            };
         };
         installPageScript();
     }

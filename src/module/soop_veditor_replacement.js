@@ -4,7 +4,7 @@ import { IVodSync } from './interface4log.js';
  * SOOP VOD 편집 UI — `button.video_edit` 직접 처리, 패널 재사용(숨김/표시).
  * 확장(브리지 있음): `soop_content` 가 주입한 `VodCorePageBridge` 가 `#__vs_vodcore_ghost`에 playingTime·총 길이를 쓰고
  * `data-vs-seek`로 시크해 `window.vodCore`와 맞춘다.
- * 재생·시크는 `tsManager` 우선; ghost dataset·`window.vodCore` 직접 참조는 타임라인 메타 등 브리지 전용 데이터에만 둔다.
+ * 재생·시크는 `tsManager` 우선; 재생 어댑터(`window.VODSync.getVodCore`)를 통해 메타/명령을 통일한다.
  * @typedef {{ name: string, begin: number, end: number, visibleOnTimeline?: boolean }} VeditorClip
  * @typedef {{ startTime: number, endTime: number, duration: number, idx: number, sectionIdx: number }} VeditorApiClip
  *
@@ -19,7 +19,7 @@ import { IVodSync } from './interface4log.js';
  * 3) 타임라인 뷰 — px/s, 눈금·트랙·편집 구간 그래프, 휠/스크롤바, 도구 모드.
  *    진입점: `_syncUiFromState`, `_renderRuler`, `_renderClipsOnTrack`, `_bindTimelineWheel`
  *
- * 4) 재생·시크 — tsManager·ghost(보간)·`<video>` 플레이헤드, 연속/구간 재생 RAF.
+ * 4) 재생·시크 — tsManager·vodCore(보간)·`<video>` 플레이헤드, 연속/구간 재생 RAF.
  *    진입점: `_refreshCachedGlobalPlaybackTime`, `_plSeekGlobal`, `_playAllClips`, `SoopVeditorReplacement.ClipBoundaryPlayback`
  *
  * 5) 게시 — 모달·카테고리·API 제출. 모달 차단: 총 길이 15초 미만 또는 30분 이상. 3초 미만 구간이 있으면 경고 alert만(모달·게시 시도는 가능). 페이로드는 유효 구간을 공식 API에 전달.
@@ -536,10 +536,10 @@ export class SoopVeditorReplacement extends IVodSync {
         this._cachedGlobalPlaybackSec = 0;
         /** 동일 동기 스택에서 `_refreshCachedGlobalPlaybackTime` 재진입 시 1회만 읽기. */
         this._gpGlobalPlaybackReadCoalesced = false;
-        /** ghost playingTime 이 잠깐 멈출 때 재생 헤드 표시만 시계로 보간 (편집 시각은 `_cachedGlobalPlaybackSec`). */
-        this._phGhostExRaw = null;
-        this._phGhostExAnchorSec = 0;
-        this._phGhostExWallMs = 0;
+        /** 재생 시간이 잠깐 멈출 때 재생 헤드 표시만 시계로 보간 (편집 시각은 `_cachedGlobalPlaybackSec`). */
+        this._phExRaw = null;
+        this._phExAnchorSec = 0;
+        this._phExWallMs = 0;
 
         this._onVideoPauseSeekForPlayhead = this._onVideoPauseSeekForPlayhead.bind(this);
         this._onPlayheadPointerMove = this._onPlayheadPointerMove.bind(this);
@@ -586,7 +586,7 @@ export class SoopVeditorReplacement extends IVodSync {
             this._mountOverlayDom();
             this._panelVisible = true;
             this._veditorInitialTimelineZoomPending = true;
-            this._hydratePlaylistFromVodCore();
+            this._hydratePlaylistFromSource();
             if (this._overlayShell) this._overlayShell.style.display = 'flex';
         } else if (!this._panelVisible || this._overlayShell.style.display === 'none') {
             this._showPanel();
@@ -602,10 +602,10 @@ export class SoopVeditorReplacement extends IVodSync {
         this._syncUiFromState();
     }
 
-    // --- 오버레이·진입 (역할 맵: video_edit, 패널, ghost) ---
-    /** ghost dataset(총 길이·titleNo 등) — 브리지 없으면 null. 재생 시각·시크는 `tsManager` 사용. */
-    _getVodCoreGhost() {
-        return window.VODSync?.vodCoreBridge?.getGhost?.() ?? null;
+    // --- 오버레이·진입 (역할 맵: video_edit, 패널, vodCore 파사드) ---
+    /** 확장/TM 공통 vodCore 파사드. 상세 접근 분기는 `window.VODSync.getVodCore()` 뒤로 숨긴다. */
+    _getVodCore() {
+        return window.VODSync?.getVodCore?.() ?? null;
     }
 
     // DOM에 있는 video_edit 버튼을 모두 찾아 아직 미바인딩인 것만 연결한다 (Observer 콜백·초기 스캔).
@@ -634,10 +634,10 @@ export class SoopVeditorReplacement extends IVodSync {
 
         if (!this._overlayShell) {
             this._mountOverlayDom();
-            // `_hydratePlaylistFromVodCore` 안의 `_startPlayheadRaf` 가 `_panelVisible` 을 본다. 먼저 true 로 두어야 최초 오픈 시에도 rAF 가 돈다.
+            // `_hydratePlaylistFromSource` 안의 `_startPlayheadRaf` 가 `_panelVisible` 을 본다. 먼저 true 로 두어야 최초 오픈 시에도 rAF 가 돈다.
             this._panelVisible = true;
             this._veditorInitialTimelineZoomPending = true;
-            this._hydratePlaylistFromVodCore();
+            this._hydratePlaylistFromSource();
             if (this._overlayShell) this._overlayShell.style.display = 'flex';
             return;
         }
@@ -648,20 +648,23 @@ export class SoopVeditorReplacement extends IVodSync {
         }
     }
 
-    // ghost(페이지 브리지가 채움)와 URL 기준 titleNo를 맞춘 뒤 UI를 갱신한다 (패널 최초 오픈·표시 시).
-    _hydratePlaylistFromVodCore() {
-        const ghost = this._getVodCoreGhost();
-        const tnGhost = ghost?.dataset?.titleNo;
-        if (tnGhost != null && String(tnGhost).length > 0) this.titleNo = String(tnGhost);
-        const hasGhostData =
-            ghost &&
-            (ghost.dataset.playingTime !== '' ||
-                ghost.dataset.configFilesDurationSum !== '' ||
-                ghost.dataset.fileItemsDurationSum !== '' ||
-                ghost.dataset.totalFileDuration !== '');
-        if (!ghost) {
-            this.debug('vodCore ghost 없음 — 타임라인·시크는 tsManager·<video> 폴백');
-        } else if (!hasGhostData) {
+    // 재생 어댑터 값과 URL 기준 titleNo를 맞춘 뒤 UI를 갱신한다 (패널 최초 오픈·표시 시).
+    _hydratePlaylistFromSource() {
+        const vc = this._getVodCore();
+        const titleNo = vc?.config?.titleNo != null ? String(vc.config.titleNo) : '';
+        if (titleNo !== '') this.titleNo = String(titleNo);
+        const playingTime = vc?.playerController?.playingTime;
+        const hasPlayingTime = typeof playingTime === 'number' && Number.isFinite(playingTime);
+        const cfg = vc?.config;
+        const cfgSum = cfg?.configFilesDurationSum != null ? String(cfg.configFilesDurationSum) : '';
+        const fiSum = cfg?.fileItemsDurationSum != null ? String(cfg.fileItemsDurationSum) : '';
+        const totalDur = cfg?.totalFileDuration != null ? String(cfg.totalFileDuration) : '';
+        const hasVodCoreData =
+            vc &&
+            (hasPlayingTime || cfgSum !== '' || fiSum !== '' || totalDur !== '');
+        if (!vc) {
+            this.debug('vodCore 어댑터 없음 — 타임라인·시크는 tsManager·<video> 폴백');
+        } else if (!hasVodCoreData) {
             this.debug('vodCore 브리지 대기 중 — 재생 길이는 video 메타에 의존할 수 있음');
         } else {
             this.debug('playlist via vodCore page bridge');
@@ -672,7 +675,7 @@ export class SoopVeditorReplacement extends IVodSync {
         this._startPlayheadRaf();
     }
 
-    /** 공식 편집기 버튼: titleNo 가 있을 때만 활성화 (ghost·URL 동기화 후 상태 맞춤). */
+    /** 공식 편집기 버튼: titleNo 가 있을 때만 활성화 (vodCore·URL 동기화 후 상태 맞춤). */
     _syncOfficialVeditorButtonState() {
         const btn = this._officialVeditorBtn;
         if (!btn) return;
@@ -698,7 +701,7 @@ export class SoopVeditorReplacement extends IVodSync {
             this._rulerTipRaf = null;
         }
         this._rulerTipPendingEv = null;
-        this._resetPlayheadGhostExtrap();
+        this._resetPlayheadExtrap();
         if (this._overlayShell) this._overlayShell.style.display = 'none';
     }
 
@@ -707,7 +710,7 @@ export class SoopVeditorReplacement extends IVodSync {
         this._veditorInitialTimelineZoomPending = true;
         if (this._overlayShell) {
             this._overlayShell.style.display = 'flex';
-            this._hydratePlaylistFromVodCore();
+            this._hydratePlaylistFromSource();
         }
     }
 
@@ -848,34 +851,28 @@ export class SoopVeditorReplacement extends IVodSync {
     }
 
     /**
-     * ghost에 싱크된 VOD 총 길이(초). config 파일 합·fileItems 합·totalFileDuration 이
-     * 서로 다르면, 끝 이후 빈 슬라이드를 줄이기 위해 보통 더 짧은 값을 쓴다.
-     * 한 값만 비정상적으로 작으면(부분 배열) 긴 쪽을 택한다.
-     */
-    _getMetaTotalDurationSec() {
-        const ghost = this._getVodCoreGhost();
-        if (!ghost) return 0;
-        const pick = (key) => {
-            const x = parseFloat(ghost.dataset[key] || '');
-            return Number.isFinite(x) && x > 0 ? x : 0;
-        };
-        const cfs = pick('configFilesDurationSum');
-        const sm = pick('fileItemsDurationSum');
-        const tf = pick('totalFileDuration');
-        const vals = [cfs, sm, tf].filter((v) => v > 0);
-        if (vals.length === 0) return 0;
-        if (vals.length === 1) return vals[0];
-        const lo = Math.min(...vals);
-        const hi = Math.max(...vals);
-        if (hi > lo + 0.5 && lo < hi * 0.5) return hi;
-        return lo;
-    }
-
-    /**
-     * 타임라인·시크 클램프에 쓰는 총 길이. ghost 메타 → `tsManager.getTotalFileDurationSec`(SOOP API)·`<video>.duration` 순.
+     * 타임라인·시크 클램프에 쓰는 총 길이. vodCore 메타 → `tsManager.getTotalFileDurationSec`(SOOP API)·`<video>.duration` 순.
      */
     _getTotalDurationSec() {
-        const meta = this._getMetaTotalDurationSec();
+        const vc = this._getVodCore();
+        let meta = 0;
+        if (vc && vc.config && typeof vc.config === 'object') {
+            const pick = (key) => {
+                const raw = vc.config[key];
+                const x = parseFloat(raw == null ? '' : String(raw));
+                return Number.isFinite(x) && x > 0 ? x : 0;
+            };
+            const cfs = pick('configFilesDurationSum');
+            const sm = pick('fileItemsDurationSum');
+            const tf = pick('totalFileDuration');
+            const vals = [cfs, sm, tf].filter((v) => v > 0);
+            if (vals.length === 1) meta = vals[0];
+            else if (vals.length >= 2) {
+                const lo = Math.min(...vals);
+                const hi = Math.max(...vals);
+                meta = hi > lo + 0.5 && lo < hi * 0.5 ? hi : lo;
+            }
+        }
         if (meta > 0) return meta;
         const ts = window.VODSync?.tsManager;
         if (ts && typeof ts.getTotalFileDurationSec === 'function') {
@@ -916,49 +913,20 @@ export class SoopVeditorReplacement extends IVodSync {
         }
     }
 
-    _peekGhostPlayingTime() {
-        const ghost = this._getVodCoreGhost();
-        if (!ghost || ghost.dataset.playingTime === '') return null;
-        const pt = parseFloat(ghost.dataset.playingTime);
-        return Number.isFinite(pt) ? Math.max(0, pt) : null;
-    }
-
-    _resetPlayheadGhostExtrap() {
-        this._phGhostExRaw = null;
-        this._phGhostExAnchorSec = 0;
-        this._phGhostExWallMs = 0;
+    _resetPlayheadExtrap() {
+        this._phExRaw = null;
+        this._phExAnchorSec = 0;
+        this._phExWallMs = 0;
     }
 
     /**
-     * ghost 값이 연속 프레임에서 같을 때(플레이어가 playingTime 을 거칠게만 갱신할 때) 시계·playbackRate 로 표시만 보간한다.
-     * @param {number} ghostPt
-     * @param {number} total
-     * @param {HTMLVideoElement} v
-     */
-    _playheadSecFromGhostExtrap(ghostPt, total, v) {
-        const now = performance.now();
-        const eps = 1e-4;
-        if (this._phGhostExRaw == null || Math.abs(ghostPt - this._phGhostExRaw) >= eps) {
-            this._phGhostExRaw = ghostPt;
-            this._phGhostExAnchorSec = ghostPt;
-            this._phGhostExWallMs = now;
-            return Math.max(0, Math.min(total, ghostPt));
-        }
-        const elapsedSec = (now - this._phGhostExWallMs) / 1000;
-        if (elapsedSec > 0.35) {
-            this._phGhostExAnchorSec = ghostPt;
-            this._phGhostExWallMs = now;
-            return Math.max(0, Math.min(total, ghostPt));
-        }
-        const rate = v.playbackRate || 1;
-        return Math.max(0, Math.min(total, this._phGhostExAnchorSec + elapsedSec * rate));
-    }
-
-    /**
-     * 노란 헤드 **표시**용 시각 (rAF). 브리지 `playingTime` 있으면 보간, 없으면 `tsManager.getCurPlaybackTime`·`<video>`.
+     * 노란 헤드 **표시**용 시각 (rAF). vodCore `playingTime` 있으면 보간, 없으면 `tsManager.getCurPlaybackTime`·`<video>`.
      */
     _computePlayheadDisplaySec(total) {
-        const ghostPt = this._peekGhostPlayingTime();
+        const vc = this._getVodCore();
+        const rawPlayback = vc?.playerController?.playingTime;
+        const playbackSec =
+            typeof rawPlayback === 'number' && Number.isFinite(rawPlayback) ? Math.max(0, rawPlayback) : null;
         const v = this._getVideo();
         const haveCur =
             typeof HTMLMediaElement !== 'undefined'
@@ -966,15 +934,30 @@ export class SoopVeditorReplacement extends IVodSync {
                 : /* @__PURE__ */ 2;
         const playing = Boolean(v && !v.paused && !v.ended && v.readyState >= haveCur);
 
-        if (ghostPt != null) {
+        if (playbackSec != null) {
             if (!playing) {
-                this._resetPlayheadGhostExtrap();
-                return Math.min(total, ghostPt);
+                this._resetPlayheadExtrap();
+                return Math.min(total, playbackSec);
             }
-            return Math.min(total, this._playheadSecFromGhostExtrap(ghostPt, total, v));
+            const now = performance.now();
+            const eps = 1e-4;
+            if (this._phExRaw == null || Math.abs(playbackSec - this._phExRaw) >= eps) {
+                this._phExRaw = playbackSec;
+                this._phExAnchorSec = playbackSec;
+                this._phExWallMs = now;
+                return Math.max(0, Math.min(total, playbackSec));
+            }
+            const elapsedSec = (now - this._phExWallMs) / 1000;
+            if (elapsedSec > 0.35) {
+                this._phExAnchorSec = playbackSec;
+                this._phExWallMs = now;
+                return Math.max(0, Math.min(total, playbackSec));
+            }
+            const rate = v.playbackRate || 1;
+            return Math.max(0, Math.min(total, this._phExAnchorSec + elapsedSec * rate));
         }
 
-        this._resetPlayheadGhostExtrap();
+        this._resetPlayheadExtrap();
         const ts = window.VODSync?.tsManager;
         if (ts && typeof ts.getCurPlaybackTime === 'function') {
             const pt = ts.getCurPlaybackTime();
@@ -987,7 +970,7 @@ export class SoopVeditorReplacement extends IVodSync {
         return 0;
     }
 
-    // `tsManager.moveToPlaybackTime`(URL·ghost·time_link) → ts 없을 때만 ghost·`<video>`.
+    // `tsManager.moveToPlaybackTime`(URL·vodCore·time_link) → ts 없을 때만 vodCore·`<video>`.
     _plSeekGlobal(globalSec) {
         const s = Number(globalSec);
         const sec = Number.isFinite(s) ? Math.max(0, s) : 0;
@@ -996,10 +979,14 @@ export class SoopVeditorReplacement extends IVodSync {
             ts.moveToPlaybackTime(sec, false);
             return;
         }
-        const ghost = this._getVodCoreGhost();
-        if (ghost) {
-            ghost.setAttribute('data-vs-seek', String(sec));
-            return;
+        const vc = this._getVodCore();
+        if (vc && typeof vc.seek === 'function') {
+            try {
+                vc.seek(sec);
+                return;
+            } catch (e) {
+                /* ignore */
+            }
         }
         const v = this._getVideo();
         if (v) {
@@ -1011,20 +998,24 @@ export class SoopVeditorReplacement extends IVodSync {
         }
     }
 
-    // 문서의 첫 `<video>` 요소 (ghost 미가동·보조 시 길이·재생 시각).
+    // 문서의 첫 `<video>` 요소 (vodCore 미가동·보조 시 길이·재생 시각).
     _getVideo() {
         const v = document.querySelector('video');
         return v instanceof HTMLVideoElement ? v : null;
     }
 
-    // 브리지 ghost가 있으면 `data-vs-playback-rate`로 MAIN에서 `vodCore.speed` 적용; 없으면 `<video>.playbackRate`.
+    // vodCore 어댑터로 배속 적용(확장=브리지 속성, TM=unsafeWindow.vodCore.speed); 실패 시 `<video>.playbackRate`.
     _setPlaybackSpeedFromUi(rate) {
         const r = Number(rate);
         if (!Number.isFinite(r) || r <= 0) return;
-        const ghost = this._getVodCoreGhost();
-        if (ghost) {
-            ghost.setAttribute('data-vs-playback-rate', String(r));
-            return;
+        const vc = this._getVodCore();
+        if (vc) {
+            try {
+                vc.speed = r;
+                return;
+            } catch (_) {
+                /* ignore */
+            }
         }
         const v = this._getVideo();
         if (v) {
@@ -1240,9 +1231,9 @@ export class SoopVeditorReplacement extends IVodSync {
     }
 
     async _resolvePublishLoginId() {
-        const ghost = this._getVodCoreGhost();
-        const fromGhost = ghost?.dataset?.loginId;
-        if (fromGhost) return String(fromGhost);
+        const vc = this._getVodCore();
+        const fromVodCore = vc?.config?.loginId != null ? String(vc.config.loginId) : '';
+        if (fromVodCore) return String(fromVodCore);
         const api = this._getSoopApi();
         if (!api || typeof api.GetPrivateInfo !== 'function') return null;
         const priv = await api.GetPrivateInfo();
@@ -2212,7 +2203,7 @@ export class SoopVeditorReplacement extends IVodSync {
         v.addEventListener('ended', this._onVideoPauseSeekForPlayhead);
     }
 
-    // 패널이 열려 있을 때 매 프레임(rAF) ghost·video 재생 시각을 따라 노란 헤드를 갱신한다 (일시정지·시크 포함).
+    // 패널이 열려 있을 때 매 프레임(rAF) vodCore·video 재생 시각을 따라 노란 헤드를 갱신한다 (일시정지·시크 포함).
     _startPlayheadRaf() {
         if (!this._panelVisible || !this._playheadEl || this._playheadDragging) return;
         if (this._playheadRafId != null) return;
@@ -2242,7 +2233,7 @@ export class SoopVeditorReplacement extends IVodSync {
 
     // 총 길이와 현재 재생 위치로 재생 헤드 초기 위치를 맞춘다 (메타데이터 로드·패널 마운트 직후).
     _initPlayheadFromVideo() {
-        this._resetPlayheadGhostExtrap();
+        this._resetPlayheadExtrap();
         const total = this._getTotalDurationSec();
         this._refreshCachedGlobalPlaybackTime();
         this._playheadSec = Math.max(0, Math.min(total, this._cachedGlobalPlaybackSec));
@@ -2252,7 +2243,7 @@ export class SoopVeditorReplacement extends IVodSync {
     // 비디오 이벤트 시 한 프레임 더 빨리 헤드를 맞춤 (rAF 와 병행; 패널 닫힘이면 무시).
     _onVideoPauseSeekForPlayhead() {
         if (this._playheadDragging || !this._panelVisible || !this._playheadEl) return;
-        this._resetPlayheadGhostExtrap();
+        this._resetPlayheadExtrap();
         const total = this._getTotalDurationSec();
         this._refreshCachedGlobalPlaybackTime();
         this._playheadSec = Math.max(0, Math.min(total, this._cachedGlobalPlaybackSec));
@@ -2340,7 +2331,7 @@ export class SoopVeditorReplacement extends IVodSync {
         this._playheadDragging = false;
         const total = this._getTotalDurationSec();
         this._seekVideoToPlayhead(total);
-        this._resetPlayheadGhostExtrap();
+        this._resetPlayheadExtrap();
         this._startPlayheadRaf();
     }
 
@@ -2479,7 +2470,7 @@ export class SoopVeditorReplacement extends IVodSync {
         const t = Math.max(0, Math.min(total, Number(raw)));
         if (!Number.isFinite(t)) return;
         this._playheadSec = t;
-        this._resetPlayheadGhostExtrap();
+        this._resetPlayheadExtrap();
         this._plSeekGlobal(t);
         this._updatePlayheadVisual(total);
         this._updateSequenceHeaderUi(total);
