@@ -250,7 +250,7 @@ body {
 .feature-panel li .feature-li-img {
     display: block;
     width: auto;
-    max-width: min(100%, 520px);
+    max-width: 100%;
     height: auto;
     margin: 0.6rem 0 0;
     border-radius: 6px;
@@ -258,7 +258,7 @@ body {
 }
 
 .feature-panel li .feature-li-img--compact {
-    max-width: min(100%, 340px);
+    max-width: 100%;
 }
 
 .feature-panel li .feature-li-img--wide {
@@ -275,7 +275,7 @@ body {
 .feature-panel li .feature-li-img-row img {
     flex: 1 1 180px;
     width: auto;
-    max-width: min(100%, 440px);
+    max-width: 100%;
     height: auto;
     margin: 0;
     border-radius: 6px;
