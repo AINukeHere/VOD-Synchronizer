@@ -29,19 +29,16 @@
         {
             "matches": ["https://www.sooplive.com/*"],
             "js": ["src/soop_content.js"],
-            "all_frames": true,
-            "run_at": "document_start"
+            "all_frames": true
         },
         {
             "matches": ["https://vod.sooplive.com/*"],
-            "js": ["src/soop_content.js"],
-            "run_at": "document_start"
+            "js": ["src/soop_content.js"]
         },
         {
             "matches": ["https://chzzk.naver.com/*"],
             "js": ["src/chzzk_content.js"],
-            "all_frames": true,
-            "run_at": "document_start"
+            "all_frames": true
         }
     ],
     "web_accessible_resources": [
