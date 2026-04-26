@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업데이트 알림</title>
+    <link rel="stylesheet" href="update_notification_common.css">
+</head>
+<body>
+    <div class="update-container">
+        <div class="version-number" id="versionNumber">v1.6.0.0 주요 변경사항</div>
+        <ul class="changes-list" id="changesList">
+            <li>
+                <strong>새 기능: 개선된 편집 VOD 인터페이스</strong>
+                <ul class="bug-fix-list" style="margin-top: 8px; margin-bottom: 8px;">
+                    <li><strong>편집VOD 만들기</strong>를 누르면 공식 편집기 페이지로 바로 넘어가지 않고, 같은 화면에서 타임라인·편집 구간을 다루는 패널이 열립니다.</li>
+                    <li>구간 추가·순서 변경·타임라인 맞춤·분할(자르기)·타임라인 댓글에서 가져오기·테스트·게시 흐름 등 기존에 불편하던 부분을 손봤습니다.</li>
+                    <li>사용 방법은 <a href="https://ainukehere.github.io/VOD-Master/doc/index.html#veditor" target="_blank" rel="noopener noreferrer">기능 소개 문서(편집 VOD 인터페이스)</a>에서 확인해 주세요.</li>
+                </ul>
+                <img src="https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/veditor_overview.png" alt="편집 VOD 패널 개요" class="preview-image" onclick="openImageModal(this.src)" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 8px;">
+            </li>
+        </ul>
+        <div class="bug-fix-section" id="bugFixSection">
+            <div class="bug-fix-toggle" onclick="toggleBugFix()">
+                <span class="bug-fix-icon">▶</span>
+                <span>버그 수정 내역 보기</span>
+            </div>
+            <div class="bug-fix-content">
+                <ul class="bug-fix-list">
+                    <li>SOOP 게시글 작성 페이지에서 오류가 나던 문제를 수정했습니다.</li>
+                </ul>
+            </div>
+        </div>
+        <p style="margin-top: 16px; font-size: 14px; color: #555;">처음 설치하셨나요? 어떤 기능이 있는지 <a href="https://ainukehere.github.io/VOD-Master/doc/index.html" target="_blank" rel="noopener noreferrer">알아보세요</a>.</p>
+    </div>
+
+    <!-- 이미지 모달 -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal()">
+        <img id="modalImage" src="" alt="확대 이미지">
+    </div>
+
+    <script src="update_notification_common.js"></script>
+</body>
+</html>
