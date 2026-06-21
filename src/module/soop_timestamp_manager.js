@@ -119,6 +119,8 @@ export class SoopTimestampManager extends TimestampManagerBase {
             files: vodInfo.data.files,
             total_file_duration: vodInfo.data.total_file_duration,
             originVodInfo: null, // 원본 다시보기의 정보
+            view_cnt: vodInfo.data.view_cnt,
+            live_total_view: vodInfo.data.live_total_view,
         }
         if (vodInfo.data.write_tm){
             const splitres = vodInfo.data.write_tm.split(' ~ ');
@@ -227,6 +229,17 @@ export class SoopTimestampManager extends TimestampManagerBase {
     reloadVideoTag(){
         this.playTimeTag = document.querySelector('span.time-current');
         this.videoTag = document.querySelector('#video');
+        
+        if (this.vodInfo.type === "REVIEW"){ // 다시보기인 경우 순수 조회수 표시
+            const vodViewCountTag = document.querySelector('div.cnt_info li:nth-child(1) strong');
+            const realViewCount = this.vodInfo.view_cnt - this.vodInfo.live_total_view ;
+            if (vodViewCountTag){
+                if (realViewCount != NaN)
+                    vodViewCountTag.setAttribute('tip', `순 조회수 ${realViewCount}회`);
+                else
+                    vodViewCountTag.setAttribute('tip', `순 조회수 불러오기 실패`);
+            }
+        }
         if (this.videoTag === null)
             this.videoTag = document.querySelector('#video_p');
         

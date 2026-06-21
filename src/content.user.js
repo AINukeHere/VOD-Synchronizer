@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.0.1
+// @version      1.6.1.0
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -1272,6 +1272,8 @@ class SoopAPI extends IVodSync{
             files: vodInfo.data.files,
             total_file_duration: vodInfo.data.total_file_duration,
             originVodInfo: null, // 원본 다시보기의 정보
+            view_cnt: vodInfo.data.view_cnt,
+            live_total_view: vodInfo.data.live_total_view,
         }
         if (vodInfo.data.write_tm){
             const splitres = vodInfo.data.write_tm.split(' ~ ');
@@ -1379,6 +1381,17 @@ class SoopAPI extends IVodSync{
     reloadVideoTag(){
         this.playTimeTag = document.querySelector('span.time-current');
         this.videoTag = document.querySelector('#video');
+        
+        if (this.vodInfo.type === "REVIEW"){ // 다시보기인 경우 순수 조회수 표시
+            const vodViewCountTag = document.querySelector('div.cnt_info li:nth-child(1) strong');
+            const realViewCount = this.vodInfo.view_cnt - this.vodInfo.live_total_view ;
+            if (vodViewCountTag){
+                if (realViewCount != NaN)
+                    vodViewCountTag.setAttribute('tip', `순 조회수 ${realViewCount}회`);
+                else
+                    vodViewCountTag.setAttribute('tip', `순 조회수 불러오기 실패`);
+            }
+        }
         if (this.videoTag === null)
             this.videoTag = document.querySelector('#video_p');
         
