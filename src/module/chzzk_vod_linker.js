@@ -8,45 +8,43 @@ export class ChzzkVODLinker extends VODLinkerBase{
     setupSearchAreaOnlyMode() {
         super.setupSearchAreaOnlyMode();
         (function waitForElementsToHide() {
-            const searchContainer = document.querySelector('[class^="search_container__"]');
-            const sideMenu = document.querySelector('[class^="aside_container__"]');
+            const searchContainer = document.querySelector('#header form');
+            const sideMenu = document.querySelector('[class^="_menu_logo_"]');
             const layoutBody = document.querySelector('#layout-body');
-            const navigationBarMenuLogo = document.querySelector('[class^="navigation_bar_menu_logo__"]');
-            const topicTab = document.querySelector('[class^="topic_tab_container__"]');
-            const toolbar = document.querySelector('[class^="toolbar_section__"]');
+            const topicTab = document.querySelector('#sidebar');
+            const toolbar = document.querySelector('[aria-label="주제 탭"]')?.parentElement;
             let allDone = true;
             if (searchContainer){
                 searchContainer.style.maxWidth = '500px';
                 searchContainer.style.minWidth = '500px';
+                const header = searchContainer.parentElement?.parentElement;
+                if (header){
+                    for (const child of header.children){
+                        if (child !== searchContainer.parentElement){
+                            child.style.display = 'none';
+                        }
+                    }
+                }
             }
-            else{
+            else
                 allDone = false;
-            }
-            if (sideMenu) {
+            if (sideMenu)
                 sideMenu.style.display = 'none';
-            } else {
+            else
                 allDone = false;
-            }
-            if (layoutBody) {
+            if (layoutBody)
                 layoutBody.style.display = "none";
-            } else {
+            else 
                 allDone = false;
-            }
-            if (navigationBarMenuLogo) {
-                navigationBarMenuLogo.style.display = "none";
-            } else {
-                allDone = false;
-            }
-            if (topicTab) {
+            if (topicTab)
                 topicTab.style.display = "none";
-            } else {
+            else
                 allDone = false;
-            }
-            if (toolbar) {
+            if (toolbar)
                 toolbar.style.display = "none";
-            } else {
+            else
                 allDone = false;
-            }
+
             document.body.style.background = 'white';
             if (!allDone) setTimeout(waitForElementsToHide, 200);
         })();
@@ -58,11 +56,14 @@ export class ChzzkVODLinker extends VODLinkerBase{
      */
     getTargetsForCreateSyncButton(){
         // if (!window.location.pathname.includes('/video/')) return; // 다시보기 페이지가 아니면 버튼 생성 X
-
-        const searchHeader = document.querySelector('div[class^="search_header_"]');
-        if (searchHeader) return; // 검색 결과 없음 → 버튼 생성 X
-
-        const targets = document.querySelectorAll('div[class^="search_container__"] > div > ul > li > a');
+        const searchInputResetBtn = document.querySelector('button[type="reset"]'); // CHZZK 검색창 초기화 버튼 (X 버튼)
+        if (!searchInputResetBtn) return [];
+        const targets = document.querySelectorAll('#header div._is_focus_pmmgc_32 > div > ul > li > a');
+        for (const target of targets) {
+            const keyword = decodeURI(target.href.split('=')[1]);
+            target.dataset.keyword = keyword;
+        }
+        // const targets = document.querySelectorAll('div[class^="search_container__"] > div > ul > li > a');
         return targets;
     }
     /**
@@ -91,9 +92,9 @@ export class ChzzkVODLinker extends VODLinkerBase{
      * @override
      */
     getStreamerName(button){
-        const searchWordSpan = button.parentElement.querySelector('[class^="search_keyword__"]');
-        if (!searchWordSpan) return null;
-        return searchWordSpan.innerText;
+        const searchWord = button.parentElement.dataset.keyword;
+        if (!searchWord) return null;
+        return searchWord;
     }
     /**
      * @description 스트리머 ID를 반환
@@ -212,14 +213,11 @@ export class ChzzkVODLinker extends VODLinkerBase{
 
     // 검색어를 제거하고 검색결과미리보기 영역을 닫음
     closeSearchArea(){
-        const searchInputButtons = document.querySelectorAll('[class^="search_form_button__"]');
-        if (searchInputButtons){
-            searchInputButtons.forEach(button => {
-                if (button.type === 'reset')
-                    button.click();
-            });
+        const searchInputResetBtn = document.querySelector('button[type="reset"]'); // CHZZK 검색창 초기화 버튼 (X 버튼)
+        if (searchInputResetBtn){
+            searchInputResetBtn.click();
         }
-        const searchPreviewCloseButton = document.querySelector('[class^="search_close_button__"]'); // CHZZK 검색 결과 영역 닫기 버튼
+        const searchPreviewCloseButton = document.querySelector('[class^="_close_button_"]'); // CHZZK 검색 결과 영역 닫기 버튼
         if (searchPreviewCloseButton){
             searchPreviewCloseButton.click();
         }
@@ -231,7 +229,7 @@ export class ChzzkVODLinker extends VODLinkerBase{
      */
     getSearchInputElement(){
         // CHZZK 검색창 선택자 (검색 결과 페이지의 검색창)
-        const searchInput = document.querySelector('[class^="search_input__"]');
+        const searchInput = document.querySelector('#search-input');
         return searchInput || null;
     }
 }

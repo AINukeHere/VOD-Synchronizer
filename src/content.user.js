@@ -1792,7 +1792,7 @@ class SoopAPI extends IVodSync{
         window.open(url, "_blank");
         this.log(`VOD 링크: ${url.toString()}`);
         button.innerText = this.BTN_TEXT_IDLE;
-        this.getSearchInputElement().blur();
+        this.getSearchInputElement()?.blur();
         this.closeSearchArea();
     }
     isValidDate(date){

@@ -12,6 +12,10 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
     let cachedSettings = {};
     
     function log(...data){
+        if (typeof logToExtension !== 'function') {
+            console.log('[soop_content.js:top]', ...data);
+            return;
+        }
         logToExtension('[soop_content.js:top]', ...data);
     }
     log('loaded');
@@ -253,6 +257,10 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
 // 타 플랫폼에서 실행되는 경우(iframe)
 else {
     function log(...data){
+        if (typeof logToExtension !== 'function') {
+            console.log('[soop_content.js:iframe]', ...data);
+            return;
+        }
         logToExtension('[soop_content.js:iframe]', ...data);
     }
     log('loaded');

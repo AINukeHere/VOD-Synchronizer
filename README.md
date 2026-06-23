@@ -59,6 +59,8 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 - 새 기능: SOOP 다시보기 순 조회수 표시
   - 다시보기의 경우 조회수 숫자에 마우스를 올리면 순 조회수가 표시됩니다.<br/>
   ![](./screenshots/soop_reviewVOD_pureViewCount.png)
+- 버그 수정
+  - [타 플랫폼과 동기화] CHZZK 검색창이 보이지 않던 문제를 수정했습니다.
 
 ### 1.6.0.1 (2026.04.26)
 - 버그 수정

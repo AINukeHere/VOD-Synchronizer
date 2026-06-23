@@ -8,6 +8,10 @@ if (window == top) {
     let lastIsVodPage = null;
 
     function log(...data){
+        if (typeof logToExtension !== 'function') {
+            console.log('[soop_content.js:top]', ...data);
+            return;
+        }
         logToExtension('[chzzk_content.js:outframe]', ...data);
     }
 
@@ -188,6 +192,10 @@ if (window == top) {
 // 타 플랫폼에서 실행되는 경우(iframe)
 else{
     function log(...data){
+        if (typeof logToExtension !== 'function') {
+            console.log('[soop_content.js:top]', ...data);
+            return;
+        }
         logToExtension('[chzzk_content.js:iframe]', ...data);
     }
     log('loaded');

@@ -46,6 +46,8 @@ VOD Master는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스�
 - 새 기능: SOOP 다시보기 순 조회수 표시
   - 다시보기의 경우 조회수 숫자에 마우스를 올리면 순 조회수가 표시됩니다.<br/>
   ![](./screenshots/soop_reviewVOD_pureViewCount.png)
+- 버그 수정
+  - [타 플랫폼과 동기화] CHZZK 검색창이 보이지 않던 문제를 수정했습니다.
   
 ### 1.6.0.0
 - 새 기능: 개선된 편집 VOD 인터페이스
