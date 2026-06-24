@@ -20,6 +20,8 @@ export class SoopPrevChatViewer extends IVodSync {
         this.cachedChatData = []; // 캐시된 채팅 데이터 [{startTime, endTime, messages}, ...]
         this.restoreInterval = 30; // 복원 구간 단위 (초)
         this.excludeEmoticonOnlyChat = false; // 이모티콘만으로 이루어진 채팅 복원 제외 여부
+        this.autoRestoreEnabled = false; // 버튼 생성 시 1회 자동 복원 여부
+        this.autoRestorePeriod = 30; // 자동 복원 시 불러올 구간 (초)
         this.initialRestoreEndTime = null; // statVBox 재생성 시점의 복구 끝지점 (playbackTime, 초 단위)
         this.sharedTooltip = null; // 재사용할 공통 툴팁 요소
         this._tooltipHideTimeout = null; // 툴팁 mouseleave 시 지연 숨김용
@@ -55,6 +57,14 @@ export class SoopPrevChatViewer extends IVodSync {
                     this.excludeEmoticonOnlyChat = response.settings.soopExcludeEmoticonOnlyChat;
                     this.log('이모티콘만 복원 제외 설정 로드:', this.excludeEmoticonOnlyChat);
                 }
+                if (response.settings.soopAutoRestoreChat !== undefined) {
+                    this.autoRestoreEnabled = response.settings.soopAutoRestoreChat;
+                    this.log('자동 복원 설정 로드:', this.autoRestoreEnabled);
+                }
+                if (response.settings.soopAutoRestorePeriod !== undefined) {
+                    this.autoRestorePeriod = response.settings.soopAutoRestorePeriod;
+                    this.log(`자동 복원 구간 설정 로드: ${this.autoRestorePeriod}초`);
+                }
             }
         } catch (error) {
             this.log('복원 구간 설정 로드 실패:', error);
@@ -72,11 +82,13 @@ export class SoopPrevChatViewer extends IVodSync {
                 action: 'saveSettings',
                 settings: {
                     soopRestoreInterval: this.restoreInterval,
-                    soopExcludeEmoticonOnlyChat: this.excludeEmoticonOnlyChat
+                    soopExcludeEmoticonOnlyChat: this.excludeEmoticonOnlyChat,
+                    soopAutoRestoreChat: this.autoRestoreEnabled,
+                    soopAutoRestorePeriod: this.autoRestorePeriod
                 }
             });
             if (response && response.success) {
-                this.log(`복원 구간 설정 저장: ${this.restoreInterval}초, 이모티콘만 제외: ${this.excludeEmoticonOnlyChat}`);
+                this.log(`복원 구간 설정 저장: ${this.restoreInterval}초, 이모티콘만 제외: ${this.excludeEmoticonOnlyChat}, 자동 복원: ${this.autoRestoreEnabled} (${this.autoRestorePeriod}초)`);
             }
         } catch (error) {
             this.log('복원 구간 설정 저장 실패:', error);
@@ -187,12 +199,12 @@ export class SoopPrevChatViewer extends IVodSync {
             endTime
         };
         
-        this.addRestoreButton(chatArea, chatMemo);
+        this.addRestoreButton(chatArea, chatMemo, boxVstart);
         this.log(`채팅 초기화 감지 및 복원 구간 설정: ${this.formatTime(startTime)} ~ ${this.formatTime(endTime)}`);
     }
 
     // 복원 버튼 추가
-    addRestoreButton(chatArea, chatMemo) {
+    addRestoreButton(chatArea, chatMemo, boxVstart) {
         // 버튼 컨테이너 생성
         const buttonContainer = document.createElement('div');
         buttonContainer.style.cssText = 'display: flex; align-items: center; gap: 5px; margin: 10px; height:35px;';
@@ -256,6 +268,18 @@ export class SoopPrevChatViewer extends IVodSync {
         this.chatMemo = chatMemo;
         this.boxVstart = boxVstart;
         this.updateButtonText();
+        this.tryAutoRestoreOnButtonCreate();
+    }
+
+    // 자동 복원이 켜져 있으면 버튼 생성 직후 1회 복원 (재생 시점 변경으로 버튼이 다시 생길 때마다 1회)
+    tryAutoRestoreOnButtonCreate() {
+        if (!this.autoRestoreEnabled || !this.nextRestorePlan) return;
+
+        const { endTime } = this.nextRestorePlan;
+        const startTime = Math.max(0, endTime - this.autoRestorePeriod);
+        this.nextRestorePlan = { startTime, endTime };
+        this.log(`자동 복원 실행: ${this.formatTime(startTime)} ~ ${this.formatTime(endTime)}`);
+        this.restorePreviousChats();
     }
 
     // 채팅 복원 실행
@@ -945,6 +969,40 @@ export class SoopPrevChatViewer extends IVodSync {
         excludeEmoticonOnlyLabel.appendChild(excludeEmoticonOnlyCheck);
         excludeEmoticonOnlyLabel.appendChild(document.createTextNode('이모티콘만으로 이루어진 채팅 복원 제외'));
 
+        const autoRestoreLabel = document.createElement('label');
+        autoRestoreLabel.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; cursor: pointer;';
+        const autoRestoreCheck = document.createElement('input');
+        autoRestoreCheck.type = 'checkbox';
+        autoRestoreCheck.checked = this.autoRestoreEnabled;
+        autoRestoreLabel.appendChild(autoRestoreCheck);
+        autoRestoreLabel.appendChild(document.createTextNode('버튼 생성 시 자동 복원 (1회)'));
+
+        const autoRestorePeriodLabel = document.createElement('div');
+        autoRestorePeriodLabel.innerText = `자동 복원 구간: ${this.autoRestorePeriod}초`;
+        autoRestorePeriodLabel.id = 'vodsync-auto-restore-period-label';
+        autoRestorePeriodLabel.style.cssText = 'margin-bottom: 10px; font-size: 14px;';
+
+        const autoRestorePeriodSlider = document.createElement('input');
+        autoRestorePeriodSlider.type = 'range';
+        autoRestorePeriodSlider.min = '10';
+        autoRestorePeriodSlider.max = String(maxDuration || 300);
+        autoRestorePeriodSlider.step = '10';
+        autoRestorePeriodSlider.value = String(this.autoRestorePeriod);
+        autoRestorePeriodSlider.style.cssText = 'width: 100%; margin-bottom: 15px;';
+        autoRestorePeriodSlider.disabled = !this.autoRestoreEnabled;
+
+        const syncAutoRestorePeriodControls = (enabled) => {
+            autoRestorePeriodSlider.disabled = !enabled;
+            autoRestorePeriodLabel.style.opacity = enabled ? '1' : '0.5';
+        };
+        autoRestoreCheck.addEventListener('change', () => {
+            syncAutoRestorePeriodControls(autoRestoreCheck.checked);
+        });
+        autoRestorePeriodSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value, 10);
+            autoRestorePeriodLabel.innerText = `자동 복원 구간: ${value}초`;
+        });
+
         const buttonContainer = document.createElement('div');
         buttonContainer.style.cssText = 'display: flex; gap: 10px; justify-content: flex-end;';
 
@@ -976,7 +1034,9 @@ export class SoopPrevChatViewer extends IVodSync {
             const newInterval = parseInt(slider.value, 10);
             this.restoreInterval = newInterval;
             this.excludeEmoticonOnlyChat = excludeEmoticonOnlyCheck.checked;
-            this.log(`복원 구간 단위 변경: ${newInterval}초, 이모티콘만 제외: ${this.excludeEmoticonOnlyChat}`);
+            this.autoRestoreEnabled = autoRestoreCheck.checked;
+            this.autoRestorePeriod = parseInt(autoRestorePeriodSlider.value, 10);
+            this.log(`복원 구간 단위 변경: ${newInterval}초, 이모티콘만 제외: ${this.excludeEmoticonOnlyChat}, 자동 복원: ${this.autoRestoreEnabled} (${this.autoRestorePeriod}초)`);
 
             // 설정 저장
             await this.saveRestoreInterval();
@@ -998,6 +1058,9 @@ export class SoopPrevChatViewer extends IVodSync {
         popup.appendChild(label);
         popup.appendChild(slider);
         popup.appendChild(excludeEmoticonOnlyLabel);
+        popup.appendChild(autoRestoreLabel);
+        popup.appendChild(autoRestorePeriodLabel);
+        popup.appendChild(autoRestorePeriodSlider);
         popup.appendChild(buttonContainer);
 
         document.body.appendChild(popup);

@@ -8,7 +8,9 @@ export class SettingsManager {
             enableRpPanel: false,
             enableUpdateNotification: true,
             soopRestoreInterval: 30,
-            soopExcludeEmoticonOnlyChat: false
+            soopExcludeEmoticonOnlyChat: false,
+            soopAutoRestoreChat: false,
+            soopAutoRestorePeriod: 30
         };
         this.settings = { ...this.defaultSettings };
         this.isLoaded = false;

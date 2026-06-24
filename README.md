@@ -59,6 +59,10 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 - 새 기능: SOOP 다시보기 순 조회수 표시
   - 다시보기의 경우 조회수 숫자에 마우스를 올리면 순 조회수가 표시됩니다.<br/>
   ![](./screenshots/soop_reviewVOD_pureViewCount.png)
+- 이전 채팅 복원
+  - 재생 시점이 바뀌어 복원 버튼이 생성될 때 **1회 자동 복원**하는 옵션이 추가되었습니다. (기본값: 사용 안 함)
+  - 자동 복원 사용 여부와 자동 복원 구간은 설정(⚙️)에서 조절할 수 있습니다.<br/>
+  ![](./screenshots/soop_prevChatViewer_autoRestoreSetting.png)
 - 버그 수정
   - [타 플랫폼과 동기화] CHZZK 검색창이 보이지 않던 문제를 수정했습니다.
 
