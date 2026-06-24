@@ -35,6 +35,7 @@
                         <li><button type="button" role="tab" data-panel="panel-timeline">타임라인 댓글 동기화<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-editor">타임라인 편집기<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-veditor">편집 VOD 인터페이스<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-pure-view">순 조회수 표시<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-insert">현재 시간 삽입<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-prevchat">이전 채팅 복원<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-rp">RP 닉네임 패널</button></li>
@@ -215,6 +216,15 @@
                 <p class="video-embed-caption"><a href="https://vod.sooplive.com/player/191205121" target="_blank" rel="noopener noreferrer">SOOP에서 새 탭으로 열기</a></p>
             </section>
 
+            <section id="panel-pure-view" class="feature-panel" role="tabpanel">
+                <h2>순 조회수 표시</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> 다시보기의 조회수 영역에 마우스를 올리면 <strong>순 조회수</strong>를 확인할 수 있습니다.</p>
+                <ul>
+                    <li>일반 조회수 텍스트에 커서를 올리면 순 조회수 값이 툴팁으로 표시됩니다.</li>
+                </ul>
+                <img src="../screenshots/soop_reviewVOD_pureViewCount.png" alt="SOOP 다시보기 순 조회수 표시">
+            </section>
+
             <section id="panel-insert" class="feature-panel" role="tabpanel">
                 <h2>현재 시간 삽입</h2>
                 <p class="lead"><span class="platform-tag soop">SOOP</span> VOD 댓글 <strong>작성·수정</strong> 시, 재생 중인 시점을 타임라인 형식으로 넣을 수 있습니다.</p>
@@ -311,6 +321,9 @@
         editor: 'panel-editor',
         veditor: 'panel-veditor',
         'edit-vod': 'panel-veditor',
+        'pure-view': 'panel-pure-view',
+        'pureview': 'panel-pure-view',
+        'unique-view': 'panel-pure-view',
         insert: 'panel-insert',
         prevchat: 'panel-prevchat',
         rp: 'panel-rp',
