@@ -17,7 +17,6 @@ export class SoopPrevChatViewer extends IVodSync {
         this.signatureEmoticon = null; // 시그니처 이모티콘 데이터 캐시
         this.defaultEmoticon = null; // 기본 이모티콘 데이터 캐시
         this.emoticonReplaceMap = new Map(); // 이모티콘 ID -> 이미지 HTML 매핑
-        this.cachedChatData = []; // 캐시된 채팅 데이터 [{startTime, endTime, messages}, ...]
         this.restoreInterval = 30; // 복원 구간 단위 (초)
         this.excludeEmoticonOnlyChat = false; // 이모티콘만으로 이루어진 채팅 복원 제외 여부
         this.autoRestoreEnabled = false; // 버튼 생성 시 1회 자동 복원 여부
@@ -297,7 +296,7 @@ export class SoopPrevChatViewer extends IVodSync {
             const soopAPI = window.VODSync?.soopAPI;
             if (!soopAPI) throw new Error('SoopAPI를 찾을 수 없습니다.');
 
-            // vodInfo 먼저 요청해서 chat_duration 확인
+            // vodInfo: 이모티콘 매핑, 설정 UI max(chat_duration)
             if (!this.vodInfo) {
                 this.vodInfo = await soopAPI.GetSoopVodInfo(videoId);
                 this.signatureEmoticon = await soopAPI.GetSignitureEmoticon(this.vodInfo?.data?.bj_id);
@@ -307,18 +306,8 @@ export class SoopPrevChatViewer extends IVodSync {
                 this.log(`기본 이모티콘 로드 완료: ${this.defaultEmoticon}`);
             }
 
-            const chatDuration = this.vodInfo?.data?.chat_duration || 300; // 기본값 300초
+            const messages = await this.fetchChatData(videoId, startTime, endTime);
 
-            // 캐시에서 해당 구간 찾기
-            let messages = this.getCachedChatData(startTime, endTime);
-            
-            // 캐시에 없으면 요청해서 캐시에 저장
-            if (messages === null) {
-                const fetchStartTime = Math.max(0, endTime - chatDuration);
-                messages = await this.fetchAndCacheChatData(videoId, fetchStartTime, endTime, chatDuration);
-            }
-
-            // 실제 복원 구간만 필터링
             let filteredMessages = messages.filter(msg =>
                 msg.timestamp >= startTime * 1000 && msg.timestamp <= endTime * 1000
             );
@@ -365,49 +354,21 @@ export class SoopPrevChatViewer extends IVodSync {
         }
     }
 
-    // 캐시에서 해당 구간의 채팅 데이터 찾기
-    getCachedChatData(startTime, endTime) {
-        const startTimeMs = startTime * 1000;
-        const endTimeMs = endTime * 1000;
-
-        for (const cache of this.cachedChatData) {
-            const cacheStartMs = cache.startTime * 1000;
-            const cacheEndMs = cache.endTime * 1000;
-            
-            // 요청 구간이 캐시 구간에 완전히 포함되는지 확인
-            if (startTimeMs >= cacheStartMs && endTimeMs <= cacheEndMs) {
-                return cache.messages;
-            }
-        }
-        
-        return null; // 캐시에 없음
-    }
-
-    // 채팅 데이터를 가져와서 캐시에 저장
-    async fetchAndCacheChatData(videoId, fetchStartTime, endTime, chatDuration) {
+    // GetChatLog로 복원 구간 채팅 fetch 후 파싱 (chunk·HTTP 캐시는 SoopAPI)
+    async fetchChatData(videoId, startTimeSec, endTimeSec) {
         const soopAPI = window.VODSync?.soopAPI;
         if (!soopAPI) throw new Error('SoopAPI를 찾을 수 없습니다.');
         
-        this.log(`채팅 로그 요청: ${fetchStartTime}초 ~ ${endTime}초 (chat_duration: ${chatDuration}초)`);
+        this.log(`채팅 로그 요청: ${startTimeSec}초 ~ ${endTimeSec}초`);
         
-        const chatLogXml = await soopAPI.GetChatLog(videoId, fetchStartTime, endTime);
+        const chatLogXml = await soopAPI.GetChatLog(videoId, startTimeSec, endTimeSec);
         if (!chatLogXml) {
             this.warn('채팅 로그를 가져올 수 없습니다.');
             return [];
         }
 
-        // 필터링 없이 모든 메시지 파싱 (캐시용)
         const messages = this.parseChatLogXmlRaw(chatLogXml);
-        
-        // 캐시에 저장
-        this.cachedChatData.push({
-            startTime: fetchStartTime,
-            endTime: endTime,
-            messages: messages
-        });
-
-        this.log(`캐시 저장: ${fetchStartTime}초 ~ ${endTime}초 (${messages.length}개 메시지)`);
-        
+        this.log(`채팅 로그 수신: ${messages.length}개 메시지`);
         return messages;
     }
 

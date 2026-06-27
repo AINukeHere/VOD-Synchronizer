@@ -315,161 +315,100 @@ class SoopAPI extends IVodSync{
         return b;
     }
     /**
-     * @description Get Chat Log for specific time range (playbackTime 기준)
-     * @param {number | string} vodId 
-     * @param {number} startTime - 시작 시간 (초 단위, playbackTime)
-     * @param {number} endTime - 끝 시간 (초 단위, playbackTime)
+     * @description playbackTime 구간의 chat 로그 조회. VOD 전체 파일을 chat_duration 단위로 fetch 후 필터링.
+     * @param {number | string} vodId
+     * @param {number} startTimeSec - 시작 playbackTime (초)
+     * @param {number} endTimeSec - 끝 playbackTime (초)
      * @returns {Promise<string|null>} XML 문자열 또는 null
      */
-    async GetChatLog(vodId, startTime, endTime){
+    async GetChatLog(vodId, startTimeSec, endTimeSec){
         const vodInfo = await this.GetSoopVodInfo(vodId);
         if (vodInfo === null){
             this.warn(`GetChatLog: GetSoopVodInfo failed: ${vodId}`);
             return null;
         }
-        return this._GetChatLog(vodInfo, startTime, endTime);
+        return this._GetChatLog(vodInfo, startTimeSec, endTimeSec);
     }   
     
     /**
-     * @description VOD 정보에서 startTime과 endTime이 속한 file을 찾아 chat 로그 가져오기
+     * @description VOD 전체 파일을 chat_duration 단위로 chat 로그 fetch 후 playbackTime(초) 기준 필터링.
+     * GetSoopVodInfo 단위: `files[].duration`(ms), `chat_duration`(초). chat API `startTime`·XML `<t>`는 파일 내 초.
+     * chat API chunk 시작점은 파일 내 0부터 chat_duration 간격(0, 300, 600, …)으로만 유효함.
      * @param {Object} vodInfo - VOD 정보
-     * @param {number} startTime - 시작 시간 (초 단위, playbackTime)
-     * @param {number} endTime - 끝 시간 (초 단위, playbackTime)
+     * @param {number} startTimeSec - 시작 playbackTime (초)
+     * @param {number} endTimeSec - 끝 playbackTime (초)
      * @returns {Promise<string|null>} XML 문자열 또는 null
      */
-    async _GetChatLog(vodInfo, startTime, endTime){
+    async _GetChatLog(vodInfo, startTimeSec, endTimeSec){
         if (!vodInfo?.data?.files || vodInfo.data.files.length === 0) {
             this.warn("GetChatLog: files 정보가 없습니다.");
             return null;
         }
 
-        // 각 file의 시작 시간과 끝 시간 계산
-        const fileRanges = [];
-        let cumulativeTime = 0;
+        const chatFetchDurationSec = vodInfo.data.chat_duration || 300;
+        const chatFetchDurationMs = chatFetchDurationSec * 1000;
+        const startTimeMs = startTimeSec * 1000;
+        const endTimeMs = endTimeSec * 1000;
+        const fetchTasks = [];
+        let cumPlaybackMs = 0;
 
         for (const file of vodInfo.data.files) {
-            const fileDuration = file.duration ? Math.floor(file.duration / 1000) : 0; // 밀리초를 초로 변환
-            const fileStart = cumulativeTime;
-            const fileEnd = cumulativeTime + fileDuration;
-            
-            fileRanges.push({
-                file: file,
-                start: fileStart,
-                end: fileEnd,
-                duration: fileDuration
-            });
-            
-            cumulativeTime += fileDuration;
-        }
+            const fileDurationMs = file.duration > 0 ? file.duration : 0;
 
-        // startTime과 endTime이 속한 file 찾기
-        const startFileIndex = fileRanges.findIndex(range => startTime >= range.start && startTime < range.end);
-        let endFileIndex = fileRanges.findIndex(range => endTime >= range.start && endTime < range.end);
-        
-        // endTime이 마지막 파일의 끝을 넘어가는 경우, 마지막 파일로 설정
-        if (endFileIndex === -1 && fileRanges.length > 0) {
-            const lastRange = fileRanges[fileRanges.length - 1];
-            if (endTime >= lastRange.end) {
-                endFileIndex = fileRanges.length - 1;
-            }
-        }
+            if (file.chat && fileDurationMs > 0 && cumPlaybackMs < endTimeMs) {
+                const relativeStartInFileMs = Math.max(0, startTimeMs - cumPlaybackMs);
+                const relativeFetchStartBaseMs = Math.floor(relativeStartInFileMs / chatFetchDurationMs) * chatFetchDurationMs;
 
-        if (startFileIndex === -1) {
-            this.warn(`GetChatLog: startTime ${startTime}초에 해당하는 file을 찾을 수 없습니다.`);
-            return null;
-        }
-        
-        if (endFileIndex === -1) {
-            this.warn(`GetChatLog: endTime ${endTime}초에 해당하는 file을 찾을 수 없습니다.`);
-            return null;
-        }
-
-        // 같은 파일 내에 있는 경우
-        if (startFileIndex === endFileIndex) {
-            const fileRange = fileRanges[startFileIndex];
-            const relativeStartTime = startTime - fileRange.start;
-            if (!fileRange.file.chat) {
-                this.warn("GetChatLog: file에 chat URL이 없습니다.");
-                return null;
+                for (let relativeFetchStartMs = relativeFetchStartBaseMs; relativeFetchStartMs < fileDurationMs; relativeFetchStartMs += chatFetchDurationMs) {
+                    if (cumPlaybackMs + relativeFetchStartMs < endTimeMs) {
+                        fetchTasks.push({
+                            chatUrl: file.chat,
+                            relativeFetchStartSec: relativeFetchStartMs / 1000,
+                            fileStartPlaybackSec: Math.floor(cumPlaybackMs / 1000),
+                        });
+                    }
+                }
             }
 
-            const xml = await this._fetchChatLogFromFile(fileRange.file.chat, relativeStartTime);
-            if (!xml) return null;
-            
-            // playbackTime 기준으로 변환 및 필터링
-            return this._convertAndFilterChatLogByTimeRange(xml, startTime, endTime, fileRange.start);
+            cumPlaybackMs += fileDurationMs;
+            if (cumPlaybackMs >= endTimeMs) break;
         }
 
-        // 여러 파일에 걸쳐 있는 경우
-        const startFileRange = fileRanges[startFileIndex];
-        const endFileRange = fileRanges[endFileIndex];
-
-        if (!startFileRange.file.chat || !endFileRange.file.chat) {
-            this.warn("GetChatLog: file에 chat URL이 없습니다.");
+        if (fetchTasks.length === 0) {
+            this.warn("GetChatLog: 요청 구간에 해당하는 chat fetch가 없습니다.");
             return null;
         }
 
-        // 앞 파일: 상대적 시작시간부터 파일 끝까지
-        const startFileRelativeStart = startTime - startFileRange.start;
+        const xmlResults = await Promise.all(
+            fetchTasks.map((task) => this._fetchChatLogFromFile(task.chatUrl, task.relativeFetchStartSec))
+        );
 
-        // 뒷 파일: 파일 시작부터 상대적 끝시간까지
-        const endFileRelativeStart = 0;
-
-        // 두 파일에서 각각 가져오기
-        const [startFileXml, endFileXml] = await Promise.all([
-            this._fetchChatLogFromFile(startFileRange.file.chat, startFileRelativeStart),
-            this._fetchChatLogFromFile(endFileRange.file.chat, endFileRelativeStart)
-        ]);
-
-        // XML 합치기
         let mergedXml = null;
-        if (!startFileXml && !endFileXml) {
-            return null;
-        } else if (!startFileXml) {
-            mergedXml = endFileXml;
-        } else if (!endFileXml) {
-            mergedXml = startFileXml;
-        } else {
-            mergedXml = this._mergeChatLogXml(startFileXml, endFileXml);
+        for (let i = 0; i < fetchTasks.length; i++) {
+            const xml = xmlResults[i];
+            if (!xml) continue;
+
+            const filtered = this._convertAndFilterChatLogByTimeRange(
+                xml, startTimeSec, endTimeSec, fetchTasks[i].fileStartPlaybackSec
+            );
+            if (!filtered) continue;
+
+            mergedXml = mergedXml ? this._mergeChatLogXml(mergedXml, filtered) : filtered;
         }
 
-        if (!mergedXml) return null;
-
-        // 여러 파일에 걸쳐 있으므로 각 파일의 시작 시간을 고려하여 변환 및 필터링
-        // 앞 파일의 채팅만 변환 및 필터링
-        let filteredStartXml = null;
-        if (startFileXml) {
-            filteredStartXml = this._convertAndFilterChatLogByTimeRange(startFileXml, startTime, endTime, startFileRange.start);
-        }
-
-        // 뒷 파일의 채팅만 변환 및 필터링
-        let filteredEndXml = null;
-        if (endFileXml) {
-            filteredEndXml = this._convertAndFilterChatLogByTimeRange(endFileXml, startTime, endTime, endFileRange.start);
-        }
-
-        // 필터링된 XML 합치기
-        if (!filteredStartXml && !filteredEndXml) {
-            return null;
-        } else if (!filteredStartXml) {
-            return filteredEndXml;
-        } else if (!filteredEndXml) {
-            return filteredStartXml;
-        } else {
-            return this._mergeChatLogXml(filteredStartXml, filteredEndXml);
-        }
+        return mergedXml;
     }
 
     /**
      * @description 특정 파일의 chat URL에서 chat 로그 가져오기
      * @param {string} chatUrl - chat URL
-     * @param {number} relativeStartTime - 파일 내 상대적 시작 시간 (초)
+     * @param {number} relativeStartSec - 파일 내 상대 playbackTime (초, chat API startTime 파라미터)
      * @returns {Promise<string|null>} XML 문자열 또는 null
      */
-    async _fetchChatLogFromFile(chatUrl, relativeStartTime) {
+    async _fetchChatLogFromFile(chatUrl, relativeStartSec) {
         try {
             const baseUrl = new URL(chatUrl);
-            baseUrl.searchParams.set("startTime", relativeStartTime);
+            baseUrl.searchParams.set("startTime", relativeStartSec);
             const url = baseUrl.toString();
             const cacheKey = `_fetchChatLogFromFile:${url}`;
             const cached = this._getCached(cacheKey);
@@ -491,14 +430,14 @@ class SoopAPI extends IVodSync{
     }
 
     /**
-     * @description XML에서 file 기준 timestamp를 전역 playbackTime으로 변환하고 특정 시간 범위의 채팅만 필터링
+     * @description XML `<t>`(파일 내 초)를 playbackTime(초)으로 변환하고 구간 필터링
      * @param {string} xml - XML 문자열
-     * @param {number} startTime - 시작 시간 (playbackTime, 초)
-     * @param {number} endTime - 끝 시간 (playbackTime, 초)
-     * @param {number} fileStartTime - 파일의 시작 시간 (playbackTime, 초)
+     * @param {number} startTimeSec - 시작 playbackTime (초)
+     * @param {number} endTimeSec - 끝 playbackTime (초)
+     * @param {number} fileStartPlaybackSec - 해당 파일의 시작 playbackTime (초)
      * @returns {string} 변환 및 필터링된 XML 문자열
      */
-    _convertAndFilterChatLogByTimeRange(xml, startTime, endTime, fileStartTime) {
+    _convertAndFilterChatLogByTimeRange(xml, startTimeSec, endTimeSec, fileStartPlaybackSec) {
         try {
             const parser = new DOMParser();
             const doc = parser.parseFromString(xml, 'text/xml');
@@ -522,24 +461,22 @@ class SoopAPI extends IVodSync{
                     return;
                 }
 
-                const relativeTimestamp = parseFloat(tTag.textContent);
-                if (isNaN(relativeTimestamp)) {
+                const relativeTimestampSec = parseFloat(tTag.textContent);
+                if (isNaN(relativeTimestampSec)) {
                     // 타임스탬프가 유효하지 않으면 제거
                     chat.remove();
                     return;
                 }
 
-                // 파일 내 상대적 시간을 playbackTime으로 변환
-                const playbackTime = fileStartTime + relativeTimestamp;
+                // 파일 내 상대 초 → playbackTime(초)
+                const playbackTimeSec = fileStartPlaybackSec + relativeTimestampSec;
 
-                // startTime과 endTime 사이에 있지 않으면 제거
-                if (playbackTime < startTime || playbackTime > endTime) {
+                if (playbackTimeSec < startTimeSec || playbackTimeSec > endTimeSec) {
                     chat.remove();
                     return;
                 }
 
-                // <t> 태그의 값을 playbackTime으로 업데이트
-                tTag.textContent = playbackTime.toString();
+                tTag.textContent = playbackTimeSec.toString();
             });
 
             // XML 문자열로 변환
@@ -2838,7 +2775,6 @@ class TimelineCommentProcessorBase extends IVodSync {
         this.signatureEmoticon = null; // 시그니처 이모티콘 데이터 캐시
         this.defaultEmoticon = null; // 기본 이모티콘 데이터 캐시
         this.emoticonReplaceMap = new Map(); // 이모티콘 ID -> 이미지 HTML 매핑
-        this.cachedChatData = []; // 캐시된 채팅 데이터 [{startTime, endTime, messages}, ...]
         this.restoreInterval = 30; // 복원 구간 단위 (초)
         this.excludeEmoticonOnlyChat = false; // 이모티콘만으로 이루어진 채팅 복원 제외 여부
         this.autoRestoreEnabled = false; // 버튼 생성 시 1회 자동 복원 여부
@@ -3118,7 +3054,7 @@ class TimelineCommentProcessorBase extends IVodSync {
             const soopAPI = window.VODSync?.soopAPI;
             if (!soopAPI) throw new Error('SoopAPI를 찾을 수 없습니다.');
 
-            // vodInfo 먼저 요청해서 chat_duration 확인
+            // vodInfo: 이모티콘 매핑, 설정 UI max(chat_duration)
             if (!this.vodInfo) {
                 this.vodInfo = await soopAPI.GetSoopVodInfo(videoId);
                 this.signatureEmoticon = await soopAPI.GetSignitureEmoticon(this.vodInfo?.data?.bj_id);
@@ -3128,18 +3064,8 @@ class TimelineCommentProcessorBase extends IVodSync {
                 this.log(`기본 이모티콘 로드 완료: ${this.defaultEmoticon}`);
             }
 
-            const chatDuration = this.vodInfo?.data?.chat_duration || 300; // 기본값 300초
+            const messages = await this.fetchChatData(videoId, startTime, endTime);
 
-            // 캐시에서 해당 구간 찾기
-            let messages = this.getCachedChatData(startTime, endTime);
-            
-            // 캐시에 없으면 요청해서 캐시에 저장
-            if (messages === null) {
-                const fetchStartTime = Math.max(0, endTime - chatDuration);
-                messages = await this.fetchAndCacheChatData(videoId, fetchStartTime, endTime, chatDuration);
-            }
-
-            // 실제 복원 구간만 필터링
             let filteredMessages = messages.filter(msg =>
                 msg.timestamp >= startTime * 1000 && msg.timestamp <= endTime * 1000
             );
@@ -3186,49 +3112,21 @@ class TimelineCommentProcessorBase extends IVodSync {
         }
     }
 
-    // 캐시에서 해당 구간의 채팅 데이터 찾기
-    getCachedChatData(startTime, endTime) {
-        const startTimeMs = startTime * 1000;
-        const endTimeMs = endTime * 1000;
-
-        for (const cache of this.cachedChatData) {
-            const cacheStartMs = cache.startTime * 1000;
-            const cacheEndMs = cache.endTime * 1000;
-            
-            // 요청 구간이 캐시 구간에 완전히 포함되는지 확인
-            if (startTimeMs >= cacheStartMs && endTimeMs <= cacheEndMs) {
-                return cache.messages;
-            }
-        }
-        
-        return null; // 캐시에 없음
-    }
-
-    // 채팅 데이터를 가져와서 캐시에 저장
-    async fetchAndCacheChatData(videoId, fetchStartTime, endTime, chatDuration) {
+    // GetChatLog로 복원 구간 채팅 fetch 후 파싱 (chunk·HTTP 캐시는 SoopAPI)
+    async fetchChatData(videoId, startTimeSec, endTimeSec) {
         const soopAPI = window.VODSync?.soopAPI;
         if (!soopAPI) throw new Error('SoopAPI를 찾을 수 없습니다.');
         
-        this.log(`채팅 로그 요청: ${fetchStartTime}초 ~ ${endTime}초 (chat_duration: ${chatDuration}초)`);
+        this.log(`채팅 로그 요청: ${startTimeSec}초 ~ ${endTimeSec}초`);
         
-        const chatLogXml = await soopAPI.GetChatLog(videoId, fetchStartTime, endTime);
+        const chatLogXml = await soopAPI.GetChatLog(videoId, startTimeSec, endTimeSec);
         if (!chatLogXml) {
             this.warn('채팅 로그를 가져올 수 없습니다.');
             return [];
         }
 
-        // 필터링 없이 모든 메시지 파싱 (캐시용)
         const messages = this.parseChatLogXmlRaw(chatLogXml);
-        
-        // 캐시에 저장
-        this.cachedChatData.push({
-            startTime: fetchStartTime,
-            endTime: endTime,
-            messages: messages
-        });
-
-        this.log(`캐시 저장: ${fetchStartTime}초 ~ ${endTime}초 (${messages.length}개 메시지)`);
-        
+        this.log(`채팅 로그 수신: ${messages.length}개 메시지`);
         return messages;
     }
 

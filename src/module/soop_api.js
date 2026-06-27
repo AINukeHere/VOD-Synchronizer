@@ -275,6 +275,7 @@ export class SoopAPI extends IVodSync{
     /**
      * @description VOD 전체 파일을 chat_duration 단위로 chat 로그 fetch 후 playbackTime(초) 기준 필터링.
      * GetSoopVodInfo 단위: `files[].duration`(ms), `chat_duration`(초). chat API `startTime`·XML `<t>`는 파일 내 초.
+     * chat API chunk 시작점은 파일 내 0부터 chat_duration 간격(0, 300, 600, …)으로만 유효함.
      * @param {Object} vodInfo - VOD 정보
      * @param {number} startTimeSec - 시작 playbackTime (초)
      * @param {number} endTimeSec - 끝 playbackTime (초)
@@ -297,13 +298,14 @@ export class SoopAPI extends IVodSync{
             const fileDurationMs = file.duration > 0 ? file.duration : 0;
 
             if (file.chat && fileDurationMs > 0 && cumPlaybackMs < endTimeMs) {
-                const relativeFetchStartBaseMs = Math.floor(Math.max(0, startTimeMs - cumPlaybackMs));
+                const relativeStartInFileMs = Math.max(0, startTimeMs - cumPlaybackMs);
+                const relativeFetchStartBaseMs = Math.floor(relativeStartInFileMs / chatFetchDurationMs) * chatFetchDurationMs;
 
                 for (let relativeFetchStartMs = relativeFetchStartBaseMs; relativeFetchStartMs < fileDurationMs; relativeFetchStartMs += chatFetchDurationMs) {
                     if (cumPlaybackMs + relativeFetchStartMs < endTimeMs) {
                         fetchTasks.push({
                             chatUrl: file.chat,
-                            relativeFetchStartSec: Math.floor(relativeFetchStartMs / 1000),
+                            relativeFetchStartSec: relativeFetchStartMs / 1000,
                             fileStartPlaybackSec: Math.floor(cumPlaybackMs / 1000),
                         });
                     }
