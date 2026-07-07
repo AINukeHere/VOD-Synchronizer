@@ -250,7 +250,11 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
 
     // 기능 초기화 실행
     initializeFeatures().catch(error => {
-        log('기능 초기화 중 오류 발생:', error);
+        const detail = error instanceof Error
+            ? `${error.name}: ${error.message}\n${error.stack || ''}`
+            : String(error);
+        log('기능 초기화 중 오류 발생:', detail);
+        console.error('[soop_content.js:top] 기능 초기화 중 오류:', error);
     });
 
 }
