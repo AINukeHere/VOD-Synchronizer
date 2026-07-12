@@ -276,8 +276,8 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const reviewDataFiles = this.vodInfo.originVodInfo === null ? this.vodInfo.files : this.vodInfo.originVodInfo.files;
         const deltaTimeSec = this.vodInfo.originVodInfo === null ? 0 : this.vodInfo.originVodInfo.originVodChangeSecond;
         
-        // 시간오차가 임계값 이하이거나 다시보기 구성 파일이 1개인 경우
-        if (!this.isEditedVod || reviewDataFiles.length === 1){
+        // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
+        if (!this.isEditedVod && reviewDataFiles.length === 1){
             return new Date(reviewStartDate.getTime() + (totalPlaybackSec + deltaTimeSec)*1000);
         }
 
@@ -309,8 +309,8 @@ export class SoopTimestampManager extends TimestampManagerBase {
         const reviewDataFiles = this.vodInfo.originVodInfo === null ? this.vodInfo.files : this.vodInfo.originVodInfo.files;
         const deltaTimeSec = this.vodInfo.originVodInfo === null ? 0 : this.vodInfo.originVodInfo.originVodChangeSecond;
         
-        // 시간오차가 임계값 이하이거나 다시보기 구성 파일이 1개인 경우
-        if (!this.isEditedVod || reviewDataFiles.length === 1){
+        // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
+        if (!this.isEditedVod && reviewDataFiles.length === 1){
             const temp = reviewStartDate.getTime();
             const temp2 = (globalTS - temp) / 1000;
             return Math.floor(temp2) - deltaTimeSec;
