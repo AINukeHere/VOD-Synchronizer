@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.1.2
+// @version      1.6.1.3
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -1365,10 +1365,10 @@ class SoopAPI extends IVodSync{
         const reviewDataFiles = this.vodInfo.originVodInfo === null ? this.vodInfo.files : this.vodInfo.originVodInfo.files;
         const deltaTimeSec = this.vodInfo.originVodInfo === null ? 0 : this.vodInfo.originVodInfo.originVodChangeSecond;
         
-        // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
-        if (!this.isEditedVod && reviewDataFiles.length === 1){
-            return new Date(reviewStartDate.getTime() + (totalPlaybackSec + deltaTimeSec)*1000);
-        }
+        // // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
+        // if (this.vodInfo.type == 'REVIEW' && !this.isEditedVod && reviewDataFiles.length === 1){
+        //     return new Date(reviewStartDate.getTime() + (totalPlaybackSec + deltaTimeSec)*1000);
+        // }
 
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
             this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
@@ -1388,7 +1388,7 @@ class SoopAPI extends IVodSync{
                 continue;
             }
             const startTime = new Date(file.file_start);
-            return new Date(startTime.getTime() + localPlaybackTime);
+            return new Date(startTime.getTime() + localPlaybackTime + deltaTimeSec*1000);
         }
         return null;
     }
@@ -1399,11 +1399,11 @@ class SoopAPI extends IVodSync{
         const deltaTimeSec = this.vodInfo.originVodInfo === null ? 0 : this.vodInfo.originVodInfo.originVodChangeSecond;
         
         // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
-        if (!this.isEditedVod && reviewDataFiles.length === 1){
-            const temp = reviewStartDate.getTime();
-            const temp2 = (globalTS - temp) / 1000;
-            return Math.floor(temp2) - deltaTimeSec;
-        }
+        // if (this.vodInfo.type == 'REVIEW' && !this.isEditedVod && reviewDataFiles.length === 1){
+        //     const temp = reviewStartDate.getTime();
+        //     const temp2 = (globalTS - temp) / 1000;
+        //     return Math.floor(temp2) - deltaTimeSec;
+        // }
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
             this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
