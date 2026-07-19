@@ -58,12 +58,11 @@ export class ChzzkVODLinker extends VODLinkerBase{
         // if (!window.location.pathname.includes('/video/')) return; // 다시보기 페이지가 아니면 버튼 생성 X
         const searchInputResetBtn = document.querySelector('button[type="reset"]'); // CHZZK 검색창 초기화 버튼 (X 버튼)
         if (!searchInputResetBtn) return [];
-        const targets = document.querySelectorAll('#header div._is_focus_pmmgc_32 > div > ul > li > a');
+        const targets = document.querySelectorAll('div[class^="_autocomplete_"] > ul > li > a'); // 자동완성 검색결과들
         for (const target of targets) {
             const keyword = decodeURI(target.href.split('=')[1]);
             target.dataset.keyword = keyword;
         }
-        // const targets = document.querySelectorAll('div[class^="search_container__"] > div > ul > li > a');
         return targets;
     }
     /**
