@@ -10,7 +10,7 @@ const DEFAULT_SOOP_URLS = {
     AFEVENT2_ORIGIN: 'https://afevent2.sooplive.com',
     LIVE_ORIGIN: 'https://live.sooplive.com',
     API_M_ORIGIN: 'https://api.m.sooplive.com',
-    API_CHANNEL_ORIGIN: 'https://api-channel.sooplive.co.kr',
+    API_CHANNEL_ORIGIN: 'https://api-channel.sooplive.com',
     SCH_ORIGIN: 'https://sch.sooplive.com',
     CHAPI_ORIGIN: 'https://chapi.sooplive.com',
     ST_ORIGIN: 'https://st.sooplive.com',
@@ -97,6 +97,41 @@ export class SoopAPI extends IVodSync{
         });
         if (res.status !== 200) return null;
         const b = await res.json();
+        this._setCache(cacheKey, b);
+        return b;
+    }
+
+    /**
+     * 스트리머 라이브 방송 정보 조회. 방송 중이 아니면 null.
+     * @param {string} streamerId 스트리머 userId (예: chebi2)
+     * @returns {Promise<object|null>} broadNo·broadTitle 등, 오프라인이면 null
+     */
+    async GetChannelBroad(streamerId) {
+        if (!streamerId) return null;
+        const sid = String(streamerId);
+        const cacheKey = `GetChannelBroad:${sid}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+        const url = `${this.SoopUrls.API_CHANNEL_ORIGIN}/v1.1/channel/${encodeURIComponent(sid)}/home/section/broad`;
+        const res = await fetch(url, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) return null;
+        const text = await res.text();
+        // 오프라인이면 빈 본문
+        if (!text || !text.trim()) return null;
+        let b;
+        try {
+            b = JSON.parse(text);
+        } catch (_e) {
+            return null;
+        }
+        if (!b || typeof b !== 'object' || b.broadNo == null) return null;
         this._setCache(cacheKey, b);
         return b;
     }

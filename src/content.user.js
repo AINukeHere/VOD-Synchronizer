@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.1.4
+// @version      1.6.1.5
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -1375,10 +1375,10 @@ class SoopAPI extends IVodSync{
             return null;
         }
         
-        let cumulativeTime = 0;
+        let cumulativeTime = 0
         for (let i = 0; i < reviewDataFiles.length; ++i){
             const file = reviewDataFiles[i];
-            const localPlaybackTime = totalPlaybackSec*1000 - cumulativeTime;
+            const localPlaybackTime = totalPlaybackSec*1000 + deltaTimeSec*1000- cumulativeTime;
             const hour = Math.floor(localPlaybackTime / 3600000);
             const minute = Math.floor((localPlaybackTime % 3600000) / 60000);
             const second = Math.floor((localPlaybackTime % 60000) / 1000);
@@ -1388,7 +1388,7 @@ class SoopAPI extends IVodSync{
                 continue;
             }
             const startTime = new Date(file.file_start);
-            return new Date(startTime.getTime() + localPlaybackTime + deltaTimeSec*1000);
+            return new Date(startTime.getTime() + localPlaybackTime);
         }
         return null;
     }

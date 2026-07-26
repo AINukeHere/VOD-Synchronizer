@@ -286,10 +286,10 @@ export class SoopTimestampManager extends TimestampManagerBase {
             return null;
         }
         
-        let cumulativeTime = 0;
+        let cumulativeTime = 0
         for (let i = 0; i < reviewDataFiles.length; ++i){
             const file = reviewDataFiles[i];
-            const localPlaybackTime = totalPlaybackSec*1000 - cumulativeTime;
+            const localPlaybackTime = totalPlaybackSec*1000 + deltaTimeSec*1000- cumulativeTime;
             const hour = Math.floor(localPlaybackTime / 3600000);
             const minute = Math.floor((localPlaybackTime % 3600000) / 60000);
             const second = Math.floor((localPlaybackTime % 60000) / 1000);
@@ -299,7 +299,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
                 continue;
             }
             const startTime = new Date(file.file_start);
-            return new Date(startTime.getTime() + localPlaybackTime + deltaTimeSec*1000);
+            return new Date(startTime.getTime() + localPlaybackTime);
         }
         return null;
     }
