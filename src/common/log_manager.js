@@ -280,8 +280,13 @@ const MODAL_HTML_TEMPLATE = `
     </style>
 `;
 
+/** 이 버전 미만으로만 설치 완료 안내를 본 경우(또는 미완료) 안내를 다시 띄운다. */
+const SETUP_TARGET_VERSION = '1.7.0.0';
+const SETUP_COMPLETED_KEY = 'vodSyncSetupCompletedVersion';
+const FEATURE_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
+
 // 동적 모달 생성 및 표시 (iframe 방식)
-function createAndShowUpdateModal(version) {
+function createAndShowUpdateModal(version, onClose) {
     logToExtension(`업데이트 알림 표시됨: v${version}`);
     // 기존 모달이 있으면 제거
     const existingModal = document.getElementById('vodSyncUpdateModal');
@@ -306,9 +311,14 @@ function createAndShowUpdateModal(version) {
         
         // 모달 닫기 이벤트 설정
         const closeBtn = modal.querySelector('.vod-sync-close');
+        let closed = false;
         
         const closeModal = () => {
+            if (closed) return;
+            closed = true;
             modal.remove();
+            document.removeEventListener('keydown', handleEscKey);
+            if (typeof onClose === 'function') onClose();
         };
         
         closeBtn.onclick = closeModal;
@@ -322,11 +332,104 @@ function createAndShowUpdateModal(version) {
         const handleEscKey = (e) => {
             if (e.key === 'Escape') {
                 closeModal();
-                document.removeEventListener('keydown', handleEscKey);
             }
         };
         document.addEventListener('keydown', handleEscKey);
+    } else if (typeof onClose === 'function') {
+        onClose();
     }
+}
+
+async function getSetupCompletedVersion() {
+    try {
+        const result = await chrome.storage.sync.get(SETUP_COMPLETED_KEY);
+        return result[SETUP_COMPLETED_KEY] || null;
+    } catch (_e) {
+        return null;
+    }
+}
+
+async function setSetupCompletedVersion(version) {
+    try {
+        await chrome.storage.sync.set({ [SETUP_COMPLETED_KEY]: version });
+    } catch (error) {
+        logToExtension('설치 완료 안내 표시 버전 저장 실패:', error);
+    }
+}
+
+async function maybeShowSetupModal() {
+    if (window !== top) return;
+    const completed = await getSetupCompletedVersion();
+    if (completed && compareVersions(completed, SETUP_TARGET_VERSION) >= 0) {
+        return;
+    }
+    createAndShowSetupModal();
+}
+
+// 최초 설치(또는 안내 미완료) 시: 설치 완료 문구와 문서/설정 새 탭 버튼만 보여 준다.
+function createAndShowSetupModal() {
+    const existing = document.getElementById('vodSyncSetupModal');
+    if (existing) existing.remove();
+
+    document.body.insertAdjacentHTML('beforeend', `
+    <div id="vodSyncSetupModal" style="
+        position: fixed; z-index: 999998; left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="background:#fff; border-radius:10px; width:min(440px,92vw); max-height:90vh; overflow:auto;
+            box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            <div style="background:linear-gradient(135deg,#007bff,#0056b3); color:#fff; padding:14px 18px; border-radius:10px 10px 0 0;">
+                <h2 style="margin:0; font-size:18px;">VOD Master 설치 완료</h2>
+            </div>
+            <div style="padding:20px 18px;">
+                <p style="margin:0 0 18px; font-size:15px; color:#333; line-height:1.55;">
+                    VOD Master 설치가 완료되었습니다.<br>
+                    기능 설명과 설정은 아래 버튼으로 새 탭에서 열 수 있습니다.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button id="vodSyncSetupSettingsBtn" type="button" style="
+                        background:#007bff; color:#fff; border:none; border-radius:6px;
+                        padding:12px 16px; font-size:14px; cursor:pointer; width:100%;">설정 페이지 열기</button>
+                    <button id="vodSyncSetupDocsBtn" type="button" style="
+                        background:#fff; color:#007bff; border:1px solid #007bff; border-radius:6px;
+                        padding:12px 16px; font-size:14px; cursor:pointer; width:100%;">기능 설명 문서 열기</button>
+                    <button id="vodSyncSetupCloseBtn" type="button" style="
+                        background:transparent; color:#666; border:none; border-radius:6px;
+                        padding:8px 16px; font-size:13px; cursor:pointer; width:100%;">한국인은 이런 거 안 봐요, 닫을래요</button>
+                </div>
+            </div>
+        </div>
+    </div>`);
+
+    const modal = document.getElementById('vodSyncSetupModal');
+    const closeBtn = document.getElementById('vodSyncSetupCloseBtn');
+    // 설정·문서를 열어 본 뒤에는 닫기 문구를 부드럽게 바꾼다.
+    const markExplored = () => {
+        closeBtn.textContent = '봤어요, 이제 닫을래요';
+    };
+    const closeAndMarkDone = async () => {
+        try {
+            await setSetupCompletedVersion(SETUP_TARGET_VERSION);
+            logToExtension('설치 완료 안내 표시 완료');
+        } catch (error) {
+            logToExtension('설치 완료 안내 처리 실패:', error);
+        }
+        modal.remove();
+    };
+
+    document.getElementById('vodSyncSetupDocsBtn').onclick = () => {
+        window.open(FEATURE_DOCS_URL, '_blank', 'noopener,noreferrer');
+        markExplored();
+    };
+    // 웹 페이지에서 chrome-extension:// 을 window.open 하면 차단되므로 백그라운드에 위임
+    document.getElementById('vodSyncSetupSettingsBtn').onclick = () => {
+        chrome.runtime.sendMessage({ action: 'openSettings' });
+        markExplored();
+    };
+    closeBtn.onclick = closeAndMarkDone;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeAndMarkDone();
+    };
 }
 
 
@@ -379,28 +482,43 @@ async function checkForUpdates() {
     try {
         const currentVersion = getCurrentVersion();
         const lastCheckedVersion = await getLastCheckedVersion();
+        let showedUpdateModal = false;
         
         logToExtension(`업데이트 확인 중... 현재 버전: ${currentVersion}, 마지막 확인: ${lastCheckedVersion || '없음'}`);
         
         // 처음 설치하거나 버전이 다른 경우
         if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
-            logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
-            // 네 번째 자릿수만 바뀐 경우 알림 표시 안 함 (예: 1.5.7.0 → 1.5.7.1)
-            const showNotification = !lastCheckedVersion || shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
+            const isFirstInstall = !lastCheckedVersion;
+            if (isFirstInstall) {
+                logToExtension(`첫 설치 감지: v${currentVersion} — 업데이트 알림 대신 설치 완료 안내 표시`);
+            } else {
+                logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
+            }
+            // 첫 설치는 업데이트 알림 생략. 네 번째 자릿수만 바뀐 경우도 알림 표시 안 함.
+            const showNotification = !isFirstInstall && shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
             if (showNotification) {
                 const settings = await getSettings();
                 if (settings.enableUpdateNotification) {
-                    createAndShowUpdateModal(currentVersion);
+                    showedUpdateModal = true;
+                    // 업데이트 알림을 닫은 뒤 설치 완료 안내(미완료 시)
+                    createAndShowUpdateModal(currentVersion, () => {
+                        maybeShowSetupModal();
+                    });
                 } else {
                     logToExtension(`업데이트 알림이 비활성화되어 있습니다.`);
                 }
-            } else {
+            } else if (!isFirstInstall) {
                 logToExtension(`네 번째 세그먼트만 변경된 업데이트(v${currentVersion})라 알림을 표시하지 않습니다.`);
             }
             // 현재 버전을 마지막 확인 버전으로 저장
             await setLastCheckedVersion(currentVersion);
         } else {
             logToExtension(`업데이트 없음. 현재 버전: ${currentVersion}`);
+        }
+
+        // 업데이트 알림을 안 띄운 경우에도 설치 완료 안내가 필요하면 표시
+        if (!showedUpdateModal) {
+            await maybeShowSetupModal();
         }
     } catch (error) {
         errorToExtension('업데이트 확인 중 오류 발생:', error);

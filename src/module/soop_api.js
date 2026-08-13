@@ -542,6 +542,334 @@ export class SoopAPI extends IVodSync{
     }
 
     /**
+     * VOD UP 하기. 라이브 중 VOD 시청 알려주기에 사용.
+     * @param {object} opts
+     * @param {string|number} opts.stationNo
+     * @param {string|number} opts.titleNo nPKno
+     * @param {string|number} [opts.boardType=105]
+     * @param {string} [opts.referer] 생략 시 플레이어 URL
+     * @returns {Promise<object|null>}
+     */
+    async LikeVodTitle(opts = {}) {
+        const {
+            stationNo,
+            titleNo,
+            boardType = 105,
+            referer: refererOpt,
+        } = opts;
+        if (stationNo == null || titleNo == null) {
+            this.error('LikeVodTitle: stationNo, titleNo 필수');
+            return null;
+        }
+        const tn = String(titleNo);
+        const referer =
+            typeof refererOpt === 'string' && refererOpt.length > 0
+                ? refererOpt
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+        const url = new URL(`${this.SoopUrls.STBBS_ORIGIN}/api/like_action.php`);
+        url.searchParams.set('szType', 'addTitle');
+        url.searchParams.set('nStationNo', String(stationNo));
+        url.searchParams.set('nPKno', tn);
+        url.searchParams.set('nBoardType', String(boardType));
+
+        const res = await fetch(url.toString(), {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) {
+            this.error('LikeVodTitle HTTP', res.status);
+            return null;
+        }
+        let b;
+        try {
+            b = await res.json();
+        } catch (_e) {
+            this.warn('LikeVodTitle: JSON 파싱 실패');
+            return null;
+        }
+        // result/RESULT === 1(또는 true)만 성공으로 본다.
+        const likeOk = b && typeof b === 'object'
+            && [b.result, b.RESULT, b.CHANNEL?.RESULT, b.CHANNEL?.result]
+                .some((v) => v === 1 || v === true || String(v) === '1');
+        if (!likeOk) {
+            this.warn('LikeVodTitle 실패 응답:', b);
+            return null;
+        }
+        return b;
+    }
+
+    /**
+     * VOD 댓글 등록 (클립·캐치·편집·업로드 등). 라이브 중 VOD 시청 알려주기에 사용.
+     * @param {object} opts
+     * @param {string|number} opts.stationNo
+     * @param {string|number} opts.bbsNo
+     * @param {string|number} opts.titleNo
+     * @param {string} opts.bjId
+     * @param {string} opts.content 댓글 본문
+     * @param {string} opts.fileType CLIP|CATCH|EDITOR|NORMAL|REVIEW 등
+     * @param {string|number} [opts.boardType=105]
+     * @param {string|number} [opts.parentCommentNo=0]
+     * @param {string|number} [opts.commentPhotoType=1]
+     * @param {string} [opts.commentPhoto='']
+     * @param {string} [opts.referer] 생략 시 플레이어 URL
+     * @returns {Promise<object|null>}
+     */
+    async WriteVodComment(opts = {}) {
+        const {
+            stationNo,
+            bbsNo,
+            titleNo,
+            bjId,
+            content,
+            fileType,
+            boardType = 105,
+            parentCommentNo = 0,
+            commentPhotoType = 1,
+            commentPhoto = '',
+            referer: refererOpt,
+        } = opts;
+        if (stationNo == null || bbsNo == null || titleNo == null || !bjId || !fileType) {
+            this.error('WriteVodComment: stationNo, bbsNo, titleNo, bjId, fileType 필수');
+            return null;
+        }
+        if (typeof content !== 'string' || !content.trim()) {
+            this.error('WriteVodComment: content 필수');
+            return null;
+        }
+        const tn = String(titleNo);
+        const referer =
+            typeof refererOpt === 'string' && refererOpt.length > 0
+                ? refererOpt
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+        const body = new URLSearchParams({
+            nStationNo: String(stationNo),
+            nBbsNo: String(bbsNo),
+            nTitleNo: tn,
+            bj_id: String(bjId),
+            nBoardType: String(boardType),
+            szContent: content,
+            szAction: 'write',
+            nParentCommentNo: String(parentCommentNo),
+            nCommentPhotoType: String(commentPhotoType),
+            szCommentPhoto: String(commentPhoto ?? ''),
+            szFileType: String(fileType),
+        });
+        const res = await fetch(`${this.SoopUrls.STBBS_ORIGIN}/api/bbs_memo_action.php`, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                'content-type': 'application/x-www-form-urlencoded',
+                Referer: referer,
+            },
+            body: body.toString(),
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) {
+            this.error('WriteVodComment HTTP', res.status);
+            return null;
+        }
+        let b;
+        try {
+            b = await res.json();
+        } catch (_e) {
+            this.warn('WriteVodComment: JSON 파싱 실패');
+            return null;
+        }
+        // result/RESULT === 1(또는 true)만 성공으로 본다.
+        const commentOk = b && typeof b === 'object'
+            && [b.result, b.RESULT, b.CHANNEL?.RESULT, b.CHANNEL?.result]
+                .some((v) => v === 1 || v === true || String(v) === '1');
+        if (!commentOk) {
+            this.warn('WriteVodComment 실패 응답:', b);
+            return null;
+        }
+        return b;
+    }
+
+    /**
+     * VOD 댓글 목록 조회 (bbs_memo_action szAction=get).
+     * stationNo/bbsNo/bjId가 없으면 GetSoopVodInfo로 채운다.
+     * @param {string|number} videoId titleNo
+     * @param {string} [streamerId] bj_id (생략 시 VOD 정보의 bj_id 사용)
+     * @param {object} [opts]
+     * @param {string|number} [opts.stationNo]
+     * @param {string|number} [opts.bbsNo]
+     * @param {string|number} [opts.boardType]
+     * @param {number} [opts.pageNo=1]
+     * @param {number} [opts.orderNo=1] 1: 등록순 등으로 추정
+     * @param {number} [opts.lastNo=0] 페이지네이션 커서
+     * @param {string|number} [opts.changeSecond] Referer용 재생 시점
+     * @returns {Promise<object|null>}
+     */
+    async GetSoopCommentInVod(videoId, streamerId, opts = {}) {
+        const {
+            stationNo,
+            bbsNo,
+            boardType,
+            pageNo = 1,
+            orderNo = 1,
+            lastNo = 0,
+            changeSecond,
+        } = opts;
+
+        let resolvedStationNo = stationNo;
+        let resolvedBbsNo = bbsNo;
+        let resolvedBjId = streamerId;
+        let resolvedBoardType = boardType ?? 105;
+
+        if (resolvedStationNo == null || resolvedBbsNo == null || !resolvedBjId) {
+            const vodInfo = await this.GetSoopVodInfo(videoId);
+            const data = vodInfo?.data;
+            if (!data || vodInfo?.result !== 1) {
+                this.error('GetSoopCommentInVod: VOD 정보 조회 실패', videoId, data?.message || vodInfo?.message);
+                return null;
+            }
+            resolvedStationNo = resolvedStationNo ?? data.station_no;
+            resolvedBbsNo = resolvedBbsNo ?? data.bbs_no;
+            resolvedBjId = resolvedBjId || data.bj_id;
+            if (boardType == null && data.board_type != null) {
+                resolvedBoardType = data.board_type;
+            }
+        }
+
+        if (resolvedStationNo == null || resolvedBbsNo == null || !resolvedBjId) {
+            this.error('GetSoopCommentInVod: stationNo/bbsNo/bj_id 부족', {
+                videoId,
+                resolvedStationNo,
+                resolvedBbsNo,
+                resolvedBjId,
+            });
+            return null;
+        }
+
+        const tn = String(videoId);
+        const referer = changeSecond != null && changeSecond !== ''
+            ? `${this.SoopUrls.VOD_ORIGIN}/player/${tn}?change_second=${changeSecond}`
+            : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+        const body = new URLSearchParams({
+            nStationNo: String(resolvedStationNo),
+            nBbsNo: String(resolvedBbsNo),
+            nTitleNo: tn,
+            bj_id: String(resolvedBjId),
+            nPageNo: String(pageNo),
+            nOrderNo: String(orderNo),
+            nBoardType: String(resolvedBoardType),
+            szAction: 'get',
+            nVod: '1',
+            nLastNo: String(lastNo),
+        });
+
+        const res = await fetch(`${this.SoopUrls.STBBS_ORIGIN}/api/bbs_memo_action.php`, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                'accept-language': 'ko',
+                'content-type': 'application/x-www-form-urlencoded',
+                Referer: referer,
+            },
+            body: body.toString(),
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) {
+            this.error('GetSoopCommentInVod HTTP', res.status);
+            return null;
+        }
+        try {
+            return await res.json();
+        } catch (_e) {
+            this.warn('GetSoopCommentInVod: JSON 파싱 실패');
+            return null;
+        }
+    }
+
+    /**
+     * VOD 부모 댓글 전체를 페이지네이션으로 모아 반환. (대댓글 본문은 포함되지 않음)
+     * @param {string|number} videoId titleNo
+     * @returns {Promise<object[]|null>} list_data 항목 배열. 실패 시 null
+     */
+    async GetSoopParentCommentsInVod(videoId) {
+        if (videoId == null || videoId === '') {
+            this.error('GetSoopParentCommentsInVod: videoId 필수');
+            return null;
+        }
+
+        const vodInfo = await this.GetSoopVodInfo(videoId);
+        const data = vodInfo?.data;
+        if (!data || vodInfo?.result !== 1) {
+            this.error(
+                'GetSoopParentCommentsInVod: VOD 정보 조회 실패',
+                videoId,
+                data?.message || vodInfo?.message
+            );
+            return null;
+        }
+
+        const stationNo = data.station_no;
+        const bbsNo = data.bbs_no;
+        const bjId = data.bj_id;
+        const boardType = data.board_type ?? 105;
+        if (stationNo == null || bbsNo == null || !bjId) {
+            this.error('GetSoopParentCommentsInVod: stationNo/bbsNo/bj_id 부족', {
+                videoId,
+                stationNo,
+                bbsNo,
+                bjId,
+            });
+            return null;
+        }
+
+        const all = [];
+        let pageNo = 1;
+        let lastNo = 0;
+        const maxPages = 100;
+
+        for (let i = 0; i < maxPages; i++) {
+            const page = await this.GetSoopCommentInVod(videoId, bjId, {
+                stationNo,
+                bbsNo,
+                boardType,
+                pageNo,
+                lastNo,
+            });
+            const channel = page?.CHANNEL;
+            const pageOk = channel
+                && [channel.RESULT, channel.result]
+                    .some((v) => v === 1 || v === true || String(v) === '1');
+            if (!pageOk) {
+                if (i === 0) {
+                    this.error('GetSoopParentCommentsInVod: 댓글 조회 실패', videoId);
+                    return null;
+                }
+                this.warn('GetSoopParentCommentsInVod: 중간 페이지 실패, 수집분 반환', videoId, pageNo);
+                break;
+            }
+
+            const list = Array.isArray(channel.DATA?.list_data) ? channel.DATA.list_data : [];
+            all.push(...list);
+
+            if (channel.DATA?.has_more !== true || list.length === 0) {
+                break;
+            }
+
+            const nextLast = Number(list[list.length - 1]?.p_comment_no);
+            if (!Number.isFinite(nextLast) || nextLast === lastNo) {
+                break;
+            }
+            lastNo = nextLast;
+            pageNo += 1;
+        }
+
+        return all;
+    }
+
+    /**
      * 다시보기 편집 VOD 생성 (setWebEditorJob).
      * @param {object} [opts]
      * @param {string} [opts.titleNo]

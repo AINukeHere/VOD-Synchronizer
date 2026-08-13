@@ -42,3 +42,4 @@ TODO.txt
 # cursor rules
 .cursor/
 private_files/
+.vscode/

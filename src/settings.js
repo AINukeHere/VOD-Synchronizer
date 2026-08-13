@@ -30,7 +30,7 @@ class settingPageManager {
     saveSettings() {
         chrome.runtime.sendMessage({ action: 'saveSettings', settings: this.settings}, (response) => {
             if (response.success) {
-                this.showStatus('설정이 저장되었습니다.', 'success');
+                this.showStatus('설정이 저장되었습니다. 일부 설정은 페이지 새로고침이 필요할 수 있습니다.', 'success');
             } else {
                 this.showStatus('설정 저장에 실패했습니다.', 'error');
             }
@@ -49,6 +49,174 @@ class settingPageManager {
         document.getElementById('enableSyncPanel').checked = this.settings.enableSyncPanel;
         document.getElementById('enableRpPanel').checked = this.settings.enableRpPanel;
         document.getElementById('enableUpdateNotification').checked = this.settings.enableUpdateNotification;
+        document.getElementById('soopRestoreInterval').value = this.clampRestoreSeconds(this.settings.soopRestoreInterval, 30);
+        document.getElementById('soopExcludeEmoticonOnlyChat').checked = !!this.settings.soopExcludeEmoticonOnlyChat;
+        document.getElementById('soopAutoRestoreChat').checked = !!this.settings.soopAutoRestoreChat;
+        document.getElementById('soopAutoRestorePeriod').value = this.clampRestoreSeconds(this.settings.soopAutoRestorePeriod, 30);
+        document.getElementById('soopLiveWatchLikeNotify').checked = this.settings.soopLiveWatchLikeNotify !== false;
+        document.getElementById('soopLiveWatchCommentNotify').checked = !!this.settings.soopLiveWatchCommentNotify;
+        document.getElementById('soopLiveWatchDisableAutoplay').checked = this.settings.soopLiveWatchDisableAutoplay !== false;
+        document.getElementById('soopLiveWatchCommentToast').checked = this.settings.soopLiveWatchCommentToast !== false;
+        document.getElementById('soopLiveWatchCommentText').value =
+            typeof this.settings.soopLiveWatchCommentText === 'string' && this.settings.soopLiveWatchCommentText.trim()
+                ? this.settings.soopLiveWatchCommentText
+                : '잘 볼게요';
+        this.setRadioValue(
+            'soopLiveWatchCommentDedupMode',
+            this.settings.soopLiveWatchCommentDedupMode === 'existing_comment' ? 'existing_comment' : 'cooldown'
+        );
+        this.setRadioValue(
+            'soopLiveWatchCommentCooldownType',
+            this.settings.soopLiveWatchCommentCooldownType === 'custom_hours' ? 'custom_hours' : 'video_duration'
+        );
+        this.setCooldownDurationFields(
+            this.normalizeCooldownSeconds(
+                this.settings.soopLiveWatchCommentCooldownSeconds,
+                this.settings.soopLiveWatchCommentCooldownHours
+            )
+        );
+        this.updateAutoRestoreOptionsState();
+        this.updateLiveWatchNotifyOptionsState();
+    }
+
+    setRadioValue(name, value) {
+        const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+        if (input) input.checked = true;
+    }
+
+    getRadioValue(name, fallback) {
+        const checked = document.querySelector(`input[name="${name}"]:checked`);
+        return checked ? checked.value : fallback;
+    }
+
+    // 임의 지정 대기 시간(초). 예전 시간 단위 값이 있으면 초로 변환한다.
+    normalizeCooldownSeconds(secondsValue, legacyHoursValue) {
+        const seconds = Number(secondsValue);
+        if (Number.isFinite(seconds) && seconds > 0) {
+            return Math.max(1, Math.floor(seconds));
+        }
+        const hours = Number(legacyHoursValue);
+        if (Number.isFinite(hours) && hours > 0) {
+            return Math.max(1, Math.round(hours * 3600));
+        }
+        return 3600;
+    }
+
+    // 시·분·초 입력칸 값을 모아 총 초로 만든다. (0 허용 — 저장 시 별도 검사)
+    readCooldownSecondsFromFields() {
+        const hours = Math.max(0, Math.floor(Number(document.getElementById('soopLiveWatchCommentCooldownHoursPart').value) || 0));
+        const minutes = Math.max(0, Math.floor(Number(document.getElementById('soopLiveWatchCommentCooldownMinutesPart').value) || 0));
+        const seconds = Math.max(0, Math.floor(Number(document.getElementById('soopLiveWatchCommentCooldownSecondsPart').value) || 0));
+        return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    // 총 초를 시·분·초 칸에 나눠 채운다. (양수일 때만 호출)
+    setCooldownDurationFields(totalSeconds) {
+        const normalized = this.normalizeCooldownSeconds(totalSeconds);
+        const hours = Math.floor(normalized / 3600);
+        const minutes = Math.floor((normalized % 3600) / 60);
+        const seconds = normalized % 60;
+        document.getElementById('soopLiveWatchCommentCooldownHoursPart').value = hours;
+        document.getElementById('soopLiveWatchCommentCooldownMinutesPart').value = minutes;
+        document.getElementById('soopLiveWatchCommentCooldownSecondsPart').value = seconds;
+    }
+
+    // 입력값을 정수로만 정리한다. 총합이 양수면 시·분·초로 다시 나눠 표시한다.
+    normalizeCooldownFieldsOnEdit() {
+        const hours = Math.max(0, Math.floor(Number(document.getElementById('soopLiveWatchCommentCooldownHoursPart').value) || 0));
+        const minutes = Math.max(0, Math.floor(Number(document.getElementById('soopLiveWatchCommentCooldownMinutesPart').value) || 0));
+        const seconds = Math.max(0, Math.floor(Number(document.getElementById('soopLiveWatchCommentCooldownSecondsPart').value) || 0));
+        const total = hours * 3600 + minutes * 60 + seconds;
+        if (total > 0) {
+            this.setCooldownDurationFields(total);
+            return;
+        }
+        document.getElementById('soopLiveWatchCommentCooldownHoursPart').value = hours;
+        document.getElementById('soopLiveWatchCommentCooldownMinutesPart').value = minutes;
+        document.getElementById('soopLiveWatchCommentCooldownSecondsPart').value = seconds;
+    }
+
+    // 임의 지정 시간이 선택된 상태에서 0초 이하면 저장을 막는다.
+    validateLiveWatchCooldownBeforeSave() {
+        const cooldownType = this.getRadioValue('soopLiveWatchCommentCooldownType', 'video_duration');
+        if (cooldownType !== 'custom_hours') return true;
+        if (this.readCooldownSecondsFromFields() > 0) return true;
+        alert('임의 지정 시간은 1초 이상이어야 합니다.');
+        return false;
+    }
+
+    trySaveSettings() {
+        if (!this.validateLiveWatchCooldownBeforeSave()) return false;
+        this.collectSettings();
+        this.saveSettings();
+        return true;
+    }
+
+    // 이전 채팅 복원 구간: 10~300초, 10초 단위
+    clampRestoreSeconds(value, fallback = 30) {
+        const parsed = parseInt(value, 10);
+        if (Number.isNaN(parsed)) return fallback;
+        const clamped = Math.min(300, Math.max(10, parsed));
+        return Math.round(clamped / 10) * 10;
+    }
+
+    // 자동 복원이 꺼져 있으면 자동 복원 구간을 수정할 수 없게 한다.
+    updateAutoRestoreOptionsState() {
+        const enabled = document.getElementById('soopAutoRestoreChat').checked;
+        const options = document.getElementById('soopAutoRestoreOptions');
+        const periodInput = document.getElementById('soopAutoRestorePeriod');
+        periodInput.disabled = !enabled;
+        if (options) {
+            options.classList.toggle('is-disabled', !enabled);
+        }
+    }
+
+    // 댓글 등록 OFF면 문구·재등록 방지 하위 항목 비활성화. 안내 메시지는 UP·댓글 둘 다 OFF일 때만 비활성화.
+    updateLiveWatchNotifyOptionsState() {
+        const likeOn = document.getElementById('soopLiveWatchLikeNotify').checked;
+        const commentOn = document.getElementById('soopLiveWatchCommentNotify').checked;
+        const commentOptions = document.getElementById('soopLiveWatchCommentOptions');
+        commentOptions?.classList.toggle('is-disabled', !commentOn);
+        commentOptions?.querySelectorAll('input').forEach((input) => {
+            input.disabled = !commentOn;
+        });
+
+        const toastInput = document.getElementById('soopLiveWatchCommentToast');
+        if (toastInput) {
+            toastInput.disabled = !likeOn && !commentOn;
+        }
+
+        if (commentOn) {
+            this.updateLiveWatchDedupOptionsState();
+        } else {
+            document.getElementById('soopLiveWatchCooldownOptions')?.classList.add('is-disabled');
+            document.getElementById('soopLiveWatchCustomHoursRow')?.classList.add('is-disabled');
+        }
+    }
+
+    // 재등록 방지 방식에 따라 대기시간 하위 옵션 활성/비활성.
+    updateLiveWatchDedupOptionsState() {
+        if (!document.getElementById('soopLiveWatchCommentNotify').checked) return;
+
+        const dedupMode = this.getRadioValue('soopLiveWatchCommentDedupMode', 'cooldown');
+        const cooldownOptions = document.getElementById('soopLiveWatchCooldownOptions');
+        const cooldownEnabled = dedupMode === 'cooldown';
+        cooldownOptions?.classList.toggle('is-disabled', !cooldownEnabled);
+        cooldownOptions?.querySelectorAll('input[type="radio"]').forEach((input) => {
+            input.disabled = !cooldownEnabled;
+        });
+
+        const cooldownType = this.getRadioValue('soopLiveWatchCommentCooldownType', 'video_duration');
+        const customEnabled = cooldownEnabled && cooldownType === 'custom_hours';
+        [
+            'soopLiveWatchCommentCooldownHoursPart',
+            'soopLiveWatchCommentCooldownMinutesPart',
+            'soopLiveWatchCommentCooldownSecondsPart',
+        ].forEach((id) => {
+            const input = document.getElementById(id);
+            if (input) input.disabled = !customEnabled;
+        });
+        document.getElementById('soopLiveWatchCustomHoursRow')?.classList.toggle('is-disabled', !customEnabled);
     }
 
     displayVersion() {
@@ -74,13 +242,66 @@ class settingPageManager {
         this.settings.enableSyncPanel = document.getElementById('enableSyncPanel').checked;
         this.settings.enableRpPanel = document.getElementById('enableRpPanel').checked;
         this.settings.enableUpdateNotification = document.getElementById('enableUpdateNotification').checked;
+        this.settings.soopRestoreInterval = this.clampRestoreSeconds(
+            document.getElementById('soopRestoreInterval').value, 30
+        );
+        this.settings.soopExcludeEmoticonOnlyChat = document.getElementById('soopExcludeEmoticonOnlyChat').checked;
+        this.settings.soopAutoRestoreChat = document.getElementById('soopAutoRestoreChat').checked;
+        this.settings.soopAutoRestorePeriod = this.clampRestoreSeconds(
+            document.getElementById('soopAutoRestorePeriod').value, 30
+        );
+        this.settings.soopLiveWatchLikeNotify = document.getElementById('soopLiveWatchLikeNotify').checked;
+        this.settings.soopLiveWatchCommentNotify = document.getElementById('soopLiveWatchCommentNotify').checked;
+        this.settings.soopLiveWatchDisableAutoplay = document.getElementById('soopLiveWatchDisableAutoplay').checked;
+        this.settings.soopLiveWatchCommentToast = document.getElementById('soopLiveWatchCommentToast').checked;
+        const commentText = document.getElementById('soopLiveWatchCommentText').value.trim();
+        this.settings.soopLiveWatchCommentText = commentText || '잘 볼게요';
+        this.settings.soopLiveWatchCommentDedupMode =
+            this.getRadioValue('soopLiveWatchCommentDedupMode', 'cooldown') === 'existing_comment'
+                ? 'existing_comment'
+                : 'cooldown';
+        this.settings.soopLiveWatchCommentCooldownType =
+            this.getRadioValue('soopLiveWatchCommentCooldownType', 'video_duration') === 'custom_hours'
+                ? 'custom_hours'
+                : 'video_duration';
+        this.settings.soopLiveWatchCommentCooldownSeconds = this.readCooldownSecondsFromFields();
     }
 
     setupEventListeners() {
+        document.getElementById('soopAutoRestoreChat').addEventListener('change', () => {
+            this.updateAutoRestoreOptionsState();
+        });
+        document.getElementById('soopLiveWatchLikeNotify').addEventListener('change', () => {
+            this.updateLiveWatchNotifyOptionsState();
+        });
+        document.getElementById('soopLiveWatchCommentNotify').addEventListener('change', () => {
+            this.updateLiveWatchNotifyOptionsState();
+        });
+        document.querySelectorAll('input[name="soopLiveWatchCommentDedupMode"]').forEach((input) => {
+            input.addEventListener('change', () => this.updateLiveWatchDedupOptionsState());
+        });
+        document.querySelectorAll('input[name="soopLiveWatchCommentCooldownType"]').forEach((input) => {
+            input.addEventListener('change', () => this.updateLiveWatchDedupOptionsState());
+        });
+        [
+            'soopLiveWatchCommentCooldownHoursPart',
+            'soopLiveWatchCommentCooldownMinutesPart',
+            'soopLiveWatchCommentCooldownSecondsPart',
+        ].forEach((id) => {
+            document.getElementById(id).addEventListener('change', () => {
+                this.normalizeCooldownFieldsOnEdit();
+            });
+        });
+        // 저장 전 입력값이 범위 밖으로 남지 않도록 표시도 맞춰 둔다.
+        ['soopRestoreInterval', 'soopAutoRestorePeriod'].forEach((id) => {
+            document.getElementById(id).addEventListener('change', (e) => {
+                e.target.value = this.clampRestoreSeconds(e.target.value, 30);
+            });
+        });
+
         // 저장 버튼
         document.getElementById('saveSettings').addEventListener('click', () => {
-            this.collectSettings();
-            this.saveSettings();
+            this.trySaveSettings();
         });
 
         // 닫기 버튼
@@ -134,8 +355,7 @@ class settingPageManager {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
-                this.collectSettings();
-                this.saveSettings();
+                this.trySaveSettings();
             }
         });
     }
@@ -265,20 +485,28 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupTabs() {
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
-        
+        const container = document.querySelector('.container');
+
+        const applyTabLayout = (targetTab) => {
+            // 로그 탭은 가로 폭을 최대로 쓰고, 일반 설정은 좁은 카드로 되돌린다.
+            container?.classList.toggle('wide-layout', targetTab === 'logs');
+        };
+
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const targetTab = tab.getAttribute('data-tab');
-                
-                // 모든 탭 비활성화
+
                 tabs.forEach(t => t.classList.remove('active'));
                 tabContents.forEach(content => content.classList.remove('active'));
-                
-                // 선택된 탭 활성화
+
                 tab.classList.add('active');
                 document.getElementById(targetTab).classList.add('active');
+                applyTabLayout(targetTab);
             });
         });
+
+        const activeTab = document.querySelector('.tab.active')?.getAttribute('data-tab') || 'general';
+        applyTabLayout(activeTab);
     }
     
     // 로그 기능 설정

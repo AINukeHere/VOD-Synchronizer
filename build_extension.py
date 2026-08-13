@@ -128,6 +128,8 @@ def build_tampermonkey_script():
             '{{ChzzkTimelineCommentProcessor}}': ('src/module/chzzk_timeline_comment_processor.js', 'ChzzkTimelineCommentProcessor'),
             '{{SoopPrevChatViewer}}': ('src/module/soop_prev_chat_viewer.js', 'SoopPrevChatViewer'),
             '{{SoopVeditorReplacement}}': ('src/module/soop_veditor_replacement.js', 'SoopVeditorReplacement'),
+            '{{SoopLiveWatchCommentNotifier}}': ('src/module/soop_live_watch_comment_notifier.js', 'SoopLiveWatchCommentNotifier'),
+            '{{SoopNextVideoAutoplayGuard}}': ('src/module/soop_next_video_autoplay_guard.js', 'SoopNextVideoAutoplayGuard'),
         }
         
         # 각 플레이스홀더를 실제 클래스 정의로 교체
@@ -199,6 +201,8 @@ def create_test_extension():
         'src/module/soop_timeline_comment_processor.js',
         'src/module/chzzk_timeline_comment_processor.js',
         'src/module/soop_veditor_replacement.js',
+        'src/module/soop_live_watch_comment_notifier.js',
+        'src/module/soop_next_video_autoplay_guard.js',
         'src/module/soop_vodcore_page_bridge.js',
         
         # 리소스 파일

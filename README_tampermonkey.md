@@ -42,6 +42,21 @@ VOD Master는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스�
 - 아직은 없는 것 같군요.
 
 ## 업데이트 내역
+### 1.7.0.0 (2026.08.02)
+- 새 기능: 라이브 중 VOD 시청 알림 — **SOOP 전용**
+  - VOD Master를 켠 채 **라이브 중인 본인**이 클립·캐치·편집·업로드 VOD를 **음소거 해제** 상태로 보면, 업로더에게 시청 시작을 알려 줍니다.
+  - 알림 방식: **UP 하기**(기본 ON) · **댓글 등록**(기본 OFF, 문구 변경 가능)
+  - 설정에서 ON/OFF 가능. 알림 후 우측 하단 안내 제공.
+  - [소개 페이지](https://ainukehere.github.io/VOD-Master/doc/live_watch_notify_intro.html)
+- 새 기능: 다음 영상 자동 재생 방지 — **SOOP 전용**
+  - VOD 재생이 끝날 때 다음 영상으로 자동으로 넘어가지 않게 합니다. (다른 페이지 삽입된 VOD 포함)
+  - VOD 재생 바의 자동 재생 활성화/비활성화 설정과 별개로 동작합니다.
+
+    ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/soop_autoplay_toggle.png)
+  - 설정에서 ON/OFF할 수 있습니다. (기본 ON)
+- 이제 설정 창은 항상 새 탭에서 열립니다.
+- 이제 최초 설치 시 설치 완료 안내(기능 설명 문서·설정 페이지 새 탭 버튼) 제공
+
 ### 1.6.1.4 (2026.07.19)
 - no changes
 
@@ -57,7 +72,7 @@ VOD Master는 SOOP VOD(다시보기) 시청 시 생방송 보듯이 다른 스�
 ### 1.6.1.0
 - 새 기능: SOOP 다시보기 순 조회수 표시
   - 다시보기의 경우 조회수 숫자에 마우스를 올리면 순 조회수가 표시됩니다.
-  - ![](./screenshots/soop_reviewVOD_pureViewCount.png)
+  - ![](https://raw.githubusercontent.com/AINukeHere/VOD-Master/main/screenshots/soop_reviewVOD_pureViewCount.png)
 - 이전 채팅 복원
   - 재생 시점이 바뀌어 복원 버튼이 생성될 때 **1회 자동 복원**하는 옵션이 추가되었습니다. (기본값: 사용 안 함)
   - 자동 복원 사용 여부와 자동 복원 구간은 설정(⚙️)에서 조절할 수 있습니다.

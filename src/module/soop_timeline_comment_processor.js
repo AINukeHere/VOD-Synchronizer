@@ -29,6 +29,13 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
     buildSegmentsFromComments(commentEls) {
         const tsManager = window.VODSync?.tsManager;
         const result = [];
+        let timeLinkCount = 0;
+        let convertedCount = 0;
+        let skippedNoGlobal = 0;
+        this.debug('timeline_sync: buildSegmentsFromComments 시작', {
+            commentCount: commentEls?.length ?? 0,
+            hasPlaybackTimeToGlobalTS: !!tsManager?.playbackTimeToGlobalTS,
+        });
         for (const commentEl of commentEls) {
             const cmmtTxt = commentEl?.querySelector('.cmmt-txt');
             if (!cmmtTxt) continue;
@@ -45,12 +52,20 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
                 if (node.classList?.contains('best')) continue;
                 if (node.tagName === 'BR') { result.push('\n'); continue; }
                 if (node.classList?.contains('time_link') && node.hasAttribute('data-time')) {
+                    timeLinkCount++;
                     const sec = parseInt(node.getAttribute('data-time'), 10);
                     if (!isNaN(sec) && tsManager?.playbackTimeToGlobalTS) {
                         const globalDate = tsManager.playbackTimeToGlobalTS(sec);
                         if (globalDate instanceof Date && !isNaN(globalDate.getTime())) {
+                            convertedCount++;
                             result.push(globalDate.getTime());
+                        } else {
+                            skippedNoGlobal++;
+                            this.debug('timeline_sync: time_link → globalTS 변환 실패', { sec, globalDate });
                         }
+                    } else {
+                        skippedNoGlobal++;
+                        this.debug('timeline_sync: time_link 스킵', { sec, hasConverter: !!tsManager?.playbackTimeToGlobalTS });
                     }
                     continue;
                 }
@@ -58,6 +73,13 @@ export class SoopTimelineCommentProcessor extends TimelineCommentProcessorBase {
                 if (t) result.push(t);
             }
         }
+        this.debug('timeline_sync: buildSegmentsFromComments 완료', {
+            resultLen: result.length,
+            timeLinkCount,
+            convertedCount,
+            skippedNoGlobal,
+            sample: result.slice(0, 8),
+        });
         return result;
     }
 

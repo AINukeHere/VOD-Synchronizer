@@ -10,7 +10,20 @@ export class SettingsManager {
             soopRestoreInterval: 30,
             soopExcludeEmoticonOnlyChat: false,
             soopAutoRestoreChat: false,
-            soopAutoRestorePeriod: 30
+            soopAutoRestorePeriod: 30,
+            // 라이브 중 VOD 시청 알려주기: UP 하기 기본 ON, 댓글 등록 기본 OFF
+            soopLiveWatchLikeNotify: true,
+            soopLiveWatchCommentNotify: false,
+            soopLiveWatchCommentText: '잘 볼게요',
+            soopLiveWatchCommentToast: true,
+            // 다음 영상 자동 재생을 계속 끔 (기본 ON)
+            soopLiveWatchDisableAutoplay: true,
+            // existing_comment | cooldown
+            soopLiveWatchCommentDedupMode: 'cooldown',
+            // video_duration | custom_hours (cooldown 모드일 때)
+            soopLiveWatchCommentCooldownType: 'video_duration',
+            // 임의 지정 대기 시간(초). 예전 soopLiveWatchCommentCooldownHours는 로드 시 초로 변환
+            soopLiveWatchCommentCooldownSeconds: 3600,
         };
         this.settings = { ...this.defaultSettings };
         this.isLoaded = false;
@@ -23,6 +36,19 @@ export class SettingsManager {
 
     log(...data){
         console.log(`[${this.constructor.name}] `, ...data);
+    }
+
+    // 임의 지정 대기 시간을 초 단위 정수로 맞춘다. 예전 시간(소수) 값이 있으면 초로 변환한다.
+    normalizeCooldownSeconds(secondsValue, legacyHoursValue) {
+        const seconds = Number(secondsValue);
+        if (Number.isFinite(seconds) && seconds > 0) {
+            return Math.max(1, Math.floor(seconds));
+        }
+        const hours = Number(legacyHoursValue);
+        if (Number.isFinite(hours) && hours > 0) {
+            return Math.max(1, Math.round(hours * 3600));
+        }
+        return 3600;
     }
 
     async init() {
@@ -38,6 +64,10 @@ export class SettingsManager {
         try {
             const result = await chrome.storage.sync.get('vodSyncSettings');
             this.settings = { ...this.defaultSettings, ...result.vodSyncSettings };
+            this.settings.soopLiveWatchCommentCooldownSeconds = this.normalizeCooldownSeconds(
+                this.settings.soopLiveWatchCommentCooldownSeconds,
+                this.settings.soopLiveWatchCommentCooldownHours
+            );
             this.isLoaded = true;
             this.log('설정 로드 완료:', this.settings);
             return true;
@@ -95,6 +125,10 @@ export class SettingsManager {
             const oldSettings = { ...this.settings };
             // 기존 설정을 유지하면서 파라미터로 받은 설정만 업데이트
             this.settings = { ...this.settings, ...newSettings };
+            this.settings.soopLiveWatchCommentCooldownSeconds = this.normalizeCooldownSeconds(
+                this.settings.soopLiveWatchCommentCooldownSeconds,
+                this.settings.soopLiveWatchCommentCooldownHours
+            );
             await chrome.storage.sync.set({ vodSyncSettings: this.settings });
             this.log('설정 저장 완료:', this.settings);
             

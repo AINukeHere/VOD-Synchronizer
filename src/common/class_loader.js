@@ -17,6 +17,8 @@ class ClassLoader {
             'SoopPrevChatViewer': ['IVodSync'],
             'SoopTimelineCommentProcessor': ['TimelineCommentProcessorBase'],
             'ChzzkTimelineCommentProcessor': ['TimelineCommentProcessorBase'],
+            'SoopLiveWatchCommentNotifier': ['IVodSync'],
+            'SoopNextVideoAutoplayGuard': ['IVodSync'],
             // 'SoopVeditorReplacement': ['IVodSync'],
         };
     }

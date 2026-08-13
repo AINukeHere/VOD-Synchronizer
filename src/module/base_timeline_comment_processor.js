@@ -45,6 +45,9 @@ export class TimelineCommentProcessorBase extends IVodSync {
         this._started = false;
         /** 전달받은 타임라인 동기화 페이로드 (receive 시 저장) */
         this._incomingTimelineSyncPayload = null;
+        /** timeline_sync fill 시도/대기 debug 1회 로그용 */
+        this._loggedTimelineSyncFillAttempt = false;
+        this._loggedTimelineSyncWaitingConvert = false;
         /** 미리보기 창 뼈대 (receive 시 생성). listWrap은 뼈대의 내용 영역 참조용. */
         this._timelinePreviewWrap = null;
         this._timelinePreviewListWrap = null;
@@ -105,8 +108,17 @@ export class TimelineCommentProcessorBase extends IVodSync {
             this._injectTinelineInsertButton(container);
 
             // 수신 페이로드가 있으면 미리보기 목록 영역에 내용 채움
-            if (this._incomingTimelineSyncPayload)
+            if (this._incomingTimelineSyncPayload) {
+                if (!this._loggedTimelineSyncFillAttempt) {
+                    this._loggedTimelineSyncFillAttempt = true;
+                    this.debug('timeline_sync: 미리보기 채우기 시도 (tsManager 준비 대기 가능)', {
+                        payloadLen: this._incomingTimelineSyncPayload.length,
+                        hasTsManager: !!window.VODSync?.tsManager,
+                        canConvert: !!window.VODSync?.tsManager?.canConvertGlobalTSToPlaybackTime?.(),
+                    });
+                }
                 this.fillTimelinePreviewContent(this._incomingTimelineSyncPayload);
+            }
         }, 500);
     }
 
@@ -274,8 +286,16 @@ export class TimelineCommentProcessorBase extends IVodSync {
      * @param {Array<Array<{type:'string',value:string}|{type:'timeline',playbackSec:number|null}>>} rows
      */
     openTimelinePreview(rows) {
-        if (!Array.isArray(rows) || rows.length === 0) return;
+        if (!Array.isArray(rows) || rows.length === 0) {
+            this.debug('timeline_sync: openTimelinePreview 거부 (빈 rows)');
+            return;
+        }
+        this.debug('timeline_sync: openTimelinePreview', {
+            rowCount: rows.length,
+            fragCounts: rows.map((r) => r?.length ?? 0),
+        });
         if (!this._timelinePreviewWrap?.isConnected) {
+            this.debug('timeline_sync: open 시 미리보기 뼈대 생성');
             this._createTimelinePreviewSkeleton();
         }
         this._incomingTimelineSyncPayload = null;
@@ -300,10 +320,29 @@ export class TimelineCommentProcessorBase extends IVodSync {
      * @param {(string|number)[]} payload
      */
     receiveTimelineSyncPayload(payload) {
-        if (!Array.isArray(payload) || payload.length === 0) return;
+        if (!Array.isArray(payload) || payload.length === 0) {
+            this.debug('timeline_sync: receive 거부 (빈 페이로드)', {
+                isArray: Array.isArray(payload),
+                length: payload?.length,
+            });
+            return;
+        }
+        const numberCount = payload.filter((item) => typeof item === 'number' && !isNaN(item)).length;
+        const stringCount = payload.filter((item) => typeof item === 'string').length;
+        this.debug('timeline_sync: receive 수신', {
+            length: payload.length,
+            numberCount,
+            stringCount,
+            sample: payload.slice(0, 8),
+        });
         this._incomingTimelineSyncPayload = payload;
+        this._loggedTimelineSyncFillAttempt = false;
+        this._loggedTimelineSyncWaitingConvert = false;
         if (!this._timelinePreviewWrap?.isConnected) {
+            this.debug('timeline_sync: 미리보기 뼈대 생성');
             this._createTimelinePreviewSkeleton();
+        } else {
+            this.debug('timeline_sync: 미리보기 뼈대 이미 존재');
         }
     }
     
@@ -374,14 +413,34 @@ export class TimelineCommentProcessorBase extends IVodSync {
 
     // 수신한 페이로드로부터 변환된 타임라인 댓글 미리보기 목록 영역에 내용 채움. 내부에서 openTimelinePreview(rows) 호출.
     fillTimelinePreviewContent(payload) {
-        if (!Array.isArray(payload) || payload.length === 0) return;
+        if (!Array.isArray(payload) || payload.length === 0) {
+            this.debug('timeline_sync: fill 거부 (빈 페이로드)');
+            return;
+        }
         const tsManager = window.VODSync?.tsManager;
-        if (!tsManager?.canConvertGlobalTSToPlaybackTime()) return;
+        if (!tsManager?.canConvertGlobalTSToPlaybackTime()) {
+            // 인터벌 재시도 중이므로 대기 로그는 1회만
+            if (!this._loggedTimelineSyncWaitingConvert) {
+                this._loggedTimelineSyncWaitingConvert = true;
+                this.debug('timeline_sync: fill 대기 — canConvertGlobalTSToPlaybackTime=false', {
+                    hasTsManager: !!tsManager,
+                    hasVodInfo: tsManager?.vodInfo != null,
+                });
+            }
+            return;
+        }
         const globalTSToPlaybackTime = tsManager.globalTSToPlaybackTime;
-        if (!globalTSToPlaybackTime) return;
+        if (!globalTSToPlaybackTime) {
+            this.debug('timeline_sync: fill 거부 — globalTSToPlaybackTime 없음');
+            return;
+        }
+        this.debug('timeline_sync: fill 시작 (변환 가능)', { payloadLen: payload.length });
 
         // 페이로드 → 순서 유지 fragments (string | timeline), \n 기준으로 행 분리
         const fragments = [];
+        let convertedOk = 0;
+        let convertedNull = 0;
+        let stringItems = 0;
         for (const item of payload) {
             const asGlobalMs = typeof item === 'number' && !isNaN(item)
                 ? item
@@ -391,14 +450,24 @@ export class TimelineCommentProcessorBase extends IVodSync {
             if (!isNaN(asGlobalMs)) {
                 const sec = globalTSToPlaybackTime.call(tsManager, asGlobalMs);
                 if (sec != null) {
+                    convertedOk++;
                     fragments.push({ type: 'timeline', playbackSec: Math.max(0, Math.floor(sec)) });
                 } else {
+                    convertedNull++;
                     fragments.push({ type: 'timeline', playbackSec: null });
                 }
             } else if (typeof item === 'string') {
+                stringItems++;
                 fragments.push({ type: 'string', value: item });
             }
         }
+        this.debug('timeline_sync: 페이로드 변환 결과', {
+            fragments: fragments.length,
+            convertedOk,
+            convertedNull,
+            stringItems,
+            sampleTimeline: fragments.filter((f) => f.type === 'timeline').slice(0, 5),
+        });
 
         const rows = [];
         let currentRow = [];
@@ -417,16 +486,28 @@ export class TimelineCommentProcessorBase extends IVodSync {
             }
         }
         if (currentRow.length > 0) rows.push(currentRow);
-        if (rows.length === 0) return;
+        if (rows.length === 0) {
+            this.debug('timeline_sync: fill 중단 — 행으로 분리된 결과 없음');
+            return;
+        }
+        this.debug('timeline_sync: fill 완료 → openTimelinePreview', { rowCount: rows.length });
 
         this.openTimelinePreview(rows);
     }
 
     /** 미리보기 목록 영역에 행 데이터를 DOM으로 채움. openTimelinePreview → fillTimelinePreviewContent / openPreviewWithCurrentPageTimelineComments 에서 사용. */
     _renderPreviewRows(rows) {
-        if (!this._timelinePreviewListWrap?.isConnected || !Array.isArray(rows) || rows.length === 0) return;
+        if (!this._timelinePreviewListWrap?.isConnected || !Array.isArray(rows) || rows.length === 0) {
+            this.debug('timeline_sync: _renderPreviewRows 거부', {
+                listConnected: !!this._timelinePreviewListWrap?.isConnected,
+                isArray: Array.isArray(rows),
+                length: rows?.length,
+            });
+            return;
+        }
         const listWrap = this._timelinePreviewListWrap;
         listWrap.textContent = '';
+        this.debug('timeline_sync: _renderPreviewRows 렌더', { rowCount: rows.length });
 
         rows.forEach((rowFragments) => {
             const row = document.createElement('div');

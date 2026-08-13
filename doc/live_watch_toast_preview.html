@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>라이브 중 VOD 시청 알려주기 — 토스트 미리보기 (개발용)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #e8ecf1;
+            color: #1a1f2a;
+        }
+        h1 { margin: 0 0 6px; font-size: 20px; }
+        .dev-badge {
+            display: inline-block;
+            margin-bottom: 14px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .lead {
+            margin: 0 0 20px;
+            font-size: 14px;
+            color: #4e5968;
+            line-height: 1.5;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 22px;
+            padding: 14px;
+            background: #fff;
+            border-radius: 10px;
+            border: 1px solid #d8dee6;
+        }
+        .controls label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+        .controls input[type="text"] {
+            min-width: 180px;
+            padding: 6px 8px;
+            border: 1px solid #c9d1db;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .controls button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #3182f6;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .controls button.secondary {
+            background: #fff;
+            color: #3182f6;
+            border: 1px solid #3182f6;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #d8dee6;
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .card h2 {
+            margin: 0 0 4px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .card .meta {
+            margin: 0 0 12px;
+            font-size: 12px;
+            color: #8b95a1;
+        }
+        .stage {
+            position: relative;
+            min-height: 180px;
+            border-radius: 10px;
+            background:
+                linear-gradient(135deg, #2b3340 0%, #1a2030 100%);
+            overflow: hidden;
+        }
+        .stage-label {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.45);
+        }
+        /* 실사용과 동일한 토스트 스타일 (고정 위치 대신 스테이지 안 배치) */
+        .toast-preview {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            max-width: 320px;
+            padding: 12px 14px;
+            background: rgba(72, 80, 96, 0.82);
+            color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .toast-preview .title {
+            font-weight: 600;
+        }
+        .toast-preview .body {
+            opacity: 0.9;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .toast-preview .footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .toast-preview .countdown {
+            opacity: 0.75;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .toast-preview button {
+            border: 1px solid rgba(255,255,255,0.35);
+            background: transparent;
+            color: #fff;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: default;
+            white-space: nowrap;
+        }
+        .note {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #8b95a1;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <span class="dev-badge">개발자용 · 임시 미리보기</span>
+    <h1>라이브 중 VOD 시청 알려주기 — 토스트</h1>
+    <p class="lead">
+        실제 `_showSuccessToast`와 같은 문구·스타일입니다.
+        아래는 세 가지 조합의 정적 예시이고, 버튼으로 화면 우하단에 실동작 토스트도 띄울 수 있습니다.
+    </p>
+
+    <div class="controls">
+        <label>댓글 문구 <input type="text" id="commentText" value="잘 볼게요"></label>
+        <button type="button" data-live="up">UP 하기만</button>
+        <button type="button" data-live="comment">댓글 등록만</button>
+        <button type="button" data-live="both">UP 하기 + 댓글 등록</button>
+        <button type="button" class="secondary" id="refreshStatic">정적 예시 새로고침</button>
+    </div>
+
+    <div class="grid" id="staticGrid"></div>
+
+    <p class="note">
+        실서비스에서는 5초 후 자동 닫히며, 「이 창을 다시 열지 않음」은 안내 토스트만 끕니다 (알림 자체는 유지).<br>
+        파일: <code>doc/live_watch_toast_preview.html</code> · 토스트 구현: <code>src/module/soop_live_watch_comment_notifier.js</code>
+    </p>
+
+    <script>
+(function () {
+    var TOAST_AUTO_HIDE_MS = 5000;
+
+    function titleFor(liked, commented) {
+        if (liked && commented) return 'VOD를 UP하고 댓글을 등록했습니다.';
+        if (liked) return 'VOD를 UP했습니다.';
+        return 'VOD에 댓글을 등록했습니다.';
+    }
+
+    function buildToastEl(liked, commented, commentText, opts) {
+        opts = opts || {};
+        var toast = document.createElement('div');
+        toast.className = opts.live ? '' : 'toast-preview';
+        if (opts.live) {
+            toast.id = 'vodSyncLiveWatchCommentToast';
+            toast.setAttribute('role', 'status');
+            toast.style.cssText =
+                'position:fixed;right:16px;bottom:16px;z-index:2147483000;max-width:320px;'
+                + 'padding:12px 14px;background:rgba(72,80,96,0.82);color:#fff;border-radius:10px;'
+                + 'box-shadow:0 4px 14px rgba(0,0,0,0.22);font-family:\'Segoe UI\',Tahoma,sans-serif;'
+                + 'font-size:13px;line-height:1.45;';
+        }
+
+        var title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = titleFor(liked, commented);
+        title.style.fontWeight = '600';
+        title.style.marginBottom = commented ? '4px' : '8px';
+        toast.appendChild(title);
+
+        if (commented) {
+            var body = document.createElement('div');
+            body.className = 'body';
+            body.textContent = '댓글: ' + commentText;
+            body.style.opacity = '0.9';
+            body.style.marginBottom = '8px';
+            body.style.wordBreak = 'break-word';
+            toast.appendChild(body);
+        }
+
+        var footer = document.createElement('div');
+        footer.className = 'footer';
+        footer.style.cssText =
+            'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px;';
+
+        var countdown = document.createElement('span');
+        countdown.className = 'countdown';
+        countdown.style.cssText = 'opacity:0.75;font-size:12px;flex-shrink:0;';
+        countdown.textContent = Math.ceil(TOAST_AUTO_HIDE_MS / 1000) + '초후 닫음';
+
+        var dismissBtn = document.createElement('button');
+        dismissBtn.type = 'button';
+        dismissBtn.textContent = '이 창을 다시 열지 않음';
+        dismissBtn.style.cssText =
+            'border:1px solid rgba(255,255,255,0.35);background:transparent;color:#fff;'
+            + 'border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;white-space:nowrap;';
+
+        footer.appendChild(countdown);
+        footer.appendChild(dismissBtn);
+        toast.appendChild(footer);
+
+        return { toast: toast, countdown: countdown, dismissBtn: dismissBtn };
+    }
+
+    function renderStatic() {
+        var text = document.getElementById('commentText').value || '잘 볼게요';
+        var cases = [
+            { key: 'up', label: 'UP 하기만', liked: true, commented: false },
+            { key: 'comment', label: '댓글 등록만', liked: false, commented: true },
+            { key: 'both', label: 'UP 하기 + 댓글 등록', liked: true, commented: true }
+        ];
+        var grid = document.getElementById('staticGrid');
+        grid.innerHTML = '';
+        cases.forEach(function (c) {
+            var card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML =
+                '<h2>' + c.label + '</h2>'
+                + '<p class="meta">liked=' + c.liked + ', commented=' + c.commented + '</p>';
+            var stage = document.createElement('div');
+            stage.className = 'stage';
+            stage.innerHTML = '<span class="stage-label">우하단 배치 (실제와 동일)</span>';
+            var built = buildToastEl(c.liked, c.commented, text, { live: false });
+            stage.appendChild(built.toast);
+            card.appendChild(stage);
+            grid.appendChild(card);
+        });
+    }
+
+    var liveHideTimer = null;
+    var liveCountdownTimer = null;
+
+    function showLive(liked, commented) {
+        var existing = document.getElementById('vodSyncLiveWatchCommentToast');
+        if (existing) existing.remove();
+        if (liveHideTimer) clearTimeout(liveHideTimer);
+        if (liveCountdownTimer) clearInterval(liveCountdownTimer);
+
+        var text = document.getElementById('commentText').value || '잘 볼게요';
+        var built = buildToastEl(liked, commented, text, { live: true });
+        var remainingSec = Math.ceil(TOAST_AUTO_HIDE_MS / 1000);
+
+        function closeToast() {
+            clearTimeout(liveHideTimer);
+            clearInterval(liveCountdownTimer);
+            built.toast.remove();
+        }
+
+        built.dismissBtn.addEventListener('click', function () {
+            alert('미리보기: 실서비스에서는 안내 토스트만 OFF로 저장됩니다.');
+            closeToast();
+        });
+
+        function updateCountdown() {
+            built.countdown.textContent = remainingSec + '초후 닫음';
+        }
+        updateCountdown();
+
+        document.body.appendChild(built.toast);
+        liveCountdownTimer = setInterval(function () {
+            remainingSec -= 1;
+            if (remainingSec <= 0) {
+                closeToast();
+                return;
+            }
+            updateCountdown();
+        }, 1000);
+        liveHideTimer = setTimeout(closeToast, TOAST_AUTO_HIDE_MS);
+    }
+
+    document.querySelectorAll('[data-live]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var mode = btn.getAttribute('data-live');
+            if (mode === 'up') showLive(true, false);
+            else if (mode === 'comment') showLive(false, true);
+            else showLive(true, true);
+        });
+    });
+    document.getElementById('refreshStatic').addEventListener('click', renderStatic);
+    document.getElementById('commentText').addEventListener('change', renderStatic);
+
+    renderStatic();
+})();
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "VOD Master",
-    "version": "1.6.1.5",
+    "version": "1.7.0.0",
     "description": "SOOP, CHZZK 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화 등 VOD 관련 편의 기능 제공",
     "author": "AINukeHere",
     "homepage_url": "https://github.com/AINukeHere/VOD-Master",
@@ -35,6 +35,7 @@
         {
             "matches": ["https://vod.sooplive.com/*"],
             "js": ["src/soop_content.js"],
+            "all_frames": true,
             "run_at": "document_end"
         },
         {
@@ -62,6 +63,8 @@
                 "src/module/rp_nickname_panel.js",
                 "src/module/soop_prev_chat_viewer.js",
                 "src/module/soop_veditor_replacement.js",
+                "src/module/soop_live_watch_comment_notifier.js",
+                "src/module/soop_next_video_autoplay_guard.js",
                 "src/module/soop_vodcore_page_bridge.js"
             ],
             "matches": [
@@ -98,7 +101,13 @@
         }
     },
     "action": {
-        "default_popup": "src/settings.html"
+        "default_title": "VOD Master 설정",
+        "default_icon": {
+            "16": "icons/icon_16.png",
+            "32": "icons/icon_32.png",
+            "48": "icons/icon_48.png",
+            "128": "icons/icon_128.png"
+        }
     },
     "icons": {
         "16": "icons/icon_16.png",

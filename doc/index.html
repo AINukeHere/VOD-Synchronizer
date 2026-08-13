@@ -13,6 +13,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VOD Master — 기능 소개</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="../icons/icon_32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../icons/icon_16.png">
+    <link rel="apple-touch-icon" href="../icons/icon_128.png">
     <link rel="stylesheet" href="features.css">
 </head>
 <body>
@@ -38,6 +41,8 @@
                         <li><button type="button" role="tab" data-panel="panel-pure-view">순 조회수 표시<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-insert">현재 시간 삽입<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-prevchat">이전 채팅 복원<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-live-watch">라이브 중 VOD 시청 알림<span class="nav-label-soop">SOOP</span></button></li>
+                        <li><button type="button" role="tab" data-panel="panel-autoplay-guard">다음 영상 자동 재생 방지<span class="nav-label-soop">SOOP</span></button></li>
                         <li><button type="button" role="tab" data-panel="panel-rp">RP 닉네임 패널</button></li>
                         <li><button type="button" role="tab" data-panel="panel-loop">반복 재생<span class="nav-label-soop">SOOP</span></button></li>
                     </ul>
@@ -51,7 +56,7 @@
                 <p class="lead">SOOP·CHZZK 다시보기(VOD)를 볼 때, 다른 스트리머의 같은 시점 다시보기를 찾아주거나 채팅·타임라인을 다루는 편의 기능을 모은 확장 프로그램입니다.</p>
                 <ul>
                     <li><span class="platform-tag both">SOOP · CHZZK</span> 라이브 당시 시간 표시, 플랫폼 간 동기화, RP 패널 등</li>
-                    <li><span class="platform-tag soop">SOOP</span> 댓글 타임라인 편집·삽입, 편집 VOD 제작용 인터페이스, 이전 채팅 복원, 반복 재생 등</li>
+                    <li><span class="platform-tag soop">SOOP</span> 댓글 타임라인 편집·삽입, 편집 VOD 제작용 인터페이스, 이전 채팅 복원, 라이브 중 VOD 시청 알려주기, 다음 영상 자동 재생 방지, 반복 재생 등</li>
                 </ul>
                 <p class="note">설치: <a href="https://chromewebstore.google.com/detail/vod-master/fcgefghffdkgllcmgbckhiebjgcdppme" target="_blank" rel="noopener">Chrome 웹 스토어</a> · Tampermonkey용 SOOP 스크립트는 <a href="https://greasyfork.org/ko/scripts/541829-vod-master-soop" target="_blank" rel="noopener">GreasyFork</a>(설치 방식에 따라 일부 동작이 Chrome 확장과 다를 수 있습니다).</p>
             </section>
@@ -251,6 +256,28 @@
                 <p class="note">시그니처·기본·ogq 이모티콘 등은 표시를 맞추려 했으나, 스트리머 채팅 등은 아직 제한이 있을 수 있습니다.</p>
             </section>
 
+            <section id="panel-live-watch" class="feature-panel" role="tabpanel">
+                <h2>라이브 중 VOD 시청 알림</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> 라이브 중인 본인이 클립·캐치·편집·업로드 VOD를 <strong>음소거 해제</strong> 상태로 보면, 업로더에게 시청 시작을 알려 줍니다. (다시보기, 내 영상 제외)</p>
+                <ul>
+                    <li>알림 방식: <strong>UP 하기</strong>(기본 ON) · <strong>댓글 등록</strong>(기본 OFF, 문구·중복 방지 등 설정 가능)</li>
+                    <li>설정에서 각 방식을 켜고 끌 수 있습니다. 알림 후 우측 하단에 안내가 뜨며, 「다시 알리지 않음」을 선택할 수 있습니다.</li>
+                    <li><strong>시청 추적 기능이 아닙니다.</strong> 확프 사용자가 「누가 내 영상을 봤는지」를 알아내는 기능이 아니라, 스트리머가 업로더에게 「보고 있어요」를 전하는 기능입니다.</li>
+                    <li>스트리머가 VOD Master를 켠 채 라이브 중일 때 의미가 있습니다. 클립을 따시는 분은 스트리머에게 이 기능을 소개해 보세요.</li>
+                    <img src="../screenshots/soop_live_watch_notify_setting.png" alt="라이브 중 VOD 시청 알려주기 기능 설정 화면">
+                </ul>
+            </section>
+
+            <section id="panel-autoplay-guard" class="feature-panel" role="tabpanel">
+                <h2>다음 영상 자동 재생 방지</h2>
+                <p class="lead"><span class="platform-tag soop">SOOP</span> VOD 재생이 끝나면 다음 영상이 자동으로 이어지지 않게 합니다. (클립·캐치 등 포함, 라이브 여부와 무관)</p>
+                <ul>
+                    <li>설정에서 <strong>다음 영상 자동 재생 끄기</strong>로 ON/OFF할 수 있습니다. (기본 ON)</li>
+                    <li>재생 바에 보이는 SOOP 자동 재생 스위치와는 별개로 동작합니다. 사이트 쪽 자동 재생이 켜져 있어도, 이 옵션이 ON이면 다음 영상으로 넘어가지 않습니다.</li>
+                    <img src="../screenshots/soop_autoplay_toggle.png" alt="SOOP 자동 재생 토글">
+                </ul>
+            </section>
+
             <section id="panel-rp" class="feature-panel" role="tabpanel">
                 <h2>RP 닉네임 패널</h2>
                 <p class="feature-suspended-notice"><strong>개발이 잠정 중단된 기능입니다.</strong> 재개 시기는 정해져 있지 않습니다.</p>
@@ -328,6 +355,11 @@
         'unique-view': 'panel-pure-view',
         insert: 'panel-insert',
         prevchat: 'panel-prevchat',
+        'live-watch': 'panel-live-watch',
+        'live-watch-notify': 'panel-live-watch',
+        'autoplay-guard': 'panel-autoplay-guard',
+        'next-autoplay': 'panel-autoplay-guard',
+        'disable-autoplay': 'panel-autoplay-guard',
         rp: 'panel-rp',
         loop: 'panel-loop'
     };

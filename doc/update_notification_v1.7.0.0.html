@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업데이트 알림</title>
+    <link rel="stylesheet" href="update_notification_common.css">
+</head>
+<body>
+    <div class="update-container">
+        <div class="version-number" id="versionNumber">v1.7.0.0 주요 변경사항</div>
+        <ul class="changes-list" id="changesList">
+            <li>
+                <strong>새 기능: 라이브 중 VOD 시청 알림</strong> <span style="color:#888; font-size:13px;">(SOOP)</span>
+                <ul class="bug-fix-list" style="margin-top: 8px; margin-bottom: 8px;">
+                    <li>라이브 중인 본인이 클립·캐치·편집·업로드 VOD를 음소거 해제 상태로 보면, 업로더에게 시청 시작을 알려 줍니다. (다시보기, 내 영상 제외)</li>
+                    <li>알림 방식: <b>UP 하기</b>(기본 ON) · <b>댓글 등록</b>(기본 OFF, 문구 변경 가능)</li>
+                    <li>설정에서 ON/OFF 가능. 알림 후 우측 하단 안내 제공.</li>
+                    <li>자세한 소개는 <a href="live_watch_notify_intro.html" target="_blank" rel="noopener noreferrer">여기</a>를 읽어 보세요</li>
+                </ul>
+            </li>
+            <li>
+                <strong>새 기능: 다음 영상 자동 재생 방지</strong> <span style="color:#888; font-size:13px;">(SOOP)</span>
+                <ul class="bug-fix-list" style="margin-top: 8px; margin-bottom: 8px;">
+                    <li>VOD 재생이 끝날 때 다음 영상으로 자동으로 넘어가지 않게 합니다. (다른 페이지 삽입된 VOD 포함)</li>
+                    <li>VOD 재생 바의 자동 재생 활성화/비활성화 설정과 별개로 동작합니다.</li>
+                    <li>설정에서 ON/OFF할 수 있습니다. (기본 ON)</li>
+                </ul>
+            </li>
+            <li>
+                <strong>설정 UX</strong>
+                <ul class="bug-fix-list" style="margin-top: 8px; margin-bottom: 8px;">
+                    <li>이제 확장 아이콘 클릭 시 새 탭에서 설정 페이지가 열립니다.</li>
+                </ul>
+            </li>
+        </ul>
+        <p style="margin-top: 16px; font-size: 14px; color: #555;">VOD Master에 어떤 기능들이 있는지 <a href="https://ainukehere.github.io/VOD-Master/doc/index.html" target="_blank" rel="noopener noreferrer">알아보세요</a>.</p>
+    </div>
+
+    <script src="update_notification_common.js"></script>
+</body>
+</html>

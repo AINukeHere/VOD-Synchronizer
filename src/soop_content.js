@@ -132,6 +132,8 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
             'RPNicknamePanel': 'src/module/rp_nickname_panel.js',
             'SoopPrevChatViewer': 'src/module/soop_prev_chat_viewer.js',
             'SoopVeditorReplacement': 'src/module/soop_veditor_replacement.js',
+            'SoopLiveWatchCommentNotifier': 'src/module/soop_live_watch_comment_notifier.js',
+            'SoopNextVideoAutoplayGuard': 'src/module/soop_next_video_autoplay_guard.js',
         };
         
         // 클래스 로더를 통해 필요한 클래스들 로드
@@ -150,6 +152,10 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
         new classes.SoopPrevChatViewer();
 
         initVodCorePageBridgeHost();
+        if (/\/player\/\d+/.test(window.location.pathname)) {
+            new classes.SoopLiveWatchCommentNotifier();
+            new classes.SoopNextVideoAutoplayGuard();
+        }
 
         // 동기화 요청이 있는 경우 타임스탬프 매니저에게 요청
         const params = new URLSearchParams(window.location.search);
@@ -175,6 +181,7 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
         // timeline_sync=1 이면 localStorage에서 페이로드 로드 후 URL에서 제거
         const timelineSyncVal = params.get('timeline_sync');
         if (timelineSyncVal) {
+            log('timeline_sync 요청 감지:', timelineSyncVal);
             let payload = null;
             try {
                 const storageKey = 'vodSync_timeline';
@@ -182,14 +189,33 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
                 if (raw) {
                     payload = JSON.parse(raw);
                     localStorage.removeItem(storageKey);
+                    log('timeline_sync localStorage 로드 성공', {
+                        length: Array.isArray(payload) ? payload.length : null,
+                        sample: Array.isArray(payload) ? payload.slice(0, 8) : payload,
+                    });
+                } else {
+                    log('timeline_sync localStorage 비어 있음 (키:', storageKey, ')');
                 }
-            } catch (_) { /* ignore */ }
+            } catch (e) {
+                log('timeline_sync localStorage 파싱 실패', e);
+            }
+            const processor = window.VODSync.timelineCommentProcessor;
             if (Array.isArray(payload)) {
-                window.VODSync.timelineCommentProcessor?.receiveTimelineSyncPayload?.(payload);
+                if (processor?.receiveTimelineSyncPayload) {
+                    log('timeline_sync → receiveTimelineSyncPayload 호출');
+                    processor.receiveTimelineSyncPayload(payload);
+                } else {
+                    log('timeline_sync 실패 — timelineCommentProcessor.receiveTimelineSyncPayload 없음', {
+                        hasProcessor: !!processor,
+                    });
+                }
+            } else {
+                log('timeline_sync 실패 — 페이로드가 배열이 아님', { payload });
             }
             const url = new URL(window.location.href);
             url.searchParams.delete('timeline_sync');
             window.history.replaceState({}, '', url.toString());
+            log('timeline_sync URL 파라미터 제거 완료');
         }
 
         // 설정 로딩이 완료될 때까지 기다림
@@ -269,13 +295,23 @@ else {
     }
     log('loaded');
 
-    // 필요한 클래스들 구성
+    // 필요한 클래스들 구성 (타 플랫폼 동기화 iframe 등)
     const classConfig = {
         'SoopAPI': 'src/module/soop_api.js',
-        'SoopVODLinker': 'src/module/soop_vod_linker.js'
+        'SoopVODLinker': 'src/module/soop_vod_linker.js',
+        'SoopLiveWatchCommentNotifier': 'src/module/soop_live_watch_comment_notifier.js',
+        'SoopNextVideoAutoplayGuard': 'src/module/soop_next_video_autoplay_guard.js',
     };
     window.VODSync.classLoader.loadClasses(classConfig).then(classes => {
         new classes.SoopAPI();
         new classes.SoopVODLinker(true);
+        // vod 플레이어 iframe에서도 라이브 시청 댓글 알림·다음 영상 자동 재생 방지 동작
+        if (
+            window.location.origin.includes(new URL(window.VODSync.SoopUrls.VOD_ORIGIN).host)
+            && /\/player\/\d+/.test(window.location.pathname)
+        ) {
+            new classes.SoopLiveWatchCommentNotifier();
+            new classes.SoopNextVideoAutoplayGuard();
+        }
     });
 }

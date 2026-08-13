@@ -112,7 +112,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
 
     async loadVodInfo(videoId){
         const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(videoId);
-        if (!vodInfo || !vodInfo.data) return;
+        if (!vodInfo || !vodInfo.data || vodInfo.result !== 1) return;
         this.vodInfo = {
             id: videoId,
             type: vodInfo.data.file_type,
@@ -230,7 +230,7 @@ export class SoopTimestampManager extends TimestampManagerBase {
         this.playTimeTag = document.querySelector('span.time-current');
         this.videoTag = document.querySelector('#video');
         
-        if (this.vodInfo.type === "REVIEW"){ // 다시보기인 경우 순수 조회수 표시
+        if (this.vodInfo && this.vodInfo.type === "REVIEW"){ // 다시보기인 경우 순수 조회수 표시
             const vodViewCountTag = document.querySelector('div.cnt_info li:nth-child(1) strong');
             const realViewCount = this.vodInfo.view_cnt - this.vodInfo.live_total_view ;
             if (vodViewCountTag){

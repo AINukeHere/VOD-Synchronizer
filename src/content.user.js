@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.1.5
+// @version      1.7.0.0
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -10,6 +10,7 @@
 // @grant        GM_openInTab
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @grant        GM_info
 // @run-at       document-end
 // @license      MIT
@@ -31,12 +32,12 @@
     function debugToExtension(...data) {
         logToExtension(...data);
     }
-    if (window.top !== window.self) return;
 
     // 환경 구분용 전역 변수 (탬퍼몽키 환경)
     window.VODSync = window.VODSync || {};
     window.VODSync.IS_TAMPER_MONKEY_SCRIPT = true;
     const GITHUB_RAW_URL = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main";
+    const isIframe = window.top !== window.self;
 
     // 메인 페이지에서 실행되는 경우 (vod.sooplive.com)
     if (window.location.hostname === 'vod.sooplive.com') {
@@ -68,7 +69,7 @@ const DEFAULT_SOOP_URLS = {
     AFEVENT2_ORIGIN: 'https://afevent2.sooplive.com',
     LIVE_ORIGIN: 'https://live.sooplive.com',
     API_M_ORIGIN: 'https://api.m.sooplive.com',
-    API_CHANNEL_ORIGIN: 'https://api-channel.sooplive.co.kr',
+    API_CHANNEL_ORIGIN: 'https://api-channel.sooplive.com',
     SCH_ORIGIN: 'https://sch.sooplive.com',
     CHAPI_ORIGIN: 'https://chapi.sooplive.com',
     ST_ORIGIN: 'https://st.sooplive.com',
@@ -155,6 +156,41 @@ class SoopAPI extends IVodSync{
         });
         if (res.status !== 200) return null;
         const b = await res.json();
+        this._setCache(cacheKey, b);
+        return b;
+    }
+
+    /**
+     * 스트리머 라이브 방송 정보 조회. 방송 중이 아니면 null.
+     * @param {string} streamerId 스트리머 userId (예: chebi2)
+     * @returns {Promise<object|null>} broadNo·broadTitle 등, 오프라인이면 null
+     */
+    async GetChannelBroad(streamerId) {
+        if (!streamerId) return null;
+        const sid = String(streamerId);
+        const cacheKey = `GetChannelBroad:${sid}`;
+        const cached = this._getCached(cacheKey);
+        if (cached !== null) return cached;
+        const url = `${this.SoopUrls.API_CHANNEL_ORIGIN}/v1.1/channel/${encodeURIComponent(sid)}/home/section/broad`;
+        const res = await fetch(url, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) return null;
+        const text = await res.text();
+        // 오프라인이면 빈 본문
+        if (!text || !text.trim()) return null;
+        let b;
+        try {
+            b = JSON.parse(text);
+        } catch (_e) {
+            return null;
+        }
+        if (!b || typeof b !== 'object' || b.broadNo == null) return null;
         this._setCache(cacheKey, b);
         return b;
     }
@@ -562,6 +598,334 @@ class SoopAPI extends IVodSync{
         const b = await res.json();
         this._setCache(cacheKey, b);
         return b;
+    }
+
+    /**
+     * VOD UP 하기. 라이브 중 VOD 시청 알려주기에 사용.
+     * @param {object} opts
+     * @param {string|number} opts.stationNo
+     * @param {string|number} opts.titleNo nPKno
+     * @param {string|number} [opts.boardType=105]
+     * @param {string} [opts.referer] 생략 시 플레이어 URL
+     * @returns {Promise<object|null>}
+     */
+    async LikeVodTitle(opts = {}) {
+        const {
+            stationNo,
+            titleNo,
+            boardType = 105,
+            referer: refererOpt,
+        } = opts;
+        if (stationNo == null || titleNo == null) {
+            this.error('LikeVodTitle: stationNo, titleNo 필수');
+            return null;
+        }
+        const tn = String(titleNo);
+        const referer =
+            typeof refererOpt === 'string' && refererOpt.length > 0
+                ? refererOpt
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+        const url = new URL(`${this.SoopUrls.STBBS_ORIGIN}/api/like_action.php`);
+        url.searchParams.set('szType', 'addTitle');
+        url.searchParams.set('nStationNo', String(stationNo));
+        url.searchParams.set('nPKno', tn);
+        url.searchParams.set('nBoardType', String(boardType));
+
+        const res = await fetch(url.toString(), {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                Referer: referer,
+            },
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) {
+            this.error('LikeVodTitle HTTP', res.status);
+            return null;
+        }
+        let b;
+        try {
+            b = await res.json();
+        } catch (_e) {
+            this.warn('LikeVodTitle: JSON 파싱 실패');
+            return null;
+        }
+        // result/RESULT === 1(또는 true)만 성공으로 본다.
+        const likeOk = b && typeof b === 'object'
+            && [b.result, b.RESULT, b.CHANNEL?.RESULT, b.CHANNEL?.result]
+                .some((v) => v === 1 || v === true || String(v) === '1');
+        if (!likeOk) {
+            this.warn('LikeVodTitle 실패 응답:', b);
+            return null;
+        }
+        return b;
+    }
+
+    /**
+     * VOD 댓글 등록 (클립·캐치·편집·업로드 등). 라이브 중 VOD 시청 알려주기에 사용.
+     * @param {object} opts
+     * @param {string|number} opts.stationNo
+     * @param {string|number} opts.bbsNo
+     * @param {string|number} opts.titleNo
+     * @param {string} opts.bjId
+     * @param {string} opts.content 댓글 본문
+     * @param {string} opts.fileType CLIP|CATCH|EDITOR|NORMAL|REVIEW 등
+     * @param {string|number} [opts.boardType=105]
+     * @param {string|number} [opts.parentCommentNo=0]
+     * @param {string|number} [opts.commentPhotoType=1]
+     * @param {string} [opts.commentPhoto='']
+     * @param {string} [opts.referer] 생략 시 플레이어 URL
+     * @returns {Promise<object|null>}
+     */
+    async WriteVodComment(opts = {}) {
+        const {
+            stationNo,
+            bbsNo,
+            titleNo,
+            bjId,
+            content,
+            fileType,
+            boardType = 105,
+            parentCommentNo = 0,
+            commentPhotoType = 1,
+            commentPhoto = '',
+            referer: refererOpt,
+        } = opts;
+        if (stationNo == null || bbsNo == null || titleNo == null || !bjId || !fileType) {
+            this.error('WriteVodComment: stationNo, bbsNo, titleNo, bjId, fileType 필수');
+            return null;
+        }
+        if (typeof content !== 'string' || !content.trim()) {
+            this.error('WriteVodComment: content 필수');
+            return null;
+        }
+        const tn = String(titleNo);
+        const referer =
+            typeof refererOpt === 'string' && refererOpt.length > 0
+                ? refererOpt
+                : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+        const body = new URLSearchParams({
+            nStationNo: String(stationNo),
+            nBbsNo: String(bbsNo),
+            nTitleNo: tn,
+            bj_id: String(bjId),
+            nBoardType: String(boardType),
+            szContent: content,
+            szAction: 'write',
+            nParentCommentNo: String(parentCommentNo),
+            nCommentPhotoType: String(commentPhotoType),
+            szCommentPhoto: String(commentPhoto ?? ''),
+            szFileType: String(fileType),
+        });
+        const res = await fetch(`${this.SoopUrls.STBBS_ORIGIN}/api/bbs_memo_action.php`, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                'content-type': 'application/x-www-form-urlencoded',
+                Referer: referer,
+            },
+            body: body.toString(),
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) {
+            this.error('WriteVodComment HTTP', res.status);
+            return null;
+        }
+        let b;
+        try {
+            b = await res.json();
+        } catch (_e) {
+            this.warn('WriteVodComment: JSON 파싱 실패');
+            return null;
+        }
+        // result/RESULT === 1(또는 true)만 성공으로 본다.
+        const commentOk = b && typeof b === 'object'
+            && [b.result, b.RESULT, b.CHANNEL?.RESULT, b.CHANNEL?.result]
+                .some((v) => v === 1 || v === true || String(v) === '1');
+        if (!commentOk) {
+            this.warn('WriteVodComment 실패 응답:', b);
+            return null;
+        }
+        return b;
+    }
+
+    /**
+     * VOD 댓글 목록 조회 (bbs_memo_action szAction=get).
+     * stationNo/bbsNo/bjId가 없으면 GetSoopVodInfo로 채운다.
+     * @param {string|number} videoId titleNo
+     * @param {string} [streamerId] bj_id (생략 시 VOD 정보의 bj_id 사용)
+     * @param {object} [opts]
+     * @param {string|number} [opts.stationNo]
+     * @param {string|number} [opts.bbsNo]
+     * @param {string|number} [opts.boardType]
+     * @param {number} [opts.pageNo=1]
+     * @param {number} [opts.orderNo=1] 1: 등록순 등으로 추정
+     * @param {number} [opts.lastNo=0] 페이지네이션 커서
+     * @param {string|number} [opts.changeSecond] Referer용 재생 시점
+     * @returns {Promise<object|null>}
+     */
+    async GetSoopCommentInVod(videoId, streamerId, opts = {}) {
+        const {
+            stationNo,
+            bbsNo,
+            boardType,
+            pageNo = 1,
+            orderNo = 1,
+            lastNo = 0,
+            changeSecond,
+        } = opts;
+
+        let resolvedStationNo = stationNo;
+        let resolvedBbsNo = bbsNo;
+        let resolvedBjId = streamerId;
+        let resolvedBoardType = boardType ?? 105;
+
+        if (resolvedStationNo == null || resolvedBbsNo == null || !resolvedBjId) {
+            const vodInfo = await this.GetSoopVodInfo(videoId);
+            const data = vodInfo?.data;
+            if (!data || vodInfo?.result !== 1) {
+                this.error('GetSoopCommentInVod: VOD 정보 조회 실패', videoId, data?.message || vodInfo?.message);
+                return null;
+            }
+            resolvedStationNo = resolvedStationNo ?? data.station_no;
+            resolvedBbsNo = resolvedBbsNo ?? data.bbs_no;
+            resolvedBjId = resolvedBjId || data.bj_id;
+            if (boardType == null && data.board_type != null) {
+                resolvedBoardType = data.board_type;
+            }
+        }
+
+        if (resolvedStationNo == null || resolvedBbsNo == null || !resolvedBjId) {
+            this.error('GetSoopCommentInVod: stationNo/bbsNo/bj_id 부족', {
+                videoId,
+                resolvedStationNo,
+                resolvedBbsNo,
+                resolvedBjId,
+            });
+            return null;
+        }
+
+        const tn = String(videoId);
+        const referer = changeSecond != null && changeSecond !== ''
+            ? `${this.SoopUrls.VOD_ORIGIN}/player/${tn}?change_second=${changeSecond}`
+            : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+        const body = new URLSearchParams({
+            nStationNo: String(resolvedStationNo),
+            nBbsNo: String(resolvedBbsNo),
+            nTitleNo: tn,
+            bj_id: String(resolvedBjId),
+            nPageNo: String(pageNo),
+            nOrderNo: String(orderNo),
+            nBoardType: String(resolvedBoardType),
+            szAction: 'get',
+            nVod: '1',
+            nLastNo: String(lastNo),
+        });
+
+        const res = await fetch(`${this.SoopUrls.STBBS_ORIGIN}/api/bbs_memo_action.php`, {
+            headers: {
+                accept: 'application/json, text/plain, */*',
+                'accept-language': 'ko',
+                'content-type': 'application/x-www-form-urlencoded',
+                Referer: referer,
+            },
+            body: body.toString(),
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'include',
+        });
+        if (res.status !== 200) {
+            this.error('GetSoopCommentInVod HTTP', res.status);
+            return null;
+        }
+        try {
+            return await res.json();
+        } catch (_e) {
+            this.warn('GetSoopCommentInVod: JSON 파싱 실패');
+            return null;
+        }
+    }
+
+    /**
+     * VOD 부모 댓글 전체를 페이지네이션으로 모아 반환. (대댓글 본문은 포함되지 않음)
+     * @param {string|number} videoId titleNo
+     * @returns {Promise<object[]|null>} list_data 항목 배열. 실패 시 null
+     */
+    async GetSoopParentCommentsInVod(videoId) {
+        if (videoId == null || videoId === '') {
+            this.error('GetSoopParentCommentsInVod: videoId 필수');
+            return null;
+        }
+
+        const vodInfo = await this.GetSoopVodInfo(videoId);
+        const data = vodInfo?.data;
+        if (!data || vodInfo?.result !== 1) {
+            this.error(
+                'GetSoopParentCommentsInVod: VOD 정보 조회 실패',
+                videoId,
+                data?.message || vodInfo?.message
+            );
+            return null;
+        }
+
+        const stationNo = data.station_no;
+        const bbsNo = data.bbs_no;
+        const bjId = data.bj_id;
+        const boardType = data.board_type ?? 105;
+        if (stationNo == null || bbsNo == null || !bjId) {
+            this.error('GetSoopParentCommentsInVod: stationNo/bbsNo/bj_id 부족', {
+                videoId,
+                stationNo,
+                bbsNo,
+                bjId,
+            });
+            return null;
+        }
+
+        const all = [];
+        let pageNo = 1;
+        let lastNo = 0;
+        const maxPages = 100;
+
+        for (let i = 0; i < maxPages; i++) {
+            const page = await this.GetSoopCommentInVod(videoId, bjId, {
+                stationNo,
+                bbsNo,
+                boardType,
+                pageNo,
+                lastNo,
+            });
+            const channel = page?.CHANNEL;
+            const pageOk = channel
+                && [channel.RESULT, channel.result]
+                    .some((v) => v === 1 || v === true || String(v) === '1');
+            if (!pageOk) {
+                if (i === 0) {
+                    this.error('GetSoopParentCommentsInVod: 댓글 조회 실패', videoId);
+                    return null;
+                }
+                this.warn('GetSoopParentCommentsInVod: 중간 페이지 실패, 수집분 반환', videoId, pageNo);
+                break;
+            }
+
+            const list = Array.isArray(channel.DATA?.list_data) ? channel.DATA.list_data : [];
+            all.push(...list);
+
+            if (channel.DATA?.has_more !== true || list.length === 0) {
+                break;
+            }
+
+            const nextLast = Number(list[list.length - 1]?.p_comment_no);
+            if (!Number.isFinite(nextLast) || nextLast === lastNo) {
+                break;
+            }
+            lastNo = nextLast;
+            pageNo += 1;
+        }
+
+        return all;
     }
 
     /**
@@ -1202,7 +1566,7 @@ class SoopAPI extends IVodSync{
 
     async loadVodInfo(videoId){
         const vodInfo = await window.VODSync.soopAPI.GetSoopVodInfo(videoId);
-        if (!vodInfo || !vodInfo.data) return;
+        if (!vodInfo || !vodInfo.data || vodInfo.result !== 1) return;
         this.vodInfo = {
             id: videoId,
             type: vodInfo.data.file_type,
@@ -1319,7 +1683,7 @@ class SoopAPI extends IVodSync{
         this.playTimeTag = document.querySelector('span.time-current');
         this.videoTag = document.querySelector('#video');
         
-        if (this.vodInfo.type === "REVIEW"){ // 다시보기인 경우 순수 조회수 표시
+        if (this.vodInfo && this.vodInfo.type === "REVIEW"){ // 다시보기인 경우 순수 조회수 표시
             const vodViewCountTag = document.querySelector('div.cnt_info li:nth-child(1) strong');
             const realViewCount = this.vodInfo.view_cnt - this.vodInfo.live_total_view ;
             if (vodViewCountTag){
@@ -2010,6 +2374,9 @@ class TimelineCommentProcessorBase extends IVodSync {
         this._started = false;
         /** 전달받은 타임라인 동기화 페이로드 (receive 시 저장) */
         this._incomingTimelineSyncPayload = null;
+        /** timeline_sync fill 시도/대기 debug 1회 로그용 */
+        this._loggedTimelineSyncFillAttempt = false;
+        this._loggedTimelineSyncWaitingConvert = false;
         /** 미리보기 창 뼈대 (receive 시 생성). listWrap은 뼈대의 내용 영역 참조용. */
         this._timelinePreviewWrap = null;
         this._timelinePreviewListWrap = null;
@@ -2070,8 +2437,17 @@ class TimelineCommentProcessorBase extends IVodSync {
             this._injectTinelineInsertButton(container);
 
             // 수신 페이로드가 있으면 미리보기 목록 영역에 내용 채움
-            if (this._incomingTimelineSyncPayload)
+            if (this._incomingTimelineSyncPayload) {
+                if (!this._loggedTimelineSyncFillAttempt) {
+                    this._loggedTimelineSyncFillAttempt = true;
+                    this.debug('timeline_sync: 미리보기 채우기 시도 (tsManager 준비 대기 가능)', {
+                        payloadLen: this._incomingTimelineSyncPayload.length,
+                        hasTsManager: !!window.VODSync?.tsManager,
+                        canConvert: !!window.VODSync?.tsManager?.canConvertGlobalTSToPlaybackTime?.(),
+                    });
+                }
                 this.fillTimelinePreviewContent(this._incomingTimelineSyncPayload);
+            }
         }, 500);
     }
 
@@ -2239,8 +2615,16 @@ class TimelineCommentProcessorBase extends IVodSync {
      * @param {Array<Array<{type:'string',value:string}|{type:'timeline',playbackSec:number|null}>>} rows
      */
     openTimelinePreview(rows) {
-        if (!Array.isArray(rows) || rows.length === 0) return;
+        if (!Array.isArray(rows) || rows.length === 0) {
+            this.debug('timeline_sync: openTimelinePreview 거부 (빈 rows)');
+            return;
+        }
+        this.debug('timeline_sync: openTimelinePreview', {
+            rowCount: rows.length,
+            fragCounts: rows.map((r) => r?.length ?? 0),
+        });
         if (!this._timelinePreviewWrap?.isConnected) {
+            this.debug('timeline_sync: open 시 미리보기 뼈대 생성');
             this._createTimelinePreviewSkeleton();
         }
         this._incomingTimelineSyncPayload = null;
@@ -2265,10 +2649,29 @@ class TimelineCommentProcessorBase extends IVodSync {
      * @param {(string|number)[]} payload
      */
     receiveTimelineSyncPayload(payload) {
-        if (!Array.isArray(payload) || payload.length === 0) return;
+        if (!Array.isArray(payload) || payload.length === 0) {
+            this.debug('timeline_sync: receive 거부 (빈 페이로드)', {
+                isArray: Array.isArray(payload),
+                length: payload?.length,
+            });
+            return;
+        }
+        const numberCount = payload.filter((item) => typeof item === 'number' && !isNaN(item)).length;
+        const stringCount = payload.filter((item) => typeof item === 'string').length;
+        this.debug('timeline_sync: receive 수신', {
+            length: payload.length,
+            numberCount,
+            stringCount,
+            sample: payload.slice(0, 8),
+        });
         this._incomingTimelineSyncPayload = payload;
+        this._loggedTimelineSyncFillAttempt = false;
+        this._loggedTimelineSyncWaitingConvert = false;
         if (!this._timelinePreviewWrap?.isConnected) {
+            this.debug('timeline_sync: 미리보기 뼈대 생성');
             this._createTimelinePreviewSkeleton();
+        } else {
+            this.debug('timeline_sync: 미리보기 뼈대 이미 존재');
         }
     }
     
@@ -2339,14 +2742,34 @@ class TimelineCommentProcessorBase extends IVodSync {
 
     // 수신한 페이로드로부터 변환된 타임라인 댓글 미리보기 목록 영역에 내용 채움. 내부에서 openTimelinePreview(rows) 호출.
     fillTimelinePreviewContent(payload) {
-        if (!Array.isArray(payload) || payload.length === 0) return;
+        if (!Array.isArray(payload) || payload.length === 0) {
+            this.debug('timeline_sync: fill 거부 (빈 페이로드)');
+            return;
+        }
         const tsManager = window.VODSync?.tsManager;
-        if (!tsManager?.canConvertGlobalTSToPlaybackTime()) return;
+        if (!tsManager?.canConvertGlobalTSToPlaybackTime()) {
+            // 인터벌 재시도 중이므로 대기 로그는 1회만
+            if (!this._loggedTimelineSyncWaitingConvert) {
+                this._loggedTimelineSyncWaitingConvert = true;
+                this.debug('timeline_sync: fill 대기 — canConvertGlobalTSToPlaybackTime=false', {
+                    hasTsManager: !!tsManager,
+                    hasVodInfo: tsManager?.vodInfo != null,
+                });
+            }
+            return;
+        }
         const globalTSToPlaybackTime = tsManager.globalTSToPlaybackTime;
-        if (!globalTSToPlaybackTime) return;
+        if (!globalTSToPlaybackTime) {
+            this.debug('timeline_sync: fill 거부 — globalTSToPlaybackTime 없음');
+            return;
+        }
+        this.debug('timeline_sync: fill 시작 (변환 가능)', { payloadLen: payload.length });
 
         // 페이로드 → 순서 유지 fragments (string | timeline), \n 기준으로 행 분리
         const fragments = [];
+        let convertedOk = 0;
+        let convertedNull = 0;
+        let stringItems = 0;
         for (const item of payload) {
             const asGlobalMs = typeof item === 'number' && !isNaN(item)
                 ? item
@@ -2356,14 +2779,24 @@ class TimelineCommentProcessorBase extends IVodSync {
             if (!isNaN(asGlobalMs)) {
                 const sec = globalTSToPlaybackTime.call(tsManager, asGlobalMs);
                 if (sec != null) {
+                    convertedOk++;
                     fragments.push({ type: 'timeline', playbackSec: Math.max(0, Math.floor(sec)) });
                 } else {
+                    convertedNull++;
                     fragments.push({ type: 'timeline', playbackSec: null });
                 }
             } else if (typeof item === 'string') {
+                stringItems++;
                 fragments.push({ type: 'string', value: item });
             }
         }
+        this.debug('timeline_sync: 페이로드 변환 결과', {
+            fragments: fragments.length,
+            convertedOk,
+            convertedNull,
+            stringItems,
+            sampleTimeline: fragments.filter((f) => f.type === 'timeline').slice(0, 5),
+        });
 
         const rows = [];
         let currentRow = [];
@@ -2382,16 +2815,28 @@ class TimelineCommentProcessorBase extends IVodSync {
             }
         }
         if (currentRow.length > 0) rows.push(currentRow);
-        if (rows.length === 0) return;
+        if (rows.length === 0) {
+            this.debug('timeline_sync: fill 중단 — 행으로 분리된 결과 없음');
+            return;
+        }
+        this.debug('timeline_sync: fill 완료 → openTimelinePreview', { rowCount: rows.length });
 
         this.openTimelinePreview(rows);
     }
 
     /** 미리보기 목록 영역에 행 데이터를 DOM으로 채움. openTimelinePreview → fillTimelinePreviewContent / openPreviewWithCurrentPageTimelineComments 에서 사용. */
     _renderPreviewRows(rows) {
-        if (!this._timelinePreviewListWrap?.isConnected || !Array.isArray(rows) || rows.length === 0) return;
+        if (!this._timelinePreviewListWrap?.isConnected || !Array.isArray(rows) || rows.length === 0) {
+            this.debug('timeline_sync: _renderPreviewRows 거부', {
+                listConnected: !!this._timelinePreviewListWrap?.isConnected,
+                isArray: Array.isArray(rows),
+                length: rows?.length,
+            });
+            return;
+        }
         const listWrap = this._timelinePreviewListWrap;
         listWrap.textContent = '';
+        this.debug('timeline_sync: _renderPreviewRows 렌더', { rowCount: rows.length });
 
         rows.forEach((rowFragments) => {
             const row = document.createElement('div');
@@ -2598,6 +3043,13 @@ class TimelineCommentProcessorBase extends IVodSync {
     buildSegmentsFromComments(commentEls) {
         const tsManager = window.VODSync?.tsManager;
         const result = [];
+        let timeLinkCount = 0;
+        let convertedCount = 0;
+        let skippedNoGlobal = 0;
+        this.debug('timeline_sync: buildSegmentsFromComments 시작', {
+            commentCount: commentEls?.length ?? 0,
+            hasPlaybackTimeToGlobalTS: !!tsManager?.playbackTimeToGlobalTS,
+        });
         for (const commentEl of commentEls) {
             const cmmtTxt = commentEl?.querySelector('.cmmt-txt');
             if (!cmmtTxt) continue;
@@ -2614,12 +3066,20 @@ class TimelineCommentProcessorBase extends IVodSync {
                 if (node.classList?.contains('best')) continue;
                 if (node.tagName === 'BR') { result.push('\n'); continue; }
                 if (node.classList?.contains('time_link') && node.hasAttribute('data-time')) {
+                    timeLinkCount++;
                     const sec = parseInt(node.getAttribute('data-time'), 10);
                     if (!isNaN(sec) && tsManager?.playbackTimeToGlobalTS) {
                         const globalDate = tsManager.playbackTimeToGlobalTS(sec);
                         if (globalDate instanceof Date && !isNaN(globalDate.getTime())) {
+                            convertedCount++;
                             result.push(globalDate.getTime());
+                        } else {
+                            skippedNoGlobal++;
+                            this.debug('timeline_sync: time_link → globalTS 변환 실패', { sec, globalDate });
                         }
+                    } else {
+                        skippedNoGlobal++;
+                        this.debug('timeline_sync: time_link 스킵', { sec, hasConverter: !!tsManager?.playbackTimeToGlobalTS });
                     }
                     continue;
                 }
@@ -2627,6 +3087,13 @@ class TimelineCommentProcessorBase extends IVodSync {
                 if (t) result.push(t);
             }
         }
+        this.debug('timeline_sync: buildSegmentsFromComments 완료', {
+            resultLen: result.length,
+            timeLinkCount,
+            convertedCount,
+            skippedNoGlobal,
+            sample: result.slice(0, 8),
+        });
         return result;
     }
 
@@ -7420,6 +7887,645 @@ class SoopVeditorReplacement extends IVodSync {
         host.appendChild(addRow);
     }
 }
+        /** 라이브 중 VOD 시청 알려주기 대상 VOD 유형 (다시보기 REVIEW 제외) */
+const TARGET_FILE_TYPES = new Set(['CLIP', 'CATCH', 'EDITOR', 'NORMAL']);
+const DEFAULT_COMMENT_TEXT = '잘 볼게요';
+const DEDUP_STORAGE_PREFIX = 'vodSync_liveWatchComment:';
+const MIN_DEDUP_MS = 60 * 1000;
+const TOAST_AUTO_HIDE_MS = 5000;
+const DEFAULT_COOLDOWN_SECONDS = 3600;
+
+/**
+ * 확장 사용자가 라이브 중일 때 클립·캐치·편집·업로드 VOD를 열면
+ * 제작자에게 UP 하기·댓글 등록 알림을 보낸다.
+ * (음소거 상태에서는 보내지 않고, 음소거가 풀릴 때까지 기다린다.)
+ */
+class SoopLiveWatchCommentNotifier extends IVodSync {
+    constructor() {
+        super();
+        this.likeEnabled = true;
+        this.commentEnabled = false;
+        this.commentText = DEFAULT_COMMENT_TEXT;
+        this.toastEnabled = true;
+        this.dedupMode = 'cooldown'; // existing_comment | cooldown
+        this.cooldownType = 'video_duration'; // video_duration | custom_hours
+        this.cooldownSeconds = DEFAULT_COOLDOWN_SECONDS;
+        this._attempted = false;
+        this.log('loaded');
+        this.init();
+    }
+
+    async init() {
+        await this._loadSettings();
+        if (!this.likeEnabled && !this.commentEnabled) {
+            this.log('설정 OFF — 라이브 중 VOD 시청 알려주기 건너뜀');
+            return;
+        }
+        await this._tryNotify();
+    }
+
+    async _loadSettings() {
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) {
+            if (typeof GM_getValue === 'function') {
+                this.likeEnabled = GM_getValue('soopLiveWatchLikeNotify', true) !== false;
+                this.commentEnabled = GM_getValue('soopLiveWatchCommentNotify', false) === true;
+                const text = GM_getValue('soopLiveWatchCommentText', DEFAULT_COMMENT_TEXT);
+                this.commentText = typeof text === 'string' && text.trim() ? text : DEFAULT_COMMENT_TEXT;
+                this.toastEnabled = GM_getValue('soopLiveWatchCommentToast', true) !== false;
+                this._applyDedupSettings({
+                    soopLiveWatchCommentDedupMode: GM_getValue('soopLiveWatchCommentDedupMode', 'cooldown'),
+                    soopLiveWatchCommentCooldownType: GM_getValue('soopLiveWatchCommentCooldownType', 'video_duration'),
+                    soopLiveWatchCommentCooldownSeconds: GM_getValue('soopLiveWatchCommentCooldownSeconds', null),
+                    soopLiveWatchCommentCooldownHours: GM_getValue('soopLiveWatchCommentCooldownHours', null),
+                });
+            }
+            return;
+        }
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getAllSettings' });
+            if (response?.success && response.settings) {
+                const s = response.settings;
+                this.likeEnabled = s.soopLiveWatchLikeNotify !== false;
+                this.commentEnabled = s.soopLiveWatchCommentNotify === true;
+                const text = s.soopLiveWatchCommentText;
+                if (typeof text === 'string' && text.trim()) {
+                    this.commentText = text;
+                }
+                if (s.soopLiveWatchCommentToast !== undefined) {
+                    this.toastEnabled = s.soopLiveWatchCommentToast !== false;
+                }
+                this._applyDedupSettings(s);
+            }
+        } catch (error) {
+            this.warn('설정 로드 실패, 기본값 사용:', error);
+        }
+    }
+
+    _applyDedupSettings(settings = {}) {
+        this.dedupMode = settings.soopLiveWatchCommentDedupMode === 'existing_comment'
+            ? 'existing_comment'
+            : 'cooldown';
+        this.cooldownType = settings.soopLiveWatchCommentCooldownType === 'custom_hours'
+            ? 'custom_hours'
+            : 'video_duration';
+        this.cooldownSeconds = this._normalizeCooldownSeconds(
+            settings.soopLiveWatchCommentCooldownSeconds,
+            settings.soopLiveWatchCommentCooldownHours
+        );
+    }
+
+    // 임의 지정 대기 시간(초). 예전 시간 단위 설정이 있으면 초로 변환한다.
+    _normalizeCooldownSeconds(secondsValue, legacyHoursValue) {
+        const seconds = Number(secondsValue);
+        if (Number.isFinite(seconds) && seconds > 0) {
+            return Math.max(1, Math.floor(seconds));
+        }
+        const hours = Number(legacyHoursValue);
+        if (Number.isFinite(hours) && hours > 0) {
+            return Math.max(1, Math.round(hours * 3600));
+        }
+        return DEFAULT_COOLDOWN_SECONDS;
+    }
+
+    async _setToastEnabled(enabled) {
+        this.toastEnabled = enabled;
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) {
+            if (typeof GM_setValue === 'function') {
+                GM_setValue('soopLiveWatchCommentToast', enabled);
+            }
+            return;
+        }
+        try {
+            await chrome.runtime.sendMessage({
+                action: 'saveSettings',
+                settings: { soopLiveWatchCommentToast: enabled },
+            });
+        } catch (error) {
+            this.warn('토스트 설정 저장 실패:', error);
+        }
+    }
+
+    _getTitleNoFromUrl() {
+        const m = window.location.pathname.match(/\/player\/(\d+)/);
+        return m?.[1] ?? null;
+    }
+
+    _buildReferer(titleNo, fileType) {
+        const base = `${window.VODSync?.SoopUrls?.VOD_ORIGIN || 'https://vod.sooplive.com'}/player/${titleNo}`;
+        if (String(fileType).toUpperCase() === 'CATCH') {
+            return `${base}/catch`;
+        }
+        return base;
+    }
+
+    _dedupKey(titleNo) {
+        return `${DEDUP_STORAGE_PREFIX}${titleNo}`;
+    }
+
+    // 시간 기반 대기 남은 ms. 없거나 만료면 0.
+    _getDedupRemainingMs(titleNo) {
+        try {
+            const raw = localStorage.getItem(this._dedupKey(titleNo));
+            if (!raw) return 0;
+            const parsed = JSON.parse(raw);
+            const expiresAt = Number(parsed?.expiresAt);
+            if (!Number.isFinite(expiresAt)) {
+                localStorage.removeItem(this._dedupKey(titleNo));
+                return 0;
+            }
+            const remainingMs = expiresAt - Date.now();
+            if (remainingMs <= 0) {
+                localStorage.removeItem(this._dedupKey(titleNo));
+                return 0;
+            }
+            return remainingMs;
+        } catch (_e) {
+            return 0;
+        }
+    }
+
+    _markDedup(titleNo, durationMs) {
+        const ttl = Math.max(Number(durationMs) || 0, MIN_DEDUP_MS);
+        try {
+            localStorage.setItem(
+                this._dedupKey(titleNo),
+                JSON.stringify({ expiresAt: Date.now() + ttl })
+            );
+        } catch (error) {
+            this.warn('중복 방지 저장 실패:', error);
+        }
+    }
+
+    _resolveCooldownMs(totalFileDurationMs) {
+        if (this.cooldownType === 'custom_hours') {
+            return Math.max(this.cooldownSeconds * 1000, MIN_DEDUP_MS);
+        }
+        return Math.max(Number(totalFileDurationMs) || 0, MIN_DEDUP_MS);
+    }
+
+    /**
+     * 댓글 본문 비교용 정규화. HTML 줄바꿈·태그·공백을 맞춘다.
+     * @param {string} text
+     * @returns {string}
+     */
+    _normalizeCommentText(text) {
+        return String(text ?? '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /**
+     * 내가 남긴 부모 댓글 중 동일 문구가 있는지 확인. (대댓글은 조회 범위 밖)
+     * 조회 실패 시 false — 댓글 등록을 막지 않는다.
+     */
+    async _hasExistingMatchingComment(api, opts) {
+        const titleNo = opts?.titleNo;
+        const loginId = opts?.loginId;
+        const content = opts?.content;
+        if (titleNo == null || !loginId || typeof content !== 'string') {
+            return false;
+        }
+        if (typeof api.GetSoopParentCommentsInVod !== 'function') {
+            this.warn('GetSoopParentCommentsInVod 없음 — 기존 댓글 판별 스킵');
+            return false;
+        }
+
+        const needle = this._normalizeCommentText(content);
+        if (!needle) return false;
+
+        try {
+            const list = await api.GetSoopParentCommentsInVod(titleNo);
+            if (!Array.isArray(list)) {
+                this.warn('기존 댓글 목록 조회 실패 — 중복으로 보지 않음');
+                return false;
+            }
+            const lid = String(loginId);
+            return list.some(
+                (c) => String(c?.user_id) === lid
+                    && this._normalizeCommentText(c?.comment) === needle
+            );
+        } catch (error) {
+            this.warn('기존 댓글 판별 실패:', error);
+            return false;
+        }
+    }
+
+    _getPlayerVideo() {
+        const video = document.querySelector('video');
+        return video instanceof HTMLVideoElement ? video : null;
+    }
+
+    // muted이거나 volume이 0이면 음소거로 본다.
+    _isVideoUnmuted(video = this._getPlayerVideo()) {
+        if (!(video instanceof HTMLVideoElement)) return false;
+        return !video.muted && video.volume > 0;
+    }
+
+    // 음소거가 풀릴 때까지 대기. (자동재생이 음소거라서 시청 직후엔 보통 음소거 상태)
+    async _waitUntilUnmuted() {
+        if (this._isVideoUnmuted()) return true;
+        this.log('음소거 해제 대기 중...');
+        return new Promise((resolve) => {
+            let attachedVideo = null;
+            const onVolumeChange = () => {
+                if (this._isVideoUnmuted(attachedVideo)) finish(true);
+            };
+            const finish = (ok) => {
+                clearInterval(pollId);
+                if (attachedVideo) {
+                    attachedVideo.removeEventListener('volumechange', onVolumeChange);
+                }
+                resolve(ok);
+            };
+            const ensureListener = () => {
+                const video = this._getPlayerVideo();
+                if (!video || video === attachedVideo) return;
+                if (attachedVideo) {
+                    attachedVideo.removeEventListener('volumechange', onVolumeChange);
+                }
+                attachedVideo = video;
+                attachedVideo.addEventListener('volumechange', onVolumeChange);
+            };
+            const pollId = setInterval(() => {
+                ensureListener();
+                if (this._isVideoUnmuted()) finish(true);
+            }, 400);
+            ensureListener();
+        });
+    }
+
+    async _resolveLoginId() {
+        // 확장 환경은 vodCore 고스트 동기화 직후 loginId가 비어 있을 수 있어 잠시 재시도
+        for (let i = 0; i < 10; i++) {
+            const vc = window.VODSync?.getVodCore?.();
+            const fromVodCore = vc?.config?.loginId != null ? String(vc.config.loginId) : '';
+            if (fromVodCore) return fromVodCore;
+            if (i < 9) await new Promise((r) => setTimeout(r, 300));
+        }
+        const api = window.VODSync?.soopAPI;
+        if (!api || typeof api.GetPrivateInfo !== 'function') return null;
+        const priv = await api.GetPrivateInfo();
+        return priv?.CHANNEL?.LOGIN_ID ?? null;
+    }
+
+    // 알림 성공 안내. UP 하기/댓글 등록 중 무엇이 됐는지 정확히 표시. 「다시 알리지 않음」으로 이후 토스트만 끈다.
+    _showSuccessToast({ liked = false, commented = false, commentText = '' } = {}) {
+        if (!this.toastEnabled) return;
+        if (!liked && !commented) return;
+
+        const existing = document.getElementById('vodSyncLiveWatchCommentToast');
+        if (existing) existing.remove();
+
+        let titleText = '';
+        if (liked && commented) {
+            titleText = 'VOD를 UP하고 댓글을 등록했습니다.';
+        } else if (liked) {
+            titleText = 'VOD를 UP했습니다.';
+        } else {
+            titleText = 'VOD에 댓글을 등록했습니다.';
+        }
+
+        const toast = document.createElement('div');
+        toast.id = 'vodSyncLiveWatchCommentToast';
+        toast.setAttribute('role', 'status');
+        toast.style.cssText = `
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            z-index: 2147483000;
+            max-width: 320px;
+            padding: 12px 14px;
+            background: rgba(72, 80, 96, 0.82);
+            color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            font-size: 13px;
+            line-height: 1.45;
+        `;
+
+        const title = document.createElement('div');
+        title.textContent = titleText;
+        title.style.fontWeight = '600';
+        title.style.marginBottom = commented ? '4px' : '8px';
+
+        toast.appendChild(title);
+
+        if (commented) {
+            const body = document.createElement('div');
+            body.textContent = `댓글: ${commentText}`;
+            body.style.opacity = '0.9';
+            body.style.marginBottom = '8px';
+            body.style.wordBreak = 'break-word';
+            toast.appendChild(body);
+        }
+
+        const footer = document.createElement('div');
+        footer.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 2px;
+        `;
+
+        const countdown = document.createElement('span');
+        countdown.style.cssText = 'opacity: 0.75; font-size: 12px; flex-shrink: 0;';
+
+        const dismissBtn = document.createElement('button');
+        dismissBtn.type = 'button';
+        dismissBtn.textContent = '이 창을 다시 열지 않음';
+        dismissBtn.style.cssText = `
+            border: 1px solid rgba(255,255,255,0.35);
+            background: transparent;
+            color: #fff;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        `;
+
+        let remainingSec = Math.ceil(TOAST_AUTO_HIDE_MS / 1000);
+        const updateCountdown = () => {
+            countdown.textContent = `${remainingSec}초후 닫음`;
+        };
+        updateCountdown();
+
+        const closeToast = () => {
+            clearTimeout(hideTimer);
+            clearInterval(countdownTimer);
+            toast.remove();
+        };
+        dismissBtn.addEventListener('click', async () => {
+            await this._setToastEnabled(false);
+            closeToast();
+        });
+
+        footer.appendChild(countdown);
+        footer.appendChild(dismissBtn);
+        toast.appendChild(footer);
+        document.body.appendChild(toast);
+
+        const countdownTimer = setInterval(() => {
+            remainingSec -= 1;
+            if (remainingSec <= 0) {
+                closeToast();
+                return;
+            }
+            updateCountdown();
+        }, 1000);
+        const hideTimer = setTimeout(closeToast, TOAST_AUTO_HIDE_MS);
+    }
+
+    async _tryNotify() {
+        if (this._attempted) return;
+        this._attempted = true;
+
+        const titleNo = this._getTitleNoFromUrl();
+        if (!titleNo) return;
+
+        // 시간 기반 대기 모드만 localStorage로 선차단
+        if (this.dedupMode === 'cooldown') {
+            const remainingMs = this._getDedupRemainingMs(titleNo);
+            if (remainingMs > 0) {
+                const remainingSec = Math.ceil(remainingMs / 1000);
+                this.log(`재등록 대기 중 — titleNo=${titleNo}, 남은 시간=${remainingSec}초`);
+                return;
+            }
+        }
+
+        const api = window.VODSync?.soopAPI;
+        if (!api) {
+            this.warn('soopAPI 없음');
+            return;
+        }
+
+        const vodInfo = await api.GetSoopVodInfo(titleNo);
+        const data = vodInfo?.data;
+        if (!data || vodInfo?.result !== 1) {
+            this.log('VOD 정보 조회 실패 또는 비공개');
+            return;
+        }
+
+        const fileType = String(data.file_type || '').toUpperCase();
+        if (!TARGET_FILE_TYPES.has(fileType)) {
+            this.log(`대상 아님 file_type=${fileType}`);
+            return;
+        }
+
+        // 댓글이 막힌 VOD는 요청하지 않음
+        if (data.comment_yn === 0 || data.comment_yn === '0' || data.comment_yn === false) {
+            this.warn(`댓글을 작성할 수 없는 영상입니다. titleNo=${titleNo}`);
+            return;
+        }
+
+        const bjId = data.bj_id != null ? String(data.bj_id) : '';
+        const writerId = data.writer_id != null ? String(data.writer_id) : '';
+        if (!bjId) {
+            this.warn('bj_id 없음');
+            return;
+        }
+
+        const loginId = await this._resolveLoginId();
+        if (!loginId) {
+            this.log('로그인 ID 없음 — 건너뜀');
+            return;
+        }
+
+        // 본인이 만든 VOD면 알림 대상이 없으므로 건너뜀
+        if (writerId && writerId === loginId) {
+            this.log('본인 작성 VOD — 건너뜀');
+            return;
+        }
+
+        // 확장 사용자가 라이브 중일 때만
+        let broad = await api.GetChannelBroad(loginId);
+        if (!broad) {
+            this.log('라이브 중이 아님 — 건너뜀');
+            return;
+        }
+
+        const content = String(this.commentText || DEFAULT_COMMENT_TEXT).trim() || DEFAULT_COMMENT_TEXT;
+        let skipComment = !this.commentEnabled;
+
+        // 같은 문구의 내 댓글이 있으면 댓글만 건너뜀 (API 연동 후 동작)
+        if (this.commentEnabled && this.dedupMode === 'existing_comment') {
+            const exists = await this._hasExistingMatchingComment(api, {
+                stationNo: data.station_no,
+                bbsNo: data.bbs_no,
+                titleNo: data.title_no ?? titleNo,
+                bjId,
+                loginId,
+                content,
+                fileType,
+            });
+            if (exists) {
+                this.log(`동일 문구 댓글 이미 존재 — 댓글 건너뜀 titleNo=${titleNo}`);
+                skipComment = true;
+                if (!this.likeEnabled) return;
+            }
+        }
+
+        // 음소거면 알림 안 보내고, 해제될 때까지 대기
+        await this._waitUntilUnmuted();
+
+        // 음소거 대기 중 방송이 끝났을 수 있어 다시 확인
+        broad = await api.GetChannelBroad(loginId);
+        if (!broad) {
+            this.log('음소거 해제 후 라이브 종료 — 건너뜀');
+            return;
+        }
+
+        if (this.commentEnabled && !skipComment && this.dedupMode === 'existing_comment') {
+            const exists = await this._hasExistingMatchingComment(api, {
+                stationNo: data.station_no,
+                bbsNo: data.bbs_no,
+                titleNo: data.title_no ?? titleNo,
+                bjId,
+                loginId,
+                content,
+                fileType,
+            });
+            if (exists) {
+                this.log(`음소거 해제 후 동일 문구 댓글 확인 — 댓글 건너뜀 titleNo=${titleNo}`);
+                skipComment = true;
+                if (!this.likeEnabled) return;
+            }
+        }
+
+        const referer = this._buildReferer(titleNo, fileType);
+        const boardType = data.board_type ?? 105;
+        const resolvedTitleNo = data.title_no ?? titleNo;
+        let liked = false;
+        let commented = false;
+
+        if (this.likeEnabled) {
+            if (typeof api.LikeVodTitle !== 'function') {
+                this.warn('LikeVodTitle API 없음');
+            } else {
+                const likeResult = await api.LikeVodTitle({
+                    stationNo: data.station_no,
+                    titleNo: resolvedTitleNo,
+                    boardType,
+                    referer,
+                });
+                if (likeResult) {
+                    liked = true;
+                    this.log(`라이브 시청 UP 완료 titleNo=${titleNo} fileType=${fileType}`);
+                } else {
+                    liked = false;
+                    this.warn(`UP 하기 실패 titleNo=${titleNo}`);
+                }
+            }
+        }
+
+        if (this.commentEnabled && !skipComment) {
+            const commentResult = await api.WriteVodComment({
+                stationNo: data.station_no,
+                bbsNo: data.bbs_no,
+                titleNo: resolvedTitleNo,
+                bjId,
+                boardType,
+                content,
+                fileType,
+                referer,
+            });
+            if (commentResult) {
+                commented = true;
+                this.log(`라이브 시청 댓글 작성 완료 titleNo=${titleNo} fileType=${fileType}`);
+            } else {
+                commented = false;
+                this.warn(`댓글을 작성할 수 없는 영상이거나 작성에 실패했습니다. titleNo=${titleNo}`);
+            }
+        }
+
+        if (!liked && !commented) return;
+
+        if (this.dedupMode === 'cooldown') {
+            this._markDedup(titleNo, this._resolveCooldownMs(data.total_file_duration));
+        }
+        this._showSuccessToast({ liked, commented, commentText: content });
+    }
+}
+        /**
+ * SOOP VOD 다음 영상 자동 재생을 막는다. (라이브 여부와 무관)
+ * #video의 ended 이벤트 전파를 capture에서 막아 이어보기를 차단한다.
+ */
+class SoopNextVideoAutoplayGuard extends IVodSync {
+    constructor() {
+        super();
+        this.enabled = true;
+        this._timer = null;
+        this._boundVideos = new WeakSet();
+        this._onVideoEndedCapture = (e) => {
+            e.stopPropagation();
+        };
+        this.log('loaded');
+        this.init();
+    }
+
+    async init() {
+        if (!/\/player\/\d+/.test(window.location.pathname)) {
+            return;
+        }
+        await this._loadSettings();
+        if (!this.enabled) {
+            this.log('설정 OFF — 다음 영상 자동 재생 방지 건너뜀');
+            return;
+        }
+        this._start();
+    }
+
+    async _loadSettings() {
+        if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) {
+            if (typeof GM_getValue === 'function') {
+                this.enabled = GM_getValue('soopLiveWatchDisableAutoplay', true) !== false;
+            }
+            return;
+        }
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getAllSettings' });
+            if (response?.success && response.settings) {
+                this.enabled = response.settings.soopLiveWatchDisableAutoplay !== false;
+            }
+        } catch (error) {
+            this.warn('설정 로드 실패, 기본값 사용:', error);
+        }
+    }
+
+    _start() {
+        if (this._timer != null) return;
+        this.log('다음 영상 자동 재생 방지 시작 (1초 간격, ended 전파 차단)');
+        this._bindEndedGuards();
+        this._timer = setInterval(() => this._bindEndedGuards(), 1000);
+    }
+
+    // ended가 상위로 전파되지 않게 해서 다음 영상 자동 재생을 막는다.
+    _bindEndedGuards() {
+        document.querySelectorAll('#video').forEach((video) => {
+            if (!(video instanceof HTMLMediaElement)) return;
+            if (this._boundVideos.has(video)) return;
+            video.addEventListener('ended', this._onVideoEndedCapture, true);
+            this._boundVideos.add(video);
+            this.log('video ended 전파 차단 등록');
+        });
+    }
+}
+
+        // 타 플랫폼 동기화 iframe: API·링커·라이브 시청 댓글 알림·자동재생 방지만 기동
+        if (isIframe) {
+            new SoopAPI();
+            new SoopVODLinker(true);
+            if (/\/player\/\d+/.test(window.location.pathname)) {
+                new SoopLiveWatchCommentNotifier();
+                new SoopNextVideoAutoplayGuard();
+            }
+            return;
+        }
 
         new SoopAPI();
         const tsManager = new SoopTimestampManager();
@@ -7427,6 +8533,8 @@ class SoopVeditorReplacement extends IVodSync {
         if (/\/player\/\d+/.test(window.location.pathname)) {
             new SoopTimelineCommentProcessor();
             new SoopVeditorReplacement();
+            new SoopLiveWatchCommentNotifier();
+            new SoopNextVideoAutoplayGuard();
         }
         new SoopPrevChatViewer();
         
@@ -7454,6 +8562,7 @@ class SoopVeditorReplacement extends IVodSync {
         // timeline_sync=1 이면 localStorage에서 페이로드 로드 후 URL에서 제거
         const timelineSyncVal = params.get('timeline_sync');
         if (timelineSyncVal) {
+            logToExtension('[content.user] timeline_sync 요청 감지:', timelineSyncVal);
             let payload = null;
             try {
                 const storageKey = 'vodSync_timeline';
@@ -7461,16 +8570,243 @@ class SoopVeditorReplacement extends IVodSync {
                 if (raw) {
                     payload = JSON.parse(raw);
                     localStorage.removeItem(storageKey);
+                    logToExtension('[content.user] timeline_sync localStorage 로드 성공', {
+                        length: Array.isArray(payload) ? payload.length : null,
+                        sample: Array.isArray(payload) ? payload.slice(0, 8) : payload,
+                    });
+                } else {
+                    logToExtension('[content.user] timeline_sync localStorage 비어 있음 (키:', storageKey, ')');
                 }
-            } catch (_) { /* ignore */ }
+            } catch (e) {
+                logToExtension('[content.user] timeline_sync localStorage 파싱 실패', e);
+            }
+            const processor = window.VODSync.timelineCommentProcessor;
             if (Array.isArray(payload)) {
-                window.VODSync.timelineCommentProcessor?.receiveTimelineSyncPayload?.(payload);
+                if (processor?.receiveTimelineSyncPayload) {
+                    logToExtension('[content.user] timeline_sync → receiveTimelineSyncPayload 호출');
+                    processor.receiveTimelineSyncPayload(payload);
+                } else {
+                    logToExtension('[content.user] timeline_sync 실패 — timelineCommentProcessor.receiveTimelineSyncPayload 없음', {
+                        hasProcessor: !!processor,
+                    });
+                }
+            } else {
+                logToExtension('[content.user] timeline_sync 실패 — 페이로드가 배열이 아님', { payload });
             }
             const url = new URL(window.location.href);
             url.searchParams.delete('timeline_sync');
             window.history.replaceState({}, '', url.toString());
+            logToExtension('[content.user] timeline_sync URL 파라미터 제거 완료');
         }
     }
+
+    // iframe에서는 업데이트 알림·유저스크립트 메뉴 등 이후 로직을 실행하지 않음
+    if (isIframe) return;
+
+    // ===================== 라이브 시청 댓글 알림 설정 (유저스크립트 메뉴) =====================
+    (function initLiveWatchCommentSettingsMenuTM() {
+        if (
+            typeof GM_registerMenuCommand !== 'function'
+            || typeof GM_getValue !== 'function'
+            || typeof GM_setValue !== 'function'
+        ) {
+            return;
+        }
+
+        const KEY_LIKE = 'soopLiveWatchLikeNotify';
+        const KEY_COMMENT = 'soopLiveWatchCommentNotify';
+        const KEY_DISABLE_AUTOPLAY = 'soopLiveWatchDisableAutoplay';
+        const KEY_TEXT = 'soopLiveWatchCommentText';
+        const KEY_TOAST = 'soopLiveWatchCommentToast';
+        const KEY_DEDUP_MODE = 'soopLiveWatchCommentDedupMode';
+        const KEY_COOLDOWN_TYPE = 'soopLiveWatchCommentCooldownType';
+        const KEY_COOLDOWN_SECONDS = 'soopLiveWatchCommentCooldownSeconds';
+        const KEY_COOLDOWN_HOURS_LEGACY = 'soopLiveWatchCommentCooldownHours';
+        const DEFAULT_TEXT = '잘 볼게요';
+        const DEFAULT_COOLDOWN_SECONDS = 3600;
+
+        function getLikeEnabled() {
+            return GM_getValue(KEY_LIKE, true) !== false;
+        }
+        function getCommentEnabled() {
+            return GM_getValue(KEY_COMMENT, false) === true;
+        }
+        function getDisableAutoplayEnabled() {
+            return GM_getValue(KEY_DISABLE_AUTOPLAY, true) !== false;
+        }
+        function getCommentText() {
+            const text = GM_getValue(KEY_TEXT, DEFAULT_TEXT);
+            return typeof text === 'string' && text.trim() ? text : DEFAULT_TEXT;
+        }
+        function getToastEnabled() {
+            return GM_getValue(KEY_TOAST, true) !== false;
+        }
+        function getDedupMode() {
+            return GM_getValue(KEY_DEDUP_MODE, 'cooldown') === 'existing_comment'
+                ? 'existing_comment'
+                : 'cooldown';
+        }
+        function getCooldownType() {
+            return GM_getValue(KEY_COOLDOWN_TYPE, 'video_duration') === 'custom_hours'
+                ? 'custom_hours'
+                : 'video_duration';
+        }
+        function normalizeCooldownSeconds(secondsValue, legacyHoursValue) {
+            const seconds = Number(secondsValue);
+            if (Number.isFinite(seconds) && seconds > 0) {
+                return Math.max(1, Math.floor(seconds));
+            }
+            const hours = Number(legacyHoursValue);
+            if (Number.isFinite(hours) && hours > 0) {
+                return Math.max(1, Math.round(hours * 3600));
+            }
+            return DEFAULT_COOLDOWN_SECONDS;
+        }
+        function getCooldownSeconds() {
+            return normalizeCooldownSeconds(
+                GM_getValue(KEY_COOLDOWN_SECONDS, null),
+                GM_getValue(KEY_COOLDOWN_HOURS_LEGACY, null)
+            );
+        }
+        function formatCooldownDuration(totalSeconds) {
+            const normalized = normalizeCooldownSeconds(totalSeconds);
+            const hours = Math.floor(normalized / 3600);
+            const minutes = Math.floor((normalized % 3600) / 60);
+            const seconds = normalized % 60;
+            const parts = [];
+            if (hours > 0) parts.push(`${hours}시간`);
+            if (minutes > 0) parts.push(`${minutes}분`);
+            if (seconds > 0 || parts.length === 0) parts.push(`${seconds}초`);
+            return parts.join(' ');
+        }
+        function describeDedupPolicy() {
+            if (getDedupMode() === 'existing_comment') {
+                return '동일 문구 내 댓글이 있으면 댓글 등록 안 함';
+            }
+            if (getCooldownType() === 'custom_hours') {
+                return `최초 알림 후 ${formatCooldownDuration(getCooldownSeconds())} 대기`;
+            }
+            return '최초 알림 후 영상 총 길이만큼 대기';
+        }
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: 상태 보기', () => {
+            alert(
+                `[라이브 중 VOD 시청 알려주기]\n`
+                + `UP 하기: ${getLikeEnabled() ? 'ON' : 'OFF'}\n`
+                + `댓글 등록: ${getCommentEnabled() ? 'ON' : 'OFF'}\n`
+                + `다음 영상 자동 재생 끄기: ${getDisableAutoplayEnabled() ? 'ON' : 'OFF'}\n`
+                + `토스트: ${getToastEnabled() ? 'ON' : 'OFF'}\n`
+                + `문구: ${getCommentText()}\n`
+                + `재등록 방지: ${describeDedupPolicy()}`
+            );
+        });
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: UP 하기 ON/OFF', () => {
+            const next = !getLikeEnabled();
+            GM_setValue(KEY_LIKE, next);
+            alert(
+                `UP 하기 알림이 ${next ? 'ON' : 'OFF'}으로 설정되었습니다.\n`
+                + `(다음 VOD 페이지 로드부터 적용)`
+            );
+        });
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: 댓글 등록 ON/OFF', () => {
+            const next = !getCommentEnabled();
+            GM_setValue(KEY_COMMENT, next);
+            alert(
+                `댓글 등록 알림이 ${next ? 'ON' : 'OFF'}으로 설정되었습니다.\n`
+                + `(다음 VOD 페이지 로드부터 적용)`
+            );
+        });
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: 자동 재생 끄기 ON/OFF', () => {
+            const next = !getDisableAutoplayEnabled();
+            GM_setValue(KEY_DISABLE_AUTOPLAY, next);
+            alert(
+                `다음 영상 자동 재생 끄기가 ${next ? 'ON' : 'OFF'}으로 설정되었습니다.\n`
+                + `(다음 VOD 페이지 로드부터 적용)`
+            );
+        });
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: 토스트 ON/OFF', () => {
+            const next = !getToastEnabled();
+            GM_setValue(KEY_TOAST, next);
+            alert(
+                `안내 토스트가 ${next ? 'ON' : 'OFF'}으로 설정되었습니다.\n`
+                + `(다음 성공 시점부터 적용)`
+            );
+        });
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: 댓글 문구 설정', () => {
+            const next = prompt('댓글 등록 문구를 입력하세요.', getCommentText());
+            if (next === null) return;
+            const saved = next.trim() || DEFAULT_TEXT;
+            GM_setValue(KEY_TEXT, saved);
+            alert(
+                `댓글 등록 문구가 저장되었습니다.\n`
+                + `문구: ${saved}\n`
+                + `(다음 VOD 페이지 로드부터 적용)`
+            );
+        });
+
+        GM_registerMenuCommand('라이브 중 VOD 시청 알려주기: 재등록 방지 설정', () => {
+            const modeInput = prompt(
+                '재등록 방지 방식을 고르세요.\n'
+                + '1 = 동일 문구 내 댓글이 있으면 등록 안 함\n'
+                + '2 = 최초 등록 후 일정 시간 대기',
+                getDedupMode() === 'existing_comment' ? '1' : '2'
+            );
+            if (modeInput === null) return;
+            const mode = String(modeInput).trim() === '1' ? 'existing_comment' : 'cooldown';
+            GM_setValue(KEY_DEDUP_MODE, mode);
+
+            if (mode === 'existing_comment') {
+                alert(
+                    '재등록 방지: 동일 문구 내 댓글이 있으면 등록하지 않음\n'
+                    + '(다음 VOD 로드부터 적용)'
+                );
+                return;
+            }
+
+            const typeInput = prompt(
+                '대기 시간 기준을 고르세요.\n'
+                + '1 = 영상 총 길이\n'
+                + '2 = 임의 지정 시간',
+                getCooldownType() === 'custom_hours' ? '2' : '1'
+            );
+            if (typeInput === null) return;
+            const type = String(typeInput).trim() === '2' ? 'custom_hours' : 'video_duration';
+            GM_setValue(KEY_COOLDOWN_TYPE, type);
+
+            if (type === 'custom_hours') {
+                const current = getCooldownSeconds();
+                const currentH = Math.floor(current / 3600);
+                const currentM = Math.floor((current % 3600) / 60);
+                const currentS = current % 60;
+                const hoursInput = prompt('대기 시간 — 시간(정수)', String(currentH));
+                if (hoursInput === null) return;
+                const minutesInput = prompt('대기 시간 — 분(정수)', String(currentM));
+                if (minutesInput === null) return;
+                const secondsInput = prompt('대기 시간 — 초(정수)', String(currentS));
+                if (secondsInput === null) return;
+                const hours = Math.max(0, Math.floor(Number(hoursInput) || 0));
+                const minutes = Math.max(0, Math.floor(Number(minutesInput) || 0));
+                const seconds = Math.max(0, Math.floor(Number(secondsInput) || 0));
+                const savedSeconds = normalizeCooldownSeconds(hours * 3600 + minutes * 60 + seconds);
+                GM_setValue(KEY_COOLDOWN_SECONDS, savedSeconds);
+                alert(
+                    `재등록 방지: 최초 등록 후 ${formatCooldownDuration(savedSeconds)} 대기\n`
+                    + `(다음 VOD 페이지 로드부터 적용)`
+                );
+                return;
+            }
+
+            alert(
+                '재등록 방지: 최초 등록 후 영상 총 길이만큼 대기\n'
+                + `(다음 VOD 페이지 로드부터 적용)`
+            );
+        });
+    })();
 
     // ===================== 탬퍼몽키 업데이트 알림 =====================
     (function initUpdateNotificationTM() {
@@ -7561,7 +8897,10 @@ class SoopVeditorReplacement extends IVodSync {
     </style>
 `;
 
-        function createAndShowUpdateModal(version) {
+        const SETUP_TARGET_VERSION = '1.7.0.0';
+        const SETUP_COMPLETED_KEY = 'vodSyncSetupCompletedVersion';
+
+        function createAndShowUpdateModal(version, onClose) {
             const existingModal = document.getElementById('vodSyncUpdateModal');
             if (existingModal) existingModal.remove();
             document.body.insertAdjacentHTML('beforeend', MODAL_HTML_TEMPLATE);
@@ -7570,14 +8909,83 @@ class SoopVeditorReplacement extends IVodSync {
             if (modal && iframe) {
                 modal.style.display = 'flex';
                 iframe.src = 'https://ainukehere.github.io/VOD-Master/doc/update_notification_v' + version + '.html';
-                const closeModal = () => modal.remove();
+                let closed = false;
+                const closeModal = function() {
+                    if (closed) return;
+                    closed = true;
+                    modal.remove();
+                    document.removeEventListener('keydown', handleEscKey);
+                    if (typeof onClose === 'function') onClose();
+                };
                 modal.querySelector('.vod-sync-close').onclick = closeModal;
                 modal.onclick = function(e) { if (e.target === modal) closeModal(); };
                 const handleEscKey = function(e) {
-                    if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', handleEscKey); }
+                    if (e.key === 'Escape') closeModal();
                 };
                 document.addEventListener('keydown', handleEscKey);
+            } else if (typeof onClose === 'function') {
+                onClose();
             }
+        }
+
+        function maybeShowSetupModalTM() {
+            let completed = GM_getValue(SETUP_COMPLETED_KEY, null);
+            if (typeof completed === 'string' && compareVersions(completed, SETUP_TARGET_VERSION) >= 0) return;
+            createAndShowSetupModalTM();
+        }
+
+        // 최초 설치(또는 안내 미완료) 시: 설치 완료 문구와 문서 새 탭 버튼. 설정은 유저스크립트 메뉴 안내.
+        function createAndShowSetupModalTM() {
+            const existing = document.getElementById('vodSyncSetupModal');
+            if (existing) existing.remove();
+            const FEATURE_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
+            document.body.insertAdjacentHTML('beforeend', `
+    <div id="vodSyncSetupModal" style="
+        position: fixed; z-index: 999998; left: 0; top: 0; width: 100%; height: 100%;
+        background-color: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="background:#fff; border-radius:10px; width:min(440px,92vw); max-height:90vh; overflow:auto;
+            box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            <div style="background:linear-gradient(135deg,#007bff,#0056b3); color:#fff; padding:14px 18px; border-radius:10px 10px 0 0;">
+                <h2 style="margin:0; font-size:18px;">VOD Master 설치 완료</h2>
+            </div>
+            <div style="padding:20px 18px;">
+                <p style="margin:0 0 12px; font-size:15px; color:#333; line-height:1.55;">
+                    VOD Master 설치가 완료되었습니다.<br>
+                    기능 설명은 아래 버튼으로 새 탭에서 열 수 있습니다.
+                </p>
+                <p style="margin:0 0 18px; font-size:13px; color:#666; line-height:1.45;">
+                    세부 설정은 Tampermonkey 유저스크립트 메뉴에서 변경할 수 있습니다.
+                </p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button id="vodSyncSetupDocsBtn" type="button" style="
+                        background:#007bff; color:#fff; border:none; border-radius:6px;
+                        padding:12px 16px; font-size:14px; cursor:pointer; width:100%;">기능 설명 문서 열기</button>
+                    <button id="vodSyncSetupCloseBtn" type="button" style="
+                        background:transparent; color:#666; border:none; border-radius:6px;
+                        padding:8px 16px; font-size:13px; cursor:pointer; width:100%;">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>`);
+            const modal = document.getElementById('vodSyncSetupModal');
+            const closeBtn = document.getElementById('vodSyncSetupCloseBtn');
+            // 문서를 열어 본 뒤에는 닫기 문구를 부드럽게 바꾼다.
+            const markExplored = function() {
+                closeBtn.textContent = '이제 닫을래요';
+            };
+            const closeAndMarkDone = function() {
+                GM_setValue(SETUP_COMPLETED_KEY, SETUP_TARGET_VERSION);
+                modal.remove();
+            };
+            document.getElementById('vodSyncSetupDocsBtn').onclick = function() {
+                window.open(FEATURE_DOCS_URL, '_blank', 'noopener,noreferrer');
+                markExplored();
+            };
+            closeBtn.onclick = closeAndMarkDone;
+            modal.onclick = function(e) {
+                if (e.target === modal) closeAndMarkDone();
+            };
         }
 
         function resizeIframe(iframe, contentWidth, contentHeight) {
@@ -7616,13 +9024,20 @@ class SoopVeditorReplacement extends IVodSync {
                 let lastCheckedVersion = GM_getValue('vodSync_lastCheckedVersion', null);
                 lastCheckedVersion = await Promise.resolve(lastCheckedVersion);
                 if (typeof lastCheckedVersion !== 'string') lastCheckedVersion = null;
+                let showedUpdateModal = false;
                 const versionUpgraded = !lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0;
                 if (versionUpgraded) {
-                    const showNotification = !lastCheckedVersion || shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
-                    if (showNotification) createAndShowUpdateModal(currentVersion);
+                    const isFirstInstall = !lastCheckedVersion;
+                    // 첫 설치는 업데이트 알림 생략. 네 번째 자릿수만 바뀐 경우도 알림 표시 안 함.
+                    const showNotification = !isFirstInstall && shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
+                    if (showNotification) {
+                        showedUpdateModal = true;
+                        createAndShowUpdateModal(currentVersion, maybeShowSetupModalTM);
+                    }
                     const setResult = GM_setValue('vodSync_lastCheckedVersion', currentVersion);
                     await Promise.resolve(setResult);
                 }
+                if (!showedUpdateModal) maybeShowSetupModalTM();
             } catch (err) {
                 logToExtension('업데이트 확인 중 오류:', err);
             }

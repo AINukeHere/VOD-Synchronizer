@@ -1,68 +1,60 @@
 import { SettingsManager } from './settings_manager.js';
-// 전역 설정 관리자 인스턴스
-const settingsManager = new SettingsManager();
 
-// 설정창 window ID 저장용 변수
-let settingsWindowId = null;
+// 설정 탭 ID (아이콘 클릭·단축키 공통)
+let settingsTabId = null;
 
-// 단축키 이벤트 리스너
-chrome.commands.onCommand.addListener((command) => {
-    if (command === "open-settings") {
-        if (settingsWindowId !== null) {
-            // 저장된 창 ID로 창이 존재하는지 확인
-            chrome.windows.get(settingsWindowId, (window) => {
-                if (chrome.runtime.lastError) {
-                    // 창이 없으면 새로 생성
-                    createSettingsWindow();
-                } else {
-                    // 창이 있으면 포커스
-                    chrome.windows.update(settingsWindowId, { focused: true });
-                }
-            });
-        } else {
-            // 저장된 ID가 없으면 새로 생성
-            createSettingsWindow();
+function createSettingsTab() {
+    const url = chrome.runtime.getURL('src/settings.html');
+    chrome.tabs.create({ url, active: true }, (tab) => {
+        if (chrome.runtime.lastError) {
+            console.error('[VOD Master] 설정 탭 생성 실패:', chrome.runtime.lastError.message);
+            settingsTabId = null;
+            return;
         }
-    }
-});
-
-// 설정창 생성 함수
-function createSettingsWindow() {
-    chrome.windows.create({
-        url: chrome.runtime.getURL('src/settings.html'),
-        type: 'popup',
-        width: 575,
-        height: 850,
-        focused: true
-    }, (window) => {
-        // 생성된 창의 ID를 저장
-        settingsWindowId = window.id;
-        
-        // 창이 생성된 후 포커스 유지
-        chrome.windows.update(window.id, { focused: true });
+        if (!tab?.id) {
+            settingsTabId = null;
+            return;
+        }
+        settingsTabId = tab.id;
     });
 }
 
-// 창이 닫힐 때 ID 초기화
-chrome.windows.onRemoved.addListener((windowId) => {
-    if (windowId === settingsWindowId) {
-        settingsWindowId = null;
+// 이미 연 설정 탭이 있으면 그 탭으로 이동, 없으면 새 탭으로 연다.
+function openSettingsTab() {
+    if (settingsTabId === null) {
+        createSettingsTab();
+        return;
+    }
+    chrome.tabs.get(settingsTabId, (tab) => {
+        if (chrome.runtime.lastError || !tab) {
+            createSettingsTab();
+            return;
+        }
+        chrome.tabs.update(settingsTabId, { active: true }, () => {
+            if (tab.windowId != null) {
+                chrome.windows.update(tab.windowId, { focused: true });
+            }
+        });
+    });
+}
+
+// 이전 버전에서 default_popup이 남아 있으면 onClicked가 안 뜨므로 명시적으로 비운다.
+chrome.action.setPopup({ popup: '' });
+
+// 확장 아이콘 클릭 → 새 탭에서 설정
+chrome.action.onClicked.addListener(() => {
+    openSettingsTab();
+});
+
+// 단축키도 동일하게 새 탭으로 설정 연다
+chrome.commands.onCommand.addListener((command) => {
+    if (command === 'open-settings') {
+        openSettingsTab();
     }
 });
 
-// 창이 포커스를 잃을 때 다시 포커스 가져오기
-// chrome.windows.onFocusChanged.addListener((windowId) => {
-//     if (settingsWindowId !== null && windowId !== settingsWindowId) {
-//         // 설정창이 열려있고 다른 창이 포커스를 받았을 때
-//         chrome.windows.get(settingsWindowId, (window) => {
-//             if (!chrome.runtime.lastError && window) {
-//                 // 설정창이 여전히 존재하면 포커스 가져오기
-//                 chrome.windows.update(settingsWindowId, { focused: true });
-//             }
-//         });
-//     }
-// });
-
+// 전역 설정 관리자 (리스너 등록 후에 초기화)
+const settingsManager = new SettingsManager();
 // 로그 관리 기능
 let logs = [];
 const maxLogs = 1000;
@@ -98,9 +90,12 @@ function addLog(level, args, tabId = null) {
 }
 
 chrome.tabs.onRemoved.addListener(function(tabid, removed) {
+    if (tabid === settingsTabId) {
+        settingsTabId = null;
+    }
     settingsManager.removeChangeCallback(tabid);
     settingsManager.unregisterBroadcastSyncTab(tabid);
-})
+});
 // 메시지 리스너
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'addLog') {
@@ -173,6 +168,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     else if (request.action === 'broadCastSync') {
         settingsManager.sendBroadcastSyncToRegistered(sender.tab?.id, request.request_vod_ts);
+        sendResponse({ success: true });
+    }
+    else if (request.action === 'openSettings') {
+        // 콘텐츠 스크립트의 window.open(chrome-extension://)은 Chrome이 차단하므로 백그라운드에서 연다.
+        openSettingsTab();
         sendResponse({ success: true });
     }
     return true;
