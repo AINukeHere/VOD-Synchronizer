@@ -109,11 +109,20 @@ export class VodCorePageBridge {
             const pt = vc.playerController && vc.playerController.playingTime;
             g.dataset.playingTime =
                 typeof pt === 'number' && Number.isFinite(pt) ? String(pt) : '';
+            const playIdx = vc.playerController && vc.playerController.playIdx;
+            g.dataset.playIdx =
+                typeof playIdx === 'number' && Number.isFinite(playIdx) ? String(Math.floor(playIdx)) : '';
+            const files = Array.isArray(cfg.files)
+                ? cfg.files
+                : (Array.isArray(vc.fileItems) ? vc.fileItems : null);
+            g.dataset.filesLength = files && files.length > 0 ? String(files.length) : '';
         } else {
             g.dataset.totalFileDuration = '';
             g.dataset.configFilesDurationSum = '';
             g.dataset.fileItemsDurationSum = '';
             g.dataset.playingTime = '';
+            g.dataset.playIdx = '';
+            g.dataset.filesLength = '';
             g.dataset.titleNo = '';
             g.dataset.loginId = '';
         }

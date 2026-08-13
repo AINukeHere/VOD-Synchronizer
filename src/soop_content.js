@@ -5,6 +5,103 @@ window.VODSync.SoopUrls = {
     ...(window.VODSync.SoopUrls || {}),
 };
 
+/**
+ * vodCore ghost: 페이지 MAIN 에 `soop_vodcore_page_bridge.js` 를 ES 모듈로 주입한다.
+ * 해당 파일이 `export class VodCorePageBridge` + `mountVodCorePageBridge()` 로 스스로 기동한다.
+ * top·iframe 플레이어 모두에서 호출한다.
+ */
+function initVodCorePageBridgeHost() {
+    window.VODSync = window.VODSync || {};
+    window.VODSync.IS_TAMPER_MONKEY_SCRIPT = false;
+    const GHOST_ID = '__vs_vodcore_ghost';
+    const PAGE_SCRIPT_PATH = 'src/module/soop_vodcore_page_bridge.js';
+    let scriptInjected = false;
+    let injectUnavailable = false;
+    function installPageScript() {
+        if (scriptInjected || injectUnavailable) return;
+        if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
+            injectUnavailable = true;
+            return;
+        }
+        scriptInjected = true;
+        const url = chrome.runtime.getURL(PAGE_SCRIPT_PATH);
+        const s = document.createElement('script');
+        s.type = 'module';
+        s.src = url;
+        s.onload = () => s.remove();
+        s.onerror = () => {
+            scriptInjected = false;
+            console.error(
+                '[VOD-Master] vodCore page bridge failed to load (check manifest web_accessible_resources):',
+                url
+            );
+        };
+        (document.documentElement || document.head || document.body).appendChild(s);
+    }
+    window.VODSync.vodCoreBridge = {
+        GHOST_ID,
+        installPageScript,
+        getGhost: () => document.getElementById(GHOST_ID),
+    };
+    // 격리 월드에서 페이지 vodCore 대신 쓰는 파사드(형태는 vodCore와 유사).
+    window.VODSync.getVodCore = () => {
+        const getNode = () => document.getElementById(GHOST_ID);
+        if (!getNode()) return null;
+        const readDataset = (key) => {
+            const node = getNode();
+            if (!node || !node.dataset) return '';
+            const raw = node.dataset[key];
+            return raw == null ? '' : String(raw);
+        };
+        return {
+            playerController: {
+                get playingTime() {
+                    const pt = parseFloat(readDataset('playingTime'));
+                    return Number.isFinite(pt) ? Math.max(0, pt) : NaN;
+                },
+                get playIdx() {
+                    const idx = parseInt(readDataset('playIdx'), 10);
+                    return Number.isFinite(idx) ? idx : NaN;
+                },
+            },
+            get filesLength() {
+                const n = parseInt(readDataset('filesLength'), 10);
+                return Number.isFinite(n) && n > 0 ? n : 0;
+            },
+            config: new Proxy(
+                {},
+                {
+                    get(_target, prop) {
+                        if (typeof prop !== 'string') return undefined;
+                        const raw = readDataset(prop);
+                        return raw === '' ? undefined : raw;
+                    },
+                }
+            ),
+            seek(sec) {
+                const node = getNode();
+                if (!node) return false;
+                const s = Math.max(0, Number(sec));
+                node.setAttribute('data-vs-seek', String(Number.isFinite(s) ? s : 0));
+                return true;
+            },
+            get speed() {
+                const v = document.querySelector('video');
+                if (!(v instanceof HTMLVideoElement)) return 1;
+                return Number.isFinite(v.playbackRate) && v.playbackRate > 0 ? v.playbackRate : 1;
+            },
+            set speed(rate) {
+                const node = getNode();
+                if (!node) return;
+                const r = Number(rate);
+                if (!Number.isFinite(r) || r <= 0) return;
+                node.setAttribute('data-vs-playback-rate', String(r));
+            },
+        };
+    };
+    installPageScript();
+}
+
 if (window == top && window.location.origin.includes(new URL(window.VODSync.SoopUrls.VOD_ORIGIN).host)) {
     let tsManager = null;
     let syncPanel = null;
@@ -19,94 +116,6 @@ if (window == top && window.location.origin.includes(new URL(window.VODSync.Soop
         logToExtension('[soop_content.js:top]', ...data);
     }
     log('loaded');
-
-    /**
-     * vodCore ghost: 페이지 MAIN 에 `soop_vodcore_page_bridge.js` 를 ES 모듈로 주입한다.
-     * 해당 파일이 `export class VodCorePageBridge` + `mountVodCorePageBridge()` 로 스스로 기동한다.
-     */
-    function initVodCorePageBridgeHost() {
-        window.VODSync = window.VODSync || {};
-        window.VODSync.IS_TAMPER_MONKEY_SCRIPT = false;
-        const GHOST_ID = '__vs_vodcore_ghost';
-        const PAGE_SCRIPT_PATH = 'src/module/soop_vodcore_page_bridge.js';
-        let scriptInjected = false;
-        let injectUnavailable = false;
-        function installPageScript() {
-            if (scriptInjected || injectUnavailable) return;
-            if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
-                injectUnavailable = true;
-                return;
-            }
-            scriptInjected = true;
-            const url = chrome.runtime.getURL(PAGE_SCRIPT_PATH);
-            const s = document.createElement('script');
-            s.type = 'module';
-            s.src = url;
-            s.onload = () => s.remove();
-            s.onerror = () => {
-                scriptInjected = false;
-                console.error(
-                    '[VOD-Master] vodCore page bridge failed to load (check manifest web_accessible_resources):',
-                    url
-                );
-            };
-            (document.documentElement || document.head || document.body).appendChild(s);
-        }
-        window.VODSync.vodCoreBridge = {
-            GHOST_ID,
-            installPageScript,
-            getGhost: () => document.getElementById(GHOST_ID),
-        };
-        // 격리 월드에서 페이지 vodCore 대신 쓰는 파사드(형태는 vodCore와 유사).
-        window.VODSync.getVodCore = () => {
-            const getNode = () => document.getElementById(GHOST_ID);
-            if (!getNode()) return null;
-            const readDataset = (key) => {
-                const node = getNode();
-                if (!node || !node.dataset) return '';
-                const raw = node.dataset[key];
-                return raw == null ? '' : String(raw);
-            };
-            return {
-                playerController: {
-                    get playingTime() {
-                        const pt = parseFloat(readDataset('playingTime'));
-                        return Number.isFinite(pt) ? Math.max(0, pt) : NaN;
-                    },
-                },
-                config: new Proxy(
-                    {},
-                    {
-                        get(_target, prop) {
-                            if (typeof prop !== 'string') return undefined;
-                            const raw = readDataset(prop);
-                            return raw === '' ? undefined : raw;
-                        },
-                    }
-                ),
-                seek(sec) {
-                    const node = getNode();
-                    if (!node) return false;
-                    const s = Math.max(0, Number(sec));
-                    node.setAttribute('data-vs-seek', String(Number.isFinite(s) ? s : 0));
-                    return true;
-                },
-                get speed() {
-                    const v = document.querySelector('video');
-                    if (!(v instanceof HTMLVideoElement)) return 1;
-                    return Number.isFinite(v.playbackRate) && v.playbackRate > 0 ? v.playbackRate : 1;
-                },
-                set speed(rate) {
-                    const node = getNode();
-                    if (!node) return;
-                    const r = Number(rate);
-                    if (!Number.isFinite(r) || r <= 0) return;
-                    node.setAttribute('data-vs-playback-rate', String(r));
-                },
-            };
-        };
-        installPageScript();
-    }
 
     // 설정 관련 함수들
     async function getAllSettings() {
@@ -310,6 +319,7 @@ else {
             window.location.origin.includes(new URL(window.VODSync.SoopUrls.VOD_ORIGIN).host)
             && /\/player\/\d+/.test(window.location.pathname)
         ) {
+            initVodCorePageBridgeHost();
             new classes.SoopLiveWatchCommentNotifier();
             new classes.SoopNextVideoAutoplayGuard();
         }
