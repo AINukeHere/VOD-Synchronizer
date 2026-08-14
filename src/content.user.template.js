@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.7.0.1
+// @version      1.7.0.2
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       AINukeHere
 // @match        https://vod.sooplive.com/*
@@ -442,8 +442,7 @@
     </style>
 `;
 
-        const SETUP_TARGET_VERSION = '1.7.0.0';
-        const SETUP_COMPLETED_KEY = 'vodSyncSetupCompletedVersion';
+        const SETUP_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
 
         function createAndShowUpdateModal(version, onClose) {
             const existingModal = document.getElementById('vodSyncUpdateModal');
@@ -473,17 +472,10 @@
             }
         }
 
-        function maybeShowSetupModalTM() {
-            let completed = GM_getValue(SETUP_COMPLETED_KEY, null);
-            if (typeof completed === 'string' && compareVersions(completed, SETUP_TARGET_VERSION) >= 0) return;
-            createAndShowSetupModalTM();
-        }
-
-        // 최초 설치(또는 안내 미완료) 시: 설치 완료 문구와 문서 새 탭 버튼. 설정은 유저스크립트 메뉴 안내.
+        // 최초 설치 시에만: 설치 완료 문구와 문서 새 탭 버튼. 설정은 유저스크립트 메뉴 안내.
         function createAndShowSetupModalTM() {
             const existing = document.getElementById('vodSyncSetupModal');
             if (existing) existing.remove();
-            const FEATURE_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
             document.body.insertAdjacentHTML('beforeend', `
     <div id="vodSyncSetupModal" style="
         position: fixed; z-index: 999998; left: 0; top: 0; width: 100%; height: 100%;
@@ -519,17 +511,16 @@
             const markExplored = function() {
                 closeBtn.textContent = '이제 닫을래요';
             };
-            const closeAndMarkDone = function() {
-                GM_setValue(SETUP_COMPLETED_KEY, SETUP_TARGET_VERSION);
+            const closeModal = function() {
                 modal.remove();
             };
             document.getElementById('vodSyncSetupDocsBtn').onclick = function() {
-                window.open(FEATURE_DOCS_URL, '_blank', 'noopener,noreferrer');
+                window.open(SETUP_DOCS_URL, '_blank', 'noopener,noreferrer');
                 markExplored();
             };
-            closeBtn.onclick = closeAndMarkDone;
+            closeBtn.onclick = closeModal;
             modal.onclick = function(e) {
-                if (e.target === modal) closeAndMarkDone();
+                if (e.target === modal) closeModal();
             };
         }
 
@@ -569,20 +560,22 @@
                 let lastCheckedVersion = GM_getValue('vodSync_lastCheckedVersion', null);
                 lastCheckedVersion = await Promise.resolve(lastCheckedVersion);
                 if (typeof lastCheckedVersion !== 'string') lastCheckedVersion = null;
-                let showedUpdateModal = false;
-                const versionUpgraded = !lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0;
-                if (versionUpgraded) {
-                    const isFirstInstall = !lastCheckedVersion;
-                    // 첫 설치는 업데이트 알림 생략. 네 번째 자릿수만 바뀐 경우도 알림 표시 안 함.
-                    const showNotification = !isFirstInstall && shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
-                    if (showNotification) {
-                        showedUpdateModal = true;
-                        createAndShowUpdateModal(currentVersion, maybeShowSetupModalTM);
+
+                // lastCheckedVersion 없음 = 진짜 첫 설치 → 설치 완료 안내만
+                if (!lastCheckedVersion) {
+                    createAndShowSetupModalTM();
+                    const setResult = GM_setValue('vodSync_lastCheckedVersion', currentVersion);
+                    await Promise.resolve(setResult);
+                    return;
+                }
+
+                if (compareVersions(currentVersion, lastCheckedVersion) > 0) {
+                    if (shouldShowUpdateNotification(lastCheckedVersion, currentVersion)) {
+                        createAndShowUpdateModal(currentVersion);
                     }
                     const setResult = GM_setValue('vodSync_lastCheckedVersion', currentVersion);
                     await Promise.resolve(setResult);
                 }
-                if (!showedUpdateModal) maybeShowSetupModalTM();
             } catch (err) {
                 logToExtension('업데이트 확인 중 오류:', err);
             }

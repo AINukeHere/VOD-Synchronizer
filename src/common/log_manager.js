@@ -280,9 +280,7 @@ const MODAL_HTML_TEMPLATE = `
     </style>
 `;
 
-/** 이 버전 미만으로만 설치 완료 안내를 본 경우(또는 미완료) 안내를 다시 띄운다. */
-const SETUP_TARGET_VERSION = '1.7.0.0';
-const SETUP_COMPLETED_KEY = 'vodSyncSetupCompletedVersion';
+/** 설치 완료 안내·기능 설명 문서 URL */
 const FEATURE_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
 
 // 동적 모달 생성 및 표시 (iframe 방식)
@@ -340,33 +338,7 @@ function createAndShowUpdateModal(version, onClose) {
     }
 }
 
-async function getSetupCompletedVersion() {
-    try {
-        const result = await chrome.storage.sync.get(SETUP_COMPLETED_KEY);
-        return result[SETUP_COMPLETED_KEY] || null;
-    } catch (_e) {
-        return null;
-    }
-}
-
-async function setSetupCompletedVersion(version) {
-    try {
-        await chrome.storage.sync.set({ [SETUP_COMPLETED_KEY]: version });
-    } catch (error) {
-        logToExtension('설치 완료 안내 표시 버전 저장 실패:', error);
-    }
-}
-
-async function maybeShowSetupModal() {
-    if (window !== top) return;
-    const completed = await getSetupCompletedVersion();
-    if (completed && compareVersions(completed, SETUP_TARGET_VERSION) >= 0) {
-        return;
-    }
-    createAndShowSetupModal();
-}
-
-// 최초 설치(또는 안내 미완료) 시: 설치 완료 문구와 문서/설정 새 탭 버튼만 보여 준다.
+// 최초 설치 시에만: 설치 완료 문구와 문서/설정 새 탭 버튼만 보여 준다.
 function createAndShowSetupModal() {
     const existing = document.getElementById('vodSyncSetupModal');
     if (existing) existing.remove();
@@ -407,14 +379,9 @@ function createAndShowSetupModal() {
     const markExplored = () => {
         closeBtn.textContent = '봤어요, 이제 닫을래요';
     };
-    const closeAndMarkDone = async () => {
-        try {
-            await setSetupCompletedVersion(SETUP_TARGET_VERSION);
-            logToExtension('설치 완료 안내 표시 완료');
-        } catch (error) {
-            logToExtension('설치 완료 안내 처리 실패:', error);
-        }
+    const closeModal = () => {
         modal.remove();
+        logToExtension('설치 완료 안내 닫음');
     };
 
     document.getElementById('vodSyncSetupDocsBtn').onclick = () => {
@@ -426,9 +393,9 @@ function createAndShowSetupModal() {
         chrome.runtime.sendMessage({ action: 'openSettings' });
         markExplored();
     };
-    closeBtn.onclick = closeAndMarkDone;
+    closeBtn.onclick = closeModal;
     modal.onclick = (e) => {
-        if (e.target === modal) closeAndMarkDone();
+        if (e.target === modal) closeModal();
     };
 }
 
@@ -482,43 +449,33 @@ async function checkForUpdates() {
     try {
         const currentVersion = getCurrentVersion();
         const lastCheckedVersion = await getLastCheckedVersion();
-        let showedUpdateModal = false;
-        
+
         logToExtension(`업데이트 확인 중... 현재 버전: ${currentVersion}, 마지막 확인: ${lastCheckedVersion || '없음'}`);
-        
-        // 처음 설치하거나 버전이 다른 경우
-        if (!lastCheckedVersion || compareVersions(currentVersion, lastCheckedVersion) > 0) {
-            const isFirstInstall = !lastCheckedVersion;
-            if (isFirstInstall) {
-                logToExtension(`첫 설치 감지: v${currentVersion} — 업데이트 알림 대신 설치 완료 안내 표시`);
-            } else {
-                logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
-            }
-            // 첫 설치는 업데이트 알림 생략. 네 번째 자릿수만 바뀐 경우도 알림 표시 안 함.
-            const showNotification = !isFirstInstall && shouldShowUpdateNotification(lastCheckedVersion, currentVersion);
-            if (showNotification) {
+
+        // lastCheckedVersion 없음 = 진짜 첫 설치 → 설치 완료 안내만
+        if (!lastCheckedVersion) {
+            logToExtension(`첫 설치 감지: v${currentVersion} — 설치 완료 안내 표시`);
+            if (window === top) createAndShowSetupModal();
+            await setLastCheckedVersion(currentVersion);
+            return;
+        }
+
+        if (compareVersions(currentVersion, lastCheckedVersion) > 0) {
+            logToExtension(`새로운 업데이트 감지됨: v${currentVersion}`);
+            // 네 번째 자릿수만 바뀐 경우 알림 표시 안 함.
+            if (shouldShowUpdateNotification(lastCheckedVersion, currentVersion)) {
                 const settings = await getSettings();
                 if (settings.enableUpdateNotification) {
-                    showedUpdateModal = true;
-                    // 업데이트 알림을 닫은 뒤 설치 완료 안내(미완료 시)
-                    createAndShowUpdateModal(currentVersion, () => {
-                        maybeShowSetupModal();
-                    });
+                    createAndShowUpdateModal(currentVersion);
                 } else {
                     logToExtension(`업데이트 알림이 비활성화되어 있습니다.`);
                 }
-            } else if (!isFirstInstall) {
+            } else {
                 logToExtension(`네 번째 세그먼트만 변경된 업데이트(v${currentVersion})라 알림을 표시하지 않습니다.`);
             }
-            // 현재 버전을 마지막 확인 버전으로 저장
             await setLastCheckedVersion(currentVersion);
         } else {
             logToExtension(`업데이트 없음. 현재 버전: ${currentVersion}`);
-        }
-
-        // 업데이트 알림을 안 띄운 경우에도 설치 완료 안내가 필요하면 표시
-        if (!showedUpdateModal) {
-            await maybeShowSetupModal();
         }
     } catch (error) {
         errorToExtension('업데이트 확인 중 오류 발생:', error);
