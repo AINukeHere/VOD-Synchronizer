@@ -1299,9 +1299,14 @@ export class SoopVeditorReplacement extends IVodSync {
                 failOpen('로그인 ID를 확인할 수 없습니다.');
                 return;
             }
-            const menu = await api.GetStationMenu?.(loginId);
-            const boards = Array.isArray(menu?.board) ? menu.board.filter((b) => Number(b?.displayType) === 104) : [];
-            const langsObj = webInfo?.response?.info?.langs || {};
+            // 게시판·언어는 stbbs vodInfo.php(mode=web)의 info.bbs / info.langs 사용
+            const info = webInfo?.response?.info || {};
+            const boards = Array.isArray(info.bbs)
+                ? info.bbs
+                    .map((b) => ({ bbsNo: b?.bbs_no, name: b?.name }))
+                    .filter((b) => b.bbsNo != null && String(b.name || '').trim())
+                : [];
+            const langsObj = info.langs && typeof info.langs === 'object' ? info.langs : {};
             const langs = Object.keys(langsObj).map((k) => ({ code: k, name: langsObj[k] }));
             const cats = this._collectVodCategoryTree(catTree);
             if (boards.length === 0 || langs.length === 0 || cats.length === 0) {

@@ -6,6 +6,7 @@ const REQUEST_CACHE_TTL_MS = 60 * 1000;
 const DEFAULT_SOOP_URLS = {
     VOD_ORIGIN: 'https://vod.sooplive.com',
     WWW_ORIGIN: 'https://www.sooplive.com',
+    VEDITOR_ORIGIN: 'https://veditor.sooplive.com',
     STBBS_ORIGIN: 'https://stbbs.sooplive.com',
     AFEVENT2_ORIGIN: 'https://afevent2.sooplive.com',
     LIVE_ORIGIN: 'https://live.sooplive.com',
@@ -136,39 +137,80 @@ export class SoopAPI extends IVodSync{
         return b;
     }
 
-    _parseVodEditorCategoryScript(scriptText) {
-        if (typeof scriptText !== 'string' || scriptText.length === 0) return null;
-        const m = scriptText.match(/var\s+szVodCategory\s*=\s*(\{[\s\S]*\});?/);
-        if (!m?.[1]) return null;
-        try {
-            return JSON.parse(m[1]);
-        } catch (_e) {
-            return null;
-        }
-    }
-
     /**
-     * VOD 게시 카테고리 트리 조회(`vod_editor_category.js` 파싱).
+     * VOD 게시 카테고리 트리 조회.
+     * 공식 편집기처럼 페이지에 vod_editor_category.js를 <script>로 로드해 szVodCategory를 읽는다.
      * @returns {Promise<object|null>}
      */
     async GetVodEditorCategory() {
         const cacheKey = 'GetVodEditorCategory:ko_KR';
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;
-        const res = await fetch(`${this.SoopUrls.LIVE_ORIGIN}/script/locale/ko_KR/vod_editor_category.js`, {
-            headers: {
-                accept: '*/*',
-            },
-            method: 'GET',
-            mode: 'cors',
-            credentials: 'include',
-        });
-        if (res.status !== 200) return null;
-        const txt = await res.text();
-        const parsed = this._parseVodEditorCategoryScript(txt);
-        if (!parsed) return null;
+        const parsed = await this._loadSzVodCategoryFromPage();
+        if (!parsed || typeof parsed !== 'object') return null;
         this._setCache(cacheKey, parsed);
         return parsed;
+    }
+
+    // 페이지 MAIN에 category 스크립트를 넣어 window.szVodCategory를 받는다. (페이지 fetch CORS 회피)
+    _loadSzVodCategoryFromPage() {
+        const msgType = 'vodSync-vod-editor-category';
+        const categoryUrl = `${this.SoopUrls.LIVE_ORIGIN}/script/locale/ko_KR/vod_editor_category.js`;
+        const timeoutMs = 20000;
+
+        return new Promise((resolve) => {
+            let settled = false;
+            const finish = (payload) => {
+                if (settled) return;
+                settled = true;
+                window.removeEventListener('message', onMessage);
+                clearTimeout(timer);
+                resolve(payload && typeof payload === 'object' ? payload : null);
+            };
+            const onMessage = (event) => {
+                if (event.source !== window) return;
+                if (!event.data || event.data.type !== msgType) return;
+                finish(event.data.payload);
+            };
+            window.addEventListener('message', onMessage);
+            const timer = setTimeout(() => finish(null), timeoutMs);
+
+            // Tampermonkey: 같은 페이지에 스크립트를 직접 넣고 unsafeWindow에서 읽는다.
+            if (window.VODSync?.IS_TAMPER_MONKEY_SCRIPT === true) {
+                const s = document.createElement('script');
+                s.src = categoryUrl;
+                s.onload = () => {
+                    try {
+                        const w = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+                        finish(w.szVodCategory || null);
+                    } catch (_e) {
+                        finish(null);
+                    }
+                    s.remove();
+                };
+                s.onerror = () => finish(null);
+                (document.documentElement || document.head || document.body).appendChild(s);
+                return;
+            }
+
+            // Chrome 확장: CSP 때문에 인라인 스크립트 대신 WAR 로더를 페이지에 주입한다.
+            try {
+                if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
+                    finish(null);
+                    return;
+                }
+                const loader = document.createElement('script');
+                loader.src = chrome.runtime.getURL('src/module/soop_vod_editor_category_loader.js');
+                loader.setAttribute('data-vs-msg-type', msgType);
+                loader.setAttribute('data-vs-category-url', categoryUrl);
+                loader.onload = () => loader.remove();
+                loader.onerror = () => finish(null);
+                (document.documentElement || document.head || document.body).appendChild(loader);
+            } catch (error) {
+                this.warn('카테고리 스크립트 로더 주입 실패:', error);
+                finish(null);
+            }
+        });
     }
 
     /**
@@ -205,9 +247,9 @@ export class SoopAPI extends IVodSync{
     }
 
     /**
-     * stbbs `vodInfo.php?mode=web` VOD 메타 (다중 파일·총 길이 등). 타임라인 UI용.
+     * stbbs `vodInfo.php?mode=web` VOD 메타 (게시판·언어·다중 파일·총 길이 등).
      * @param {number | string} titleNo — 플레이어 `/player/{titleNo}` 과 동일
-     * @param {{ referer?: string }} [opts] — 생략 시 `https://vod.sooplive.com/player/{titleNo}` (공식 veditor Referer가 필요하면 명시)
+     * @param {{ referer?: string }} [opts] — 생략 시 `https://veditor.sooplive.com/web/{titleNo}`
      * @returns {Promise<{ result: number, message?: string, response?: object }|null>}
      */
     async GetSoopVeditorWebVodInfo(titleNo, opts = {}) {
@@ -215,7 +257,7 @@ export class SoopAPI extends IVodSync{
         const referer =
             typeof opts.referer === 'string' && opts.referer.length > 0
                 ? opts.referer
-                : `${this.SoopUrls.VOD_ORIGIN}/player/${tn}`;
+                : `${this.SoopUrls.VEDITOR_ORIGIN || 'https://veditor.sooplive.com'}/web/${tn}`;
         const cacheKey = `GetSoopVeditorWebVodInfo:${tn}`;
         const cached = this._getCached(cacheKey);
         if (cached !== null) return cached;

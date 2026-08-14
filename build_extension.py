@@ -204,6 +204,7 @@ def create_test_extension():
         'src/module/soop_live_watch_comment_notifier.js',
         'src/module/soop_next_video_autoplay_guard.js',
         'src/module/soop_vodcore_page_bridge.js',
+        'src/module/soop_vod_editor_category_loader.js',
         
         # 리소스 파일
         'res/data/rp_nicknames.json',
