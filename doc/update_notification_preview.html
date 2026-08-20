@@ -132,7 +132,7 @@
         // postMessage 이벤트 리스너 추가
         window.addEventListener('message', function(event) {
             // 보안을 위해 origin 확인 (필요시)
-            // if (event.origin !== 'https://ainukehere.github.io') return;
+            // if (event.origin !== 'https://khassarion.github.io') return;
             
             if (event.data && event.data.type === 'vodSync-iframe-resize') {
                 const iframe = document.getElementById('updateIframe');
@@ -145,7 +145,7 @@
         // 버전을 가져와서 iframe 설정
         getVersionFromManifest().then(version => {
             const iframe = document.getElementById('updateIframe');
-            // iframe.src = `https://ainukehere.github.io/VOD-Master/doc/update_notification_v${version}.html`;
+            // iframe.src = `https://khassarion.github.io/VOD-Master/doc/update_notification_v${version}.html`;
             iframe.src = `update_notification_v${version}.html`;
             
             // iframe 로드 완료 후 기본 크기 설정 (postMessage로 실제 크기가 조절됨)

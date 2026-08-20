@@ -281,7 +281,7 @@ const MODAL_HTML_TEMPLATE = `
 `;
 
 /** 설치 완료 안내·기능 설명 문서 URL */
-const FEATURE_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
+const FEATURE_DOCS_URL = 'https://khassarion.github.io/VOD-Master/doc/index.html';
 
 // 동적 모달 생성 및 표시 (iframe 방식)
 function createAndShowUpdateModal(version, onClose) {
@@ -303,7 +303,7 @@ function createAndShowUpdateModal(version, onClose) {
         modal.style.display = 'flex';
         
         // URL 파라미터로 업데이트 정보 전달
-        const iframeUrl = `https://ainukehere.github.io/VOD-Master/doc/update_notification_v${version}.html`;
+        const iframeUrl = `https://khassarion.github.io/VOD-Master/doc/update_notification_v${version}.html`;
         
         iframe.src = iframeUrl;
         

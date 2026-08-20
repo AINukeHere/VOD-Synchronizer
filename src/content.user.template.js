@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.7.0.2
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
-// @author       AINukeHere
+// @author       Khassarion
 // @match        https://vod.sooplive.com/*
 // @match        https://www.sooplive.com/*
 // @grant        GM_xmlhttpRequest
@@ -36,7 +36,7 @@
     // 환경 구분용 전역 변수 (탬퍼몽키 환경)
     window.VODSync = window.VODSync || {};
     window.VODSync.IS_TAMPER_MONKEY_SCRIPT = true;
-    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/AINukeHere/VOD-Master/main";
+    const GITHUB_RAW_URL = "https://raw.githubusercontent.com/Khassarion/VOD-Master/main";
     const isIframe = window.top !== window.self;
 
     // 메인 페이지에서 실행되는 경우 (vod.sooplive.com)
@@ -442,7 +442,7 @@
     </style>
 `;
 
-        const SETUP_DOCS_URL = 'https://ainukehere.github.io/VOD-Master/doc/index.html';
+        const SETUP_DOCS_URL = 'https://khassarion.github.io/VOD-Master/doc/index.html';
 
         function createAndShowUpdateModal(version, onClose) {
             const existingModal = document.getElementById('vodSyncUpdateModal');
@@ -452,7 +452,7 @@
             const iframe = document.getElementById('updateIframe');
             if (modal && iframe) {
                 modal.style.display = 'flex';
-                iframe.src = 'https://ainukehere.github.io/VOD-Master/doc/update_notification_v' + version + '.html';
+                iframe.src = 'https://khassarion.github.io/VOD-Master/doc/update_notification_v' + version + '.html';
                 let closed = false;
                 const closeModal = function() {
                     if (closed) return;

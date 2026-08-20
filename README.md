@@ -22,7 +22,7 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 - 상단 기본 검색창에 스트리머를 검색하면 검색결과에 Sync VOD 버튼이 생기고 버튼을 누르면 해당 스트리머의 VOD에서 현재 재생 시점과 동일한 시점의 VOD를 찾아 새 탭에서 열어줍니다. (최초 실행 시 팝업 허용이 필요할 수 있습니다.)
 - 우측 '타 플랫폼과 동기화' 버튼을 클릭하면 SOOP 스트리머를 검색하여 동기화할 수 있습니다.
 
-#### 그 외 기능과 설명은 [여기](https://ainukehere.github.io/VOD-Master/doc/index.html)서 확인하세요.
+#### 그 외 기능과 설명은 [여기](https://khassarion.github.io/VOD-Master/doc/index.html)서 확인하세요.
 
 ## 설치 방법
 
@@ -31,7 +31,7 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 2. "Chrome에 추가" 버튼을 클릭하여 설치를 완료하세요.
 
 ### 방법 2: GitHub Releases에서 다운로드 (개발자용 혹은 스토어에 게시되기전에 미리 체험용)
-1. [이 저장소](https://github.com/AINukeHere/VOD-Master)의 우측에 있는 [Releases](https://github.com/AINukeHere/VOD-Master/releases)를 클릭합니다.
+1. [이 저장소](https://github.com/Khassarion/VOD-Master)의 우측에 있는 [Releases](https://github.com/Khassarion/VOD-Master/releases)를 클릭합니다.
 2. 원하는 버전의 릴리즈 Assets에서 VOD-Master_로 시작하는 zip파일을 다운로드합니다.
 3. 다운로드한 ZIP 파일을 원하는 위치에 압축을 풉니다.
 4. 크롬 브라우저에서 확장 프로그램 관리(chrome://extensions)로 이동합니다.
@@ -67,7 +67,7 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
   - VOD Master를 켠 채 **라이브 중인 본인**이 클립·캐치·편집·업로드 VOD를 **음소거 해제** 상태로 보면, 업로더에게 시청 시작을 알려 줍니다.
   - 알림 방식: **UP 하기**(기본 ON) · **댓글 등록**(기본 OFF, 문구 변경 가능)
   - 설정에서 ON/OFF 가능. 알림 후 우측 하단 안내 제공.
-  - [소개 페이지](https://ainukehere.github.io/VOD-Master/doc/live_watch_notify_intro.html)
+  - [소개 페이지](https://khassarion.github.io/VOD-Master/doc/live_watch_notify_intro.html)
 - 새 기능: 다음 영상 자동 재생 방지 — **SOOP 전용**
   - VOD 재생이 끝날 때 다음 영상으로 자동으로 넘어가지 않게 합니다. (다른 페이지 삽입된 VOD 포함)
   - VOD 재생 바의 자동 재생 활성화/비활성화 설정과 별개로 동작합니다.
@@ -113,7 +113,7 @@ VOD Synchronizer에서 VOD Master로 이름이 변경되었습니다. (2026.03.2
 - 새 기능: 개선된 편집 VOD 인터페이스
   - 편집VOD 만들기를 누르면 공식 편집기 페이지가 열리지 않는 대신 더 나은 편집기 인터페이스가 나타납니다.
   - 기존의 불편했던 부분들을 개선하였습니다.
-  - 자세한 사용 방법은 [문서 페이지](https://ainukehere.github.io/VOD-Master/doc/index.html#veditor)에서 확인해주세요.
+  - 자세한 사용 방법은 [문서 페이지](https://khassarion.github.io/VOD-Master/doc/index.html#veditor)에서 확인해주세요.
 - 버그 수정
   - SOOP 게시글 작성 페이지에서 오류가 발생하던 문제를 수정했습니다.
   
