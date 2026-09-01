@@ -1,4 +1,4 @@
-name: Release Draft
+name: Release
 
 on:
   push:
@@ -54,12 +54,20 @@ jobs:
           fi
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
 
-      - name: 릴리스 노트 링크 확인
+      - name: 릴리스 노트 구성
         id: notes
         shell: bash
         run: |
           NOTES_PATH="doc/update_notification_${{ steps.version.outputs.tag }}.html"
-          BODY="자동 빌드된 draft 릴리스입니다. 배포 전 내용을 검토 후 발행해주세요."
+          BODY=$(cat <<'EOM'
+### 설치 방법
+1. 아래 Assets에서 "VOD-Master"로 시작하는 zip파일을 다운로드합니다.
+2. 다운로드한 ZIP 파일을 원하는 위치에 압축을 풉니다.
+3. 크롬 브라우저에서 확장 프로그램 관리(chrome://extensions)로 이동합니다.
+4. 우측 상단의 "개발자 모드"를 활성화합니다.
+5. "압축해제된 확장 프로그램을 로드합니다" 버튼을 클릭하고, 압축을 푼 폴더를 선택합니다.
+EOM
+          )
           if [ -f "$NOTES_PATH" ]; then
             BODY="$BODY"$'\n\n'"📄 업데이트 알림: https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/$NOTES_PATH"
           fi
@@ -69,12 +77,13 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Draft 릴리스 생성
+      - name: 릴리스 생성
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
-          draft: true
+          draft: false
+          make_latest: true
           generate_release_notes: true
           body: ${{ steps.notes.outputs.body }}
           files: ${{ steps.artifact.outputs.file }}
