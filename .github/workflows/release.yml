@@ -1,0 +1,80 @@
+name: Release Draft
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '릴리스 버전 (예: 1.7.0.5). 비워두면 manifest.json의 version을 사용합니다.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 버전 결정
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(python -c "import json; print(json.load(open('manifest.json'))['version'])")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: 확장 프로그램 빌드
+        run: python build_extension.py
+
+      - name: 빌드 산출물 찾기
+        id: artifact
+        shell: bash
+        run: |
+          FILE=$(ls VOD-Master_v${{ steps.version.outputs.version }}_*.zip 2>/dev/null | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "::error::빌드 산출물(zip)을 찾지 못했습니다. manifest.json 버전(${{ steps.version.outputs.version }})을 확인해주세요."
+            exit 1
+          fi
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+
+      - name: 릴리스 노트 링크 확인
+        id: notes
+        shell: bash
+        run: |
+          NOTES_PATH="doc/update_notification_${{ steps.version.outputs.tag }}.html"
+          BODY="자동 빌드된 draft 릴리스입니다. 배포 전 내용을 검토 후 발행해주세요."
+          if [ -f "$NOTES_PATH" ]; then
+            BODY="$BODY"$'\n\n'"📄 업데이트 알림: https://github.com/${{ github.repository }}/blob/${{ steps.version.outputs.tag }}/$NOTES_PATH"
+          fi
+          {
+            echo "body<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Draft 릴리스 생성
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          draft: true
+          generate_release_notes: true
+          body: ${{ steps.notes.outputs.body }}
+          files: ${{ steps.artifact.outputs.file }}
