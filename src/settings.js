@@ -517,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 체크박스 필터들
         const filterDebug = document.getElementById('filterDebug');
+        filterDebug.checked = false;
         const filterInfo = document.getElementById('filterInfo');
         const filterLog = document.getElementById('filterLog');
         const filterWarn = document.getElementById('filterWarn');

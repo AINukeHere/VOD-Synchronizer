@@ -152,11 +152,11 @@ export class TimestampManagerBase extends IVodSync {
         this.updateTooltip();
         this.checkMouseState();
         if (this.tooltipContainer.parentElement === document.body || !this.tooltipContainer.isConnected){
-            this.log('timestamp 컨테이너가 분리되어 재배치합니다');
+            this.debug('timestamp 컨테이너가 분리되어 재배치합니다');
             if (this.moveTooltipToCtrlBox())
-                this.log('timestamp 컨테이너 재배치 성공');
+                this.debug('timestamp 컨테이너 재배치 성공');
             else
-                this.log('timestamp 컨테이너 재배치 실패');
+                this.debug('timestamp 컨테이너 재배치 실패');
         }
         
     }

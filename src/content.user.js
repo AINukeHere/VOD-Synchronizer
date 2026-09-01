@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         VOD Master (SOOP)
 // @namespace    http://tampermonkey.net/
-// @version      1.7.0.3
+// @version      1.7.0.4
 // @description  SOOP 다시보기 타임스탬프 표시 및 다른 스트리머의 다시보기와 동기화
 // @author       Khassarion
 // @match        https://vod.sooplive.com/*
@@ -1216,11 +1216,11 @@ class SoopAPI extends IVodSync{
         this.updateTooltip();
         this.checkMouseState();
         if (this.tooltipContainer.parentElement === document.body || !this.tooltipContainer.isConnected){
-            this.log('timestamp 컨테이너가 분리되어 재배치합니다');
+            this.debug('timestamp 컨테이너가 분리되어 재배치합니다');
             if (this.moveTooltipToCtrlBox())
-                this.log('timestamp 컨테이너 재배치 성공');
+                this.debug('timestamp 컨테이너 재배치 성공');
             else
-                this.log('timestamp 컨테이너 재배치 실패');
+                this.debug('timestamp 컨테이너 재배치 실패');
         }
         
     }
@@ -1528,6 +1528,11 @@ class SoopAPI extends IVodSync{
         // VOD 변경 감지
         const url = new URL(window.location.href);
         const match = url.pathname.match(/\/player\/(\d+)/);
+        if (!match || match.length < 2)
+        {
+            this.warn('VOD ID를 가져오지 못했습니다. URL 파싱 실패 (' + url.pathname + ')');
+            return;
+        }
         const curVideoId = match[1];
         if (this.vodInfo === null || curVideoId !== this.vodInfo.id){
             this.log('VOD 변경 감지됨! 요소 업데이트 중...');
@@ -1767,14 +1772,21 @@ class SoopAPI extends IVodSync{
     }
     playbackTimeToGlobalTS(totalPlaybackSec){
         if (!this.vodInfo) return null;
-        const reviewStartDate = this.vodInfo.originVodInfo === null ? this.vodInfo.startDate : this.vodInfo.originVodInfo.startDate;
-        const reviewDataFiles = this.vodInfo.originVodInfo === null ? this.vodInfo.files : this.vodInfo.originVodInfo.files;
-        const deltaTimeSec = this.vodInfo.originVodInfo === null ? 0 : this.vodInfo.originVodInfo.originVodChangeSecond;
-        
-        // // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
-        // if (this.vodInfo.type == 'REVIEW' && !this.isEditedVod && reviewDataFiles.length === 1){
-        //     return new Date(reviewStartDate.getTime() + (totalPlaybackSec + deltaTimeSec)*1000);
-        // }
+
+        // 최대한 다시보기의 정보를 참고해야한다. 다시보기의 일부분이 잘렸을 수 있기 때문에
+        let reviewDataFiles = null;
+        let deltaTimeSec = 0;
+        if (this.vodInfo.type === 'REVIEW'){
+            reviewDataFiles = this.vodInfo.files;
+        }
+        else if (this.vodInfo.originVodInfo !== null && this.vodInfo.originVodInfo.files.length > 0)
+        {
+            reviewDataFiles = this.vodInfo.originVodInfo.files;
+            deltaTimeSec = this.vodInfo.originVodInfo.originVodChangeSecond;
+        }
+        else{ // 다시보기(originVodInfo) 정보가 없거나 파일이 없는 경우 (원본 영상이 구플이라서 접근이 안되는 경우 등)
+            return new Date(this.vodInfo.startDate.getTime() + totalPlaybackSec * 1000);
+        }
 
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
             this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
@@ -1785,9 +1797,9 @@ class SoopAPI extends IVodSync{
         for (let i = 0; i < reviewDataFiles.length; ++i){
             const file = reviewDataFiles[i];
             const localPlaybackTime = totalPlaybackSec*1000 + deltaTimeSec*1000- cumulativeTime;
-            const hour = Math.floor(localPlaybackTime / 3600000);
-            const minute = Math.floor((localPlaybackTime % 3600000) / 60000);
-            const second = Math.floor((localPlaybackTime % 60000) / 1000);
+            // const hour = Math.floor(localPlaybackTime / 3600000);
+            // const minute = Math.floor((localPlaybackTime % 3600000) / 60000);
+            // const second = Math.floor((localPlaybackTime % 60000) / 1000);
             // this.log(`localPlaybackTime: ${hour}:${minute}:${second}`);    
             if (localPlaybackTime > file.duration){
                 cumulativeTime += file.duration;
@@ -1798,18 +1810,25 @@ class SoopAPI extends IVodSync{
         }
         return null;
     }
+    /// globalTS: milliseconds
     globalTSToPlaybackTime(globalTS){
-        if (!this.vodInfo || !this.videoTag) return null;
-        const reviewStartDate = this.vodInfo.originVodInfo === null ? this.vodInfo.startDate : this.vodInfo.originVodInfo.startDate;
-        const reviewDataFiles = this.vodInfo.originVodInfo === null ? this.vodInfo.files : this.vodInfo.originVodInfo.files;
-        const deltaTimeSec = this.vodInfo.originVodInfo === null ? 0 : this.vodInfo.originVodInfo.originVodChangeSecond;
-        
-        // 편집된 다시보기가 아니며(시간오차가 임계값 이하) 다시보기 구성 파일이 1개인 경우
-        // if (this.vodInfo.type == 'REVIEW' && !this.isEditedVod && reviewDataFiles.length === 1){
-        //     const temp = reviewStartDate.getTime();
-        //     const temp2 = (globalTS - temp) / 1000;
-        //     return Math.floor(temp2) - deltaTimeSec;
-        // }
+        if (!this.vodInfo || !this.videoTag) return null;       
+
+        // 최대한 다시보기의 정보를 참고해야한다. 다시보기의 일부분이 잘렸을 수 있기 때문에
+        let reviewDataFiles = null;
+        let deltaTimeSec = 0;
+        if (this.vodInfo.type === 'REVIEW'){
+            reviewDataFiles = this.vodInfo.files;
+        }
+        else if (this.vodInfo.originVodInfo !== null && this.vodInfo.originVodInfo.files.length > 0)
+        {
+            reviewDataFiles = this.vodInfo.originVodInfo.files;
+            deltaTimeSec = this.vodInfo.originVodInfo.originVodChangeSecond;
+        }
+        else{ // 다시보기(originVodInfo) 정보가 없거나 파일이 없는 경우 (원본 영상이 구플이라서 접근이 안되는 경우 등)
+            return Math.floor((globalTS - this.vodInfo.startDate.getTime()) / 1000);
+        }
+
         if (this.isEditedVod && reviewDataFiles.length > 1 && this.vodInfo.type !== 'REVIEW'){
             this.warn(`${this.videoId}를 제보해주시기 바랍니다.\n[VOD Master 설정] > [문의하기]`);
             return null;
